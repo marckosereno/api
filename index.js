@@ -4,15 +4,21 @@ const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemi
 
 export default async function geminiProxy(req, res) {
     
-    // Configuración CORS
-    res.setHeader('Access-Control-Allow-Origin', '*'); // Permite acceso desde cualquier dominio (incluyendo mssg.me)
+    // 1. Configuración CORS - Necesaria para permitir la comunicación desde mssg.me
+    // Permitir cualquier origen ('*')
+    res.setHeader('Access-Control-Allow-Origin', '*'); 
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    res.setHeader('Access-Control-Allow-Credentials', 'true'); // A veces necesario para fetch
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); // Añadimos Authorization por si acaso
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
 
+    // 2. Manejo de la solicitud Preflight (OPTIONS)
+    // El navegador envía esto antes del POST; DEBE recibir las cabeceras CORS.
     if (req.method === 'OPTIONS') {
-        return res.status(200).end();
+        // Enviar solo las cabeceras de CORS y terminar la solicitud con éxito (204 No Content o 200 OK)
+        return res.status(204).end(); 
     }
+
+    // --- Lógica Principal POST ---
 
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY; 
     
