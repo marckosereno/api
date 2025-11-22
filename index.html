@@ -63,6 +63,28 @@
             height: 1.25rem;
             fill: currentColor;
         }
+
+        /* --- Animación de Vibración (Aplicada al botón) --- */
+        @keyframes vibrate {
+            0% { transform: translate(0); }
+            25% { transform: translate(-2px, 2px); }
+            50% { transform: translate(2px, -2px); }
+            75% { transform: translate(-2px, -2px); }
+            100% { transform: translate(2px, 2px); }
+        }
+        .vibrating {
+            animation: vibrate 0.1s ease-in-out infinite;
+        }
+        /* --- Efecto Ola y Transición para los Chips --- */
+        .category-chip.hidden-chip {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+        }
+        .category-chip.visible-chip {
+            opacity: 1;
+            transform: translateY(0);
+        }
     </style>
     <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
 </head>
@@ -84,17 +106,21 @@
 
         <div id="quick-replies-container" class="quick-replies-container p-3 border-t border-gray-100 bg-white flex-shrink-0 flex flex-col space-y-2">
             
-            <div class="chip-group-scroll">
-                <div class="inline-flex space-x-3 pb-3 border-b border-gray-200"> <div class="quick-reply-chip category-chip flex items-center p-2 rounded-xl text-sm border border-green-500 bg-green-50 text-green-700 cursor-pointer transition hover:bg-green-100" data-query="Categoría Salud y Estética en Progreso">🏥 Salud & Estética</div>
-                    <div class="quick-reply-chip category-chip flex items-center p-2 rounded-xl text-sm border border-blue-500 bg-blue-50 text-blue-700 cursor-pointer transition hover:bg-blue-100" data-query="Categoría Compras y Tiendas en Progreso">🛍️ Compras</div>
-                    <div class="quick-reply-chip category-chip flex items-center p-2 rounded-xl text-sm border border-purple-500 bg-purple-50 text-purple-700 cursor-pointer transition hover:bg-purple-100" data-query="Categoría Entretenimiento y Atracciones en Progreso">🎺 Entretenimiento</div>
+            <div id="category-chips-group" class="chip-group-scroll hidden">
+                <div class="inline-flex space-x-3 pb-3 border-b border-gray-200"> 
+                    <div class="quick-reply-chip category-chip hidden-chip flex items-center p-2 rounded-xl text-sm border border-green-500 bg-green-50 text-green-700 cursor-pointer transition hover:bg-green-100" data-query="Categoría Salud y Estética en Progreso">🏥 Salud & Estética</div>
+                    <div class="quick-reply-chip category-chip hidden-chip flex items-center p-2 rounded-xl text-sm border border-blue-500 bg-blue-50 text-blue-700 cursor-pointer transition hover:bg-blue-100" data-query="Categoría Compras y Tiendas en Progreso">🛍️ Compras</div>
+                    <div class="quick-reply-chip category-chip hidden-chip flex items-center p-2 rounded-xl text-sm border border-purple-500 bg-purple-50 text-purple-700 cursor-pointer transition hover:bg-purple-100" data-query="Categoría Entretenimiento y Atracciones en Progreso">🎺 Entretenimiento</div>
+                    <div class="quick-reply-chip category-chip hidden-chip flex items-center p-2 rounded-xl text-sm border border-yellow-500 bg-yellow-50 text-yellow-700 cursor-pointer transition hover:bg-yellow-100" data-query="Top 10 Dentistas en Progreso">🦷 Top 10 Dental</div>
                 </div>
             </div>
             
-            <div class="chip-group-scroll">
+            <div id="menu-actions" class="chip-group-scroll">
                 <div class="inline-flex space-x-3 pt-2">
-                    <div class="quick-reply-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-gray-200 text-gray-800 cursor-pointer transition hover:bg-gray-300" data-query="Dime cómo llegar a Progreso">📍 Cómo Llegar</div>
-                    <div class="quick-reply-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-gray-200 text-gray-800 cursor-pointer transition hover:bg-gray-300" data-query="Recomiéndame dónde comer y beber en Progreso">🌮 Comer & Beber</div>
+                    <div id="btn-categorias" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-gray-200 text-gray-800 cursor-pointer transition hover:bg-gray-300" data-action="CATEGORIES">📂 Categorías</div>
+                    <div id="btn-lenguaje" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-gray-200 text-gray-800 cursor-pointer transition hover:bg-gray-300" data-action="LANGUAGE" data-query="Activa modo traducción en español-inglés.">🌐 Lenguaje</div>
+                    <div id="btn-comollegar" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-gray-200 text-gray-800 cursor-pointer transition hover:bg-gray-300" data-action="GET_THERE" data-query="Dime cómo llegar a Progreso, Tamaulipas.">📍 Cómo Llegar</div>
+                    <div id="btn-info" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-gray-200 text-gray-800 cursor-pointer transition hover:bg-gray-300" data-action="INFO" data-query="Información general sobre Nuevo Progreso.">ℹ️ Info</div>
                 </div>
             </div>
         </div>
@@ -118,6 +144,7 @@
     const BACKEND_URL = "/api"; 
     
     let chatHistory = [];
+    let categoriesVisible = false; // Nuevo estado para controlar la visibilidad de las categorías
     
     // Referencias a Elementos del DOM
     const inputElement = document.getElementById('user-input');
@@ -125,7 +152,9 @@
     const messageContainer = document.getElementById('message-container');
     const loadingIndicator = document.getElementById('loading-indicator');
     const appAlertContainer = document.getElementById('app-alert-container');
-    const quickRepliesContainer = document.getElementById('quick-replies-container');
+    const categoryChipsGroup = document.getElementById('category-chips-group');
+    const categoryChips = document.querySelectorAll('#category-chips-group .category-chip');
+    const menuActionChips = document.querySelectorAll('#menu-actions .menu-action-chip');
 
     // Inicialización del estado
     if (inputElement) inputElement.disabled = false;
@@ -153,6 +182,74 @@
         if (sendButton) sendButton.disabled = d;
         if (loadingIndicator) loadingIndicator.classList.toggle('hidden', !d);
         if (inputElement) inputElement.placeholder = d ? "" : "Ask the map";
+    }
+
+    // --- NUEVAS FUNCIONES DE INTERACCIÓN ---
+
+    // Función para la animación de vibración
+    function vibrateButton(element) {
+        element.classList.add('vibrating');
+        setTimeout(() => {
+            element.classList.remove('vibrating');
+        }, 300); // 300ms es la duración de la vibración
+    }
+
+    // Oculta los chips de categorías (sin animación)
+    function hideCategoryChips() {
+        categoryChipsGroup.classList.add('hidden');
+        categoryChips.forEach(chip => {
+            chip.classList.remove('visible-chip');
+            chip.classList.add('hidden-chip');
+        });
+        categoriesVisible = false;
+    }
+
+    // Muestra los chips con efecto "ola"
+    function showCategoryChipsWithWave() {
+        if (categoriesVisible) return; // Evita mostrar si ya son visibles
+        categoryChipsGroup.classList.remove('hidden');
+        categoriesVisible = true;
+
+        categoryChips.forEach((chip, index) => {
+            // Elimina la transición inicial
+            chip.style.transition = 'none';
+            chip.classList.remove('visible-chip');
+            chip.classList.add('hidden-chip');
+
+            // Fuerza un reflow para resetear la animación
+            void chip.offsetWidth; 
+
+            // Aplica la transición y muestra con un retraso (efecto ola)
+            setTimeout(() => {
+                chip.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+                chip.classList.remove('hidden-chip');
+                chip.classList.add('visible-chip');
+            }, index * 100); // 100ms de retraso entre cada chip
+        });
+    }
+
+    // Maneja la acción de los botones del menú principal
+    function handleMenuAction(actionChip) {
+        const action = actionChip.getAttribute('data-action');
+        const query = actionChip.getAttribute('data-query');
+
+        // 1. Efecto de Vibración
+        vibrateButton(actionChip);
+
+        // 2. Lógica de Ocultar/Mostrar
+        if (action === 'CATEGORIES') {
+            if (categoriesVisible) {
+                hideCategoryChips(); // Si Categorías ya está activo, lo oculta.
+            } else {
+                showCategoryChipsWithWave(); // Si no está activo, lo muestra.
+            }
+        } else {
+            // Si se presiona cualquier otro botón (Lenguaje, Cómo Llegar, Info)
+            hideCategoryChips();
+            if (query) {
+                handleSend(query);
+            }
+        }
     }
     
     // Función para crear las burbujas de mensaje (User/Model)
@@ -278,6 +375,9 @@
         const userPrompt = userPromptInput || inputElement.value.trim();
         if (!userPrompt) return;
         
+        // Al enviar un mensaje, ocultamos las categorías si están visibles
+        hideCategoryChips();
+        
         if (typeof toggleInput === 'function') toggleInput(true);
         chatHistory.push({ role: 'user', text: userPrompt });
         if (typeof renderChat === 'function') renderChat();
@@ -329,9 +429,18 @@
     if (sendButton) sendButton.addEventListener('click', () => handleSend());
     if (inputElement) inputElement.addEventListener('keypress', function(e) { if (e.key === 'Enter') { handleSend(); } });
     
-    // Event listeners para todos los chips (Categoría y Acción) usando data-query
-    document.querySelectorAll('[data-query]').forEach(chip => {
+    // 1. Listeners para los botones del menú principal (Categorías, Lenguaje, etc.)
+    menuActionChips.forEach(chip => {
         chip.addEventListener('click', function() {
+            handleMenuAction(this);
+        });
+    });
+
+    // 2. Listeners para los chips de categorías (los que envían queries)
+    categoryChips.forEach(chip => {
+        chip.addEventListener('click', function() {
+            // Oculta las categorías inmediatamente al presionar un chip de categoría
+            hideCategoryChips(); 
             const query = this.getAttribute('data-query');
             handleSend(query); 
         });
