@@ -29,40 +29,51 @@
         /* Estilo personalizado de la barra de chat (el que solicitaste) */
         .map-search-bar {
             background-color: white; 
-            border-radius: 20px; /* Bordes redondeados sutiles para el contenedor */
+            border-radius: 20px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
-            border: 1px solid #e5e7eb; /* Borde gris sutil */
-            display: flex; /* Añadido para el layout interno */
-            align-items: center; /* Para alinear verticalmente el input y el botón */
-            padding: 8px; /* Padding para el contenido interno de la barra */
+            border: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            /* Se reduce el padding en pantallas pequeñas para evitar el desbordamiento */
+            padding: 4px; /* Ajuste para mayor compactibilidad */
+            width: 100%; /* Asegura que no se desborde */
+            box-sizing: border-box; /* Asegura que el padding no cause desbordamiento */
         }
         .map-input {
-            flex-grow: 1; /* Permite que el input ocupe el espacio restante */
-            padding: 0.5rem 0.75rem; /* Ajuste el padding para un tamaño más compacto */
-            color: #9ca3af; /* Color de texto gris claro para 'Ask the map' */
+            flex-grow: 1;
+            /* Se mantiene un padding razonable para la altura */
+            padding: 0.75rem 0.75rem; 
+            color: #9ca3af;
             font-size: 1.125rem;
-            border-radius: 20px 0 0 20px; /* Sólo el lado izquierdo redondeado */
             background: transparent;
-            border: none; /* Elimina el borde del input para que se vea como parte de la caja */
+            border: none;
+            /* Asegura que el input se adapte */
+            min-width: 0; 
         }
         .go-button {
-left:-16px;
             background-color: black;
             color: white;
-            font-size: 1rem; /* Tamaño de fuente ligeramente más pequeño */
+            font-size: 1rem;
             font-weight: bold;
-            border-radius: 15px; /* Bordes redondeados para el botón */
-            padding: 0.45rem 1rem; /* Padding más compacto */
+            border-radius: 15px;
+            /* Padding ajustado para un botón más pequeño */
+            padding: 0.5rem 1rem; 
             display: flex;
             align-items: center;
             justify-content: center;
             transition: hover:opacity-90 disabled:opacity-50;
             flex-shrink: 0;
-            min-width: 60px; /* Ancho mínimo para el botón */
-            min-height: 40px; /* Alto mínimo para el botón */
+            min-width: 60px;
+            height: 44px; /* Altura fija para alinearse mejor con el padding interno */
+            box-sizing: border-box;
+            margin-right: 4px; /* Espaciado con el borde de la caja */
         }
         .go-button svg {
-            margin-right: 0.25rem; /* Espacio entre el icono y el texto */
+            margin-right: 0.25rem;
+            /* Estilo para el nuevo SVG */
+            width: 1.25rem; 
+            height: 1.25rem;
+            fill: currentColor; /* Asegura que el SVG tome el color blanco del botón */
         }
     </style>
 </head>
@@ -103,8 +114,9 @@ left:-16px;
             <div class="map-search-bar w-full">
                 <input type="text" id="user-input" class="map-input focus:outline-none focus:ring-0" placeholder="Ask the map">
                 
-                <button id="go-button" class="go-button transition hover:opacity-90 disabled:opacity-50 pr-6">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-zap mr-1 w-6 h-6"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>                Go
+                <button id="go-button" class="go-button transition hover:opacity-90 disabled:opacity-50">
+                    <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 122.88 122.88" class="h-5 w-5"><g><path class="st0" d="M62.43,122.88h-1.98c0-16.15-6.04-30.27-18.11-42.34C30.27,68.47,16.16,62.43,0,62.43v-1.98 c16.16,0,30.27-6.04,42.34-18.14C54.41,30.21,60.45,16.1,60.45,0h1.98c0,16.15,6.04,30.27,18.11,42.34 c12.07,12.07,26.18,18.11,42.34,18.11v1.98c-16.15,0-30.27,6.04-42.34,18.11C68.47,92.61,62.43,106.72,62.43,122.88L62.43,122.88z"/></g></svg>
+                    Go
                 </button>
             </div>
         </div>
