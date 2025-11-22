@@ -28,26 +28,40 @@
 
         /* Estilo personalizado de la barra de chat (el que solicitaste) */
         .map-search-bar {
-width:94%;
             background-color: white; 
             border-radius: 20px; /* Bordes redondeados sutiles para el contenedor */
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
             border: 1px solid #e5e7eb; /* Borde gris sutil */
+            display: flex; /* Añadido para el layout interno */
+            align-items: center; /* Para alinear verticalmente el input y el botón */
+            padding: 8px; /* Padding para el contenido interno de la barra */
         }
         .map-input {
-            padding: 1rem 1.25rem;
+            flex-grow: 1; /* Permite que el input ocupe el espacio restante */
+            padding: 0.5rem 0.75rem; /* Ajuste el padding para un tamaño más compacto */
             color: #9ca3af; /* Color de texto gris claro para 'Ask the map' */
             font-size: 1.125rem;
-            border-radius: 20px 0 0 20px; 
+            border-radius: 20px 0 0 20px; /* Sólo el lado izquierdo redondeado */
             background: transparent;
+            border: none; /* Elimina el borde del input para que se vea como parte de la caja */
         }
         .go-button {
             background-color: black;
             color: white;
-            font-size: 1.125rem;
+            font-size: 1rem; /* Tamaño de fuente ligeramente más pequeño */
             font-weight: bold;
-            border-radius: 0 20px 20px 0;
-            padding: 1rem 1.5rem;
+            border-radius: 15px; /* Bordes redondeados para el botón */
+            padding: 0.5rem 1rem; /* Padding más compacto */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: hover:opacity-90 disabled:opacity-50;
+            flex-shrink: 0;
+            min-width: 60px; /* Ancho mínimo para el botón */
+            min-height: 40px; /* Alto mínimo para el botón */
+        }
+        .go-button svg {
+            margin-right: 0.25rem; /* Espacio entre el icono y el texto */
         }
     </style>
 </head>
@@ -85,11 +99,11 @@ width:94%;
         </div>
         
         <div class="p-4 bg-white shadow-xl flex-shrink-0">
-            <div class="map-search-bar flex items-center w-full">
-                <input type="text" id="user-input" class="flex-grow map-input focus:outline-none focus:ring-0" placeholder="Ask the map">
+            <div class="map-search-bar w-full">
+                <input type="text" id="user-input" class="map-input focus:outline-none focus:ring-0" placeholder="Ask the map">
                 
-                <button id="go-button" class="go-button flex items-center justify-center transition hover:opacity-90 disabled:opacity-50 flex-shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-zap mr-1 w-6 h-6"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                <button id="go-button" class="go-button transition hover:opacity-90 disabled:opacity-50">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-zap"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
                     Go
                 </button>
             </div>
