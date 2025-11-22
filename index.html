@@ -19,13 +19,6 @@
         /* Ajuste de Chips: Asegura el scroll horizontal */
         .chip-group-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
         
-        /* Indicador de Carga */
-        .dot-flashing { padding-left:8px; position: relative; width: 10px; height: 10px; border-radius: 5px; background-color: #909090; animation: dotFlashing 1s infinite alternate; animation-delay: 0s }
-        .dot-flashing::before, .dot-flashing::after { content: ''; position: absolute; top: 0; padding-left:8px; width: 10px; height: 10px; border-radius: 5px; background-color: #909090; animation: dotFlashing 1s infinite alternate }
-        .dot-flashing::before { left: -15px; animation-delay: .5s }
-        .dot-flashing::after { left: 15px; animation-delay: 1s }
-        @keyframes dotFlashing { 0% { background-color: #909090 } 50%, 100% { background-color: #cacaca } }
-
         /* Estilo personalizado de la barra de chat */
         .map-search-bar {
             background-color: white; 
@@ -71,6 +64,7 @@
             fill: currentColor;
         }
     </style>
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 </head>
 <body>
     <div id="chat-window" class="chat-window h-screen w-full"> 
@@ -82,8 +76,8 @@
 
         <div id="message-container" class="flex-grow overflow-y-auto p-4 flex flex-col"></div>
 
-        <div id="loading-indicator" class="pl-9 flex justify-start hidden p-4 flex-shrink-0">
-            <div class="dot-flashing"></div>
+        <div id="loading-indicator" class="flex justify-start hidden p-4 pl-9 flex-shrink-0">
+            <lottie-player src="https://lottie.host/5YCyCIGr3q.json" background="transparent" speed="1" style="width: 50px; height: 50px;" loop autoplay></lottie-player>
         </div>
         
         <div id="app-alert-container" class="fixed top-2 w-full flex justify-center z-50"></div>
@@ -157,6 +151,7 @@
     function toggleInput(d) {
         if (inputElement) inputElement.disabled = d;
         if (sendButton) sendButton.disabled = d;
+        // El indicador de carga ya no necesita la clase 'dot-flashing', solo la visibilidad
         if (loadingIndicator) loadingIndicator.classList.toggle('hidden', !d);
         if (inputElement) inputElement.placeholder = d ? "" : "Ask the map";
     }
@@ -173,17 +168,19 @@
             w.className = 'flex flex-col justify-start w-full mb-2';
             let content = '';
 
-            if (m.isStructured) {
-                // Lógica para mensajes estructurados con botones de acción
-                const nameAndCity = encodeURIComponent(m.placeName + " Nuevo Progreso Tamps");
-                // Nota: Usamos una URL genérica para Google Maps ya que la Places API no está activa
+            // Lógica para mensajes estructurados con botones de acción
+            if (m.isStructured) { 
+                // Asegurar que placeName exista para los botones
+                const placeName = m.placeName || 'Ubicación'; 
+                const nameAndCity = encodeURIComponent(placeName + " Nuevo Progreso Tamps");
                 const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${nameAndCity}`; 
                 const searchUrl = `https://www.google.com/search?q=${nameAndCity}`;
-                const phoneUrl = m.placePhone ? `tel:${m.placePhone}` : `javascript:alert('Número de teléfono genérico. No se puede llamar.')`;
                 
-                content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">¡Claro! Aquí está la información sobre **${m.placeName}** que tengo como tu guía local:<br><br>${m.text}</div>`;
+                // Usar m.placePhone, con un fallback seguro si no está.
+                const phoneUrl = m.placePhone ? `tel:${m.placePhone}` : `javascript:alert('Número de teléfono no disponible. Intenta buscar en Google.')`;
+                const isGenericPhone = !m.placePhone || m.placePhone === '+52 899 900 0000';
                 
-                const isGenericPhone = m.placePhone === '+52 899 900 0000';
+                content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">¡Claro! Aquí está la información sobre **${placeName}** que tengo como tu guía local:<br><br>${m.text}</div>`;
                 
                 const actionsBar = `
                     <div class="action-bar-container">
@@ -223,28 +220,27 @@
         const LATITUDE = 26.064;
         const LONGITUDE = -98.005;
 
-        // SYSTEM PROMPT AJUSTADO
-        const systemPrompt = `Eres PROGRESO TOUR GUIDE, un guía experto y sumamente cauteloso en Nuevo Progreso, Tamaulipas, México (${LATITUDE}, ${LONGITUDE}). Tu objetivo es ser preciso y NUNCA INVENTAR NOMBRES DE NEGOCIOS.
+        // SYSTEM PROMPT SIMPLIFICADO Y MEJORADO
+        const systemPrompt = `Eres PROGRESO TOUR GUIDE, un guía experto y cauteloso en Nuevo Progreso, Tamaulipas, México (${LATITUDE}, ${LONGITUDE}). Tu objetivo es ser preciso y NUNCA INVENTAR NOMBRES DE NEGOCIOS.
         
-        **INSTRUCCIONES CLAVE:**
-        1.  **Lugar Específico Detectado (Ej: "Farmacia Guadalajara"):** Si el usuario pregunta por UN lugar exacto que es real y detectable en Nuevo Progreso, responde con el **OBJETO JSON REQUERIDO**.
-        2.  **Solicitud General/Lista (Ej: "Recomiéndame 5 dentistas" o "Lugares para comer"):** Si el usuario solicita UNA LISTA o hace una pregunta general, **DEBES RESPONDER SOLO CON TEXTO PLANO**. En este caso:
-            * **Respuesta Útil y Cautelosa:** Sé cordial, menciona la gran cantidad de opciones disponibles para esa categoría (ej: "Hay una gran concentración de dentistas de alta calidad en la Avenida Juárez..."), y **redirige al usuario a buscar por sí mismo de forma positiva** (ej: "Te invito a explorar la categoría 'Salud y Estética' con el chip de arriba o a ser más específico con tu búsqueda para que encuentres la opción perfecta para ti.").
-            * NUNCA des un nombre de negocio inventado.
+        **REGLAS DE RESPUESTA:**
+        1.  **LUGAR ESPECÍFICO (Ej: "Farmacia Guadalajara"):** Si el usuario pide UN solo lugar conocido, responde **SOLO con el objeto JSON requerido**.
+        2.  **LISTAS/RECOMENDACIONES GENERALES (Ej: "5 dentistas"):** Si el usuario pide una lista o recomendación general, responde **SOLO con TEXTO PLANO**.
+            * Respuesta de texto: Sé amigable, reconoce que hay muchas opciones (ej: "Hay muchísimos dentistas de alta calidad en la Av. Juárez"), y sugiere usar los chips de categorías o ser más específico. **No evadas completamente, sé útil y directo.**
             
         **FORMATO JSON REQUERIDO (Solo para lugares específicos):**
         \`\`\`json
         {
-          "placeName": "Nombre del Lugar Exacto",
-          "description": "Saludo y descripción atractiva, enfocada en compras, salud o diversión. Termina invitando al usuario a usar los botones para mapa o contacto. NUNCA menciones nombres de la competencia.",
+          "placeName": "Nombre del Lugar Exacto y Real",
+          "description": "Saludo y descripción corta y atractiva.",
           "placePhone": "+52 899 900 0000",
           "isStructured": true
         }
         \`\`\`
         
-        Responde a la siguiente solicitud del usuario. Si no puedes detectar un lugar específico, usa tu respuesta de texto plano cautelosa.
+        Responde a la siguiente solicitud del usuario. Si no puedes detectar un lugar específico y real, usa tu respuesta de texto plano.
         `;
-        // FIN SYSTEM PROMPT AJUSTADO
+        // FIN SYSTEM PROMPT MEJORADO
 
         let contents = [];
         chatHistoryForAPI.forEach(m => {
@@ -255,7 +251,6 @@
         contents.push({ role: "user", parts: [{ text: systemPrompt + "\n\nSolicitud del usuario: " + userPrompt }] });
 
         try {
-            // LLamada al proxy de Vercel con URL RELATIVA
             const response = await fetch(BACKEND_URL, { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -310,16 +305,18 @@
                 if (parsedJson.isStructured === true) {
                     finalMessage = {
                         role: 'model',
-                        isStructured: true,
+                        isStructured: true, // <-- Aseguramos que sea 'true'
                         text: parsedJson.description || modelResponseText,
-                        placeName: parsedJson.placeName,
-                        placePhone: parsedJson.placePhone,
+                        // Añadimos fallbacks para asegurar que los botones funcionen si las propiedades faltan
+                        placeName: parsedJson.placeName || "Lugar Desconocido", 
+                        placePhone: parsedJson.placePhone || null, 
                         placeId: true 
                     };
-                    if (typeof alertUser === 'function') alertUser(`¡Ficha generada por IA para ${parsedJson.placeName}!`, "i");
+                    if (typeof alertUser === 'function') alertUser(`¡Ficha generada por IA para ${finalMessage.placeName}!`, "i");
                 }
             }
         } catch (e) {
+             // Si el JSON falla o es incompleto, trata toda la respuesta como texto plano
             finalMessage.text = modelResponseText;
         }
 
