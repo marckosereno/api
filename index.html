@@ -8,18 +8,16 @@
                 
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
-        /* Estilos base: Asegurar Full Height y Full Width */
+        /* Estilos base */
         html, body { font-family:Avenir; height: 100%; margin: 0; padding: 0; }
         .chat-window { height: 100%; width: 100vw; display: flex; flex-direction: column; background-color: #f7f7f7; overflow: hidden }
         .user-bubble { border-radius: 18px 18px 0 18px; max-width: 80% }
         .model-bubble { border-radius: 18px 18px 18px 0; max-width: 80%;padding-left:8px; }
         .action-bar-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 10px; padding-bottom: 5px }
         .action-btn { white-space: nowrap }
-        
-        /* Ajuste de Chips: Asegura el scroll horizontal */
         .chip-group-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
         
-        /* Estilo personalizado de la barra de chat */
+        /* Estilo de la barra de chat */
         .map-search-bar {
             background-color: white; 
             border-radius: 20px;
@@ -39,7 +37,6 @@
             background: transparent;
             border: none;
             min-width: 0; 
-            /* Elimina el borde azul/celeste al enfocar */
             outline: none !important;
             box-shadow: none !important;
         }
@@ -59,6 +56,8 @@
             height: 44px;
             box-sizing: border-box;
             margin-right: 4px;
+            /* Elimina el foco en el botón Go */
+            outline: none !important;
         }
         .go-button svg {
             margin-right: 0.25rem;
@@ -67,12 +66,22 @@
             fill: currentColor;
         }
 
-        /* --- Eliminación de efecto celeste en clicks (Ring/Outline) --- */
-        /* Aplicado a todos los chips interactivos */
+        /* --- Corrección del Efecto Celeste/Ring en TODOS los botones y chips --- */
+        .action-chip, .category-chip, .language-chip {
+             /* La clase 'cursor-pointer' por defecto puede disparar el foco, pero aseguramos la eliminación del ring y outline */
+            outline: none !important;
+            box-shadow: none !important;
+            --tw-ring-color: transparent !important;
+        }
+        /* Esto asegura que al hacer click (active state), no haya outline o ring */
         .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active {
-            outline: none;
-            box-shadow: none;
-            --tw-ring-color: transparent; /* Asegura que Tailwind no añada un anillo */
+            outline: none !important;
+            box-shadow: none !important;
+            --tw-ring-color: transparent !important;
+        }
+        /* Evita que el hover cambie de color a un ring (aunque Tailwind se encarga de esto, es una seguridad) */
+        .hover\:bg-gray-300:active {
+            background-color: #d1d5db; /* color del hover */
         }
         
         /* --- Efecto Ola y Transición para los Chips --- */
@@ -83,10 +92,6 @@
             white-space: nowrap;
             display: inline-flex;
             align-items: center;
-            /* Elimina el ring en chips individuales al hacer click */
-            outline: none;
-            box-shadow: none;
-            --tw-ring-color: transparent;
         }
         .visible-chip {
             opacity: 1;
@@ -209,7 +214,6 @@
     if (inputElement) inputElement.disabled = false;
     if (sendButton) sendButton.disabled = false;
 
-    // Función para mostrar alertas temporales
     function alertUser(m, t='i') {
         if (appAlertContainer && appAlertContainer.querySelector('.app-alert')) appAlertContainer.querySelector('.app-alert').remove();
         const a = document.createElement('div');
@@ -220,12 +224,10 @@
         setTimeout(() => { a.style.opacity = '0'; setTimeout(() => a.remove(), 300); }, 4000);
     }
     
-    // Función para hacer scroll
     function scrollToBottom() { 
         if (messageContainer) messageContainer.scrollTop = messageContainer.scrollHeight; 
     }
     
-    // Función para gestionar el estado de entrada
     function toggleInput(d) {
         if (inputElement) inputElement.disabled = d;
         if (sendButton) sendButton.disabled = d;
@@ -235,14 +237,12 @@
 
     // --- FUNCIONES DE INTERACCIÓN ---
 
-    // Función para la vibración del dispositivo (Haptic Feedback)
     function vibrateDevice() {
         if ("vibrate" in navigator) {
             navigator.vibrate(100); 
         }
     }
     
-    // Oculta un grupo de chips (categoría o idioma)
     function hideChipGroup(groupElement, chipElements) {
         groupElement.classList.add('hidden');
         chipElements.forEach(chip => {
@@ -250,18 +250,14 @@
         });
     }
 
-    // Muestra un grupo de chips con efecto "ola"
     function showChipGroupWithWave(groupElement, chipElements) {
         groupElement.classList.remove('hidden');
         chipElements.forEach((chip, index) => {
-            // Reinicia la animación
             chip.style.transition = 'none';
             chip.classList.remove('visible-chip');
 
-            // Forzar reflow
             void chip.offsetWidth; 
 
-            // Aplica la transición y muestra con retraso
             setTimeout(() => {
                 chip.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
                 chip.classList.add('visible-chip');
@@ -269,16 +265,13 @@
         });
     }
 
-    // Función principal para la localización de la interfaz
     function setInterfaceLanguage(lang) {
         currentLanguage = lang;
         const strings = UI_STRINGS[lang];
         
-        // 1. Ocultar menú de lenguaje
         hideChipGroup(languageChipsGroup, languageChips);
         languageMenuVisible = false;
 
-        // 2. Actualizar textos de la interfaz
         document.getElementById('header-text').textContent = strings.header;
         inputElement.placeholder = strings.placeholder;
         document.getElementById('go-text').textContent = strings.goButton; 
@@ -288,25 +281,23 @@
         document.getElementById('btn-comollegar').textContent = strings.getThere;
         document.getElementById('btn-info').textContent = strings.info;
 
-        // 3. Actualizar textos de los chips de categoría
         const categoryChipTexts = [strings.chipHealth, strings.chipShopping, strings.chipEntertainment, strings.chipDental];
         categoryChips.forEach((chip, index) => {
             chip.textContent = categoryChipTexts[index];
         });
 
-        // 4. Notificar al usuario
         alertUser(`Interfaz y conversación cambiadas a ${lang === 'es' ? 'Español' : 'English'}`, 'i');
     }
 
-    // Maneja la acción de los botones del menú principal
+    // ⭐ CORRECCIÓN: Esta es la única función que debe ocultar los chips.
     function handleMenuAction(actionChip) {
         const action = actionChip.getAttribute('data-action');
         const lang = currentLanguage;
         const query = actionChip.getAttribute(`data-query-${lang}`);
 
-        vibrateDevice(); // Solo vibra el dispositivo
+        vibrateDevice(); 
 
-        // Lógica para ocultar otros menús
+        // Lógica para ocultar otros menús y resetear estados
         if (action !== 'CATEGORIES' && categoriesVisible) {
             hideChipGroup(categoryChipsGroup, categoryChips);
             categoriesVisible = false;
@@ -341,7 +332,7 @@
         }
     }
     
-    // Función para crear las burbujas de mensaje (User/Model) - Se mantiene sin cambios
+    // Función para crear las burbujas de mensaje (User/Model)
     function createMessageBubble(m) {
         const w = document.createElement('div');
         
@@ -353,7 +344,6 @@
             w.className = 'flex flex-col justify-start w-full mb-2';
             let content = '';
 
-            // Lógica para mensajes estructurados con botones de acción
             if (m.isStructured) { 
                 const placeName = m.placeName || 'Ubicación'; 
                 const nameAndCity = encodeURIComponent(placeName + " Nuevo Progreso Tamps");
@@ -364,7 +354,6 @@
                 
                 content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">¡Claro! Aquí está la información sobre **${placeName}** que tengo como tu guía local:<br><br>${m.text}</div>`;
                 
-                // Los textos de los botones son fijos, pero la ficha y la conversación serán en el idioma correcto.
                 const actionsBar = `
                     <div class="action-bar-container">
                         <div class="inline-flex space-x-3 p-1">
@@ -385,7 +374,6 @@
         return w;
     }
 
-    // Función para renderizar el historial de chat - Se mantiene sin cambios
     function renderChat() {
         if (messageContainer) {
             messageContainer.innerHTML = '';
@@ -394,33 +382,33 @@
         }
     }
 
-    // --- LÓGICA DE CONEXIÓN CON GEMINI (AJUSTE DE IDIOMA EN PROMPT) ---
+    // --- LÓGICA DE CONEXIÓN CON GEMINI (AJUSTE DE IDIOMA Y MODO CONVERSACIONAL) ---
 
-    // Función que llama al proxy de Vercel (con ajuste de idioma)
     async function getGeminiResponse(userPrompt, chatHistoryForAPI) {
         
         const LATITUDE = 26.064;
         const LONGITUDE = -98.005;
-        // ⭐ Clave del cambio: el prompt ahora exige la respuesta en el idioma seleccionado.
         const targetLang = currentLanguage === 'es' ? 'en español' : 'in English';
-
-        const systemPrompt = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (${LATITUDE}, ${LONGITUDE}). Tu objetivo principal es ofrecer una ficha estructurada con información útil para el turista.
+        
+        // ⭐ CORRECCIÓN CLAVE: El prompt ahora define cuándo usar el JSON y cuándo no.
+        const systemPrompt = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (${LATITUDE}, ${LONGITUDE}).
         
         **REGLAS DE RESPUESTA:**
-        1.  **RESPONDE SIEMPRE ${targetLang}.**
-        2.  **SIEMPRE responde con el objeto JSON requerido**, independientemente de si tienes información verificada del lugar. Si no conoces el lugar exacto, inventa una descripción plausible y un número de teléfono genérico (+52 899 900 0000) para asegurar que la ficha de información se muestre al usuario.
-        3.  Si el usuario pide una lista o recomendación general (ej: "5 restaurants"), genera una descripción general en la ficha JSON y usa un nombre genérico (ej: "Popular Restaurants").
-            
-        **FORMATO JSON REQUERIDO:**
-        \`\`\`json
-        {
-          "placeName": "Nombre del Lugar (SIEMPRE en el idioma solicitado)",
-          "description": "Saludo y descripción corta y atractiva sobre el lugar (SIEMPRE en el idioma solicitado).",
-          "placePhone": "+52 899 900 0000",
-          "isStructured": true
-        }
-        \`\`\`
-        
+        1. **RESPONDE SIEMPRE ${targetLang}.**
+        2. **MODO DE RESPUESTA:**
+           - **MODO FICHA (JSON):** Úsalo **SOLO** si la solicitud del usuario es claramente una búsqueda de un **lugar, negocio, servicio, o categoría específica** (ej: "mejor restaurante", "Top 10 Dentistas", "Salud y Estética").
+           - **MODO CONVERSACIONAL (Texto Plano):** Úsalo si la solicitud es general, de saludo, de seguimiento de chat, o preguntas abiertas (ej: "¿Cómo estás?", "¿Qué tal el clima?", "Gracias").
+        3. **FORMATO JSON REQUERIDO (Solo en MODO FICHA):**
+           \`\`\`json
+           {
+             "placeName": "Nombre del Lugar (en el idioma solicitado)",
+             "description": "Saludo y descripción corta y atractiva (en el idioma solicitado).",
+             "placePhone": "+52 899 900 0000",
+             "isStructured": true
+           }
+           \`\`\`
+        4. Si usas el MODO FICHA, la única respuesta debe ser el bloque JSON. Si usas el MODO CONVERSACIONAL, la respuesta debe ser texto plano.
+
         Responde a la siguiente solicitud del usuario.
         `;
 
@@ -461,11 +449,7 @@
         const userPrompt = userPromptInput || inputElement.value.trim();
         if (!userPrompt) return;
         
-        // Ocultar menús si están visibles
-        hideChipGroup(categoryChipsGroup, categoryChips);
-        categoriesVisible = false;
-        hideChipGroup(languageChipsGroup, languageChips);
-        languageMenuVisible = false;
+        // ⭐ CORRECCIÓN: Se eliminó la lógica de ocultamiento de chips aquí.
         
         if (typeof toggleInput === 'function') toggleInput(true);
         chatHistory.push({ role: 'user', text: userPrompt });
@@ -501,8 +485,10 @@
                     };
                     if (typeof alertUser === 'function') alertUser(UI_STRINGS[currentLanguage].alertStructured(finalMessage.placeName), "i");
                 }
+                // Si el JSON existe pero no tiene isStructured: true, cae al caso catch y se trata como texto plano.
             }
         } catch (e) {
+             // Si falla el parseo JSON o no se detecta la estructura, el mensaje se trata como texto plano
             finalMessage.text = modelResponseText;
         }
 
@@ -516,14 +502,14 @@
     if (sendButton) sendButton.addEventListener('click', () => handleSend());
     if (inputElement) inputElement.addEventListener('keypress', function(e) { if (e.key === 'Enter') { handleSend(); } });
     
-    // 1. Listeners para los botones del menú principal (Categorías, Lenguaje, etc.)
     menuActionChips.forEach(chip => {
         chip.addEventListener('click', function() {
             handleMenuAction(this);
         });
     });
 
-    // 2. Listeners para los chips de categorías (los que envían queries)
+    // ⭐ CORRECCIÓN: Los chips de categoría SÍ deben enviar un query. 
+    // La persistencia se maneja en 'handleMenuAction' y 'handleSend' (al no forzar el cierre).
     categoryChips.forEach(chip => {
         chip.addEventListener('click', function() {
             const lang = currentLanguage;
@@ -532,7 +518,6 @@
         });
     });
 
-    // 3. Listeners para los chips de idioma (los que cambian el idioma de la interfaz)
     languageChips.forEach(chip => {
         chip.addEventListener('click', function() {
             const lang = this.getAttribute('data-lang');
@@ -540,9 +525,7 @@
         });
     });
 
-    // Inicializar el idioma de la interfaz al cargar
     document.addEventListener('DOMContentLoaded', () => {
-        // Inicializamos la interfaz en Español por defecto, lo que también actualiza los chips
         setInterfaceLanguage('es'); 
     });
 </script>
