@@ -56,7 +56,6 @@
             height: 44px;
             box-sizing: border-box;
             margin-right: 4px;
-            /* Elimina el foco en el botón Go */
             outline: none !important;
         }
         .go-button svg {
@@ -66,20 +65,17 @@
             fill: currentColor;
         }
 
-        /* --- Corrección del Efecto Celeste/Ring en TODOS los botones y chips --- */
+        /* --- Eliminación de Efecto Celeste/Ring en TODOS los botones y chips --- */
         .action-chip, .category-chip, .language-chip {
-             /* La clase 'cursor-pointer' por defecto puede disparar el foco, pero aseguramos la eliminación del ring y outline */
             outline: none !important;
             box-shadow: none !important;
             --tw-ring-color: transparent !important;
         }
-        /* Esto asegura que al hacer click (active state), no haya outline o ring */
         .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active {
             outline: none !important;
             box-shadow: none !important;
             --tw-ring-color: transparent !important;
         }
-        /* Evita que el hover cambie de color a un ring (aunque Tailwind se encarga de esto, es una seguridad) */
         .hover\:bg-gray-300:active {
             background-color: #d1d5db; /* color del hover */
         }
@@ -269,9 +265,11 @@
         currentLanguage = lang;
         const strings = UI_STRINGS[lang];
         
+        // Ocultar menú de lenguaje
         hideChipGroup(languageChipsGroup, languageChips);
         languageMenuVisible = false;
 
+        // Actualizar textos de la interfaz
         document.getElementById('header-text').textContent = strings.header;
         inputElement.placeholder = strings.placeholder;
         document.getElementById('go-text').textContent = strings.goButton; 
@@ -281,6 +279,7 @@
         document.getElementById('btn-comollegar').textContent = strings.getThere;
         document.getElementById('btn-info').textContent = strings.info;
 
+        // Actualizar textos de los chips de categoría
         const categoryChipTexts = [strings.chipHealth, strings.chipShopping, strings.chipEntertainment, strings.chipDental];
         categoryChips.forEach((chip, index) => {
             chip.textContent = categoryChipTexts[index];
@@ -289,7 +288,7 @@
         alertUser(`Interfaz y conversación cambiadas a ${lang === 'es' ? 'Español' : 'English'}`, 'i');
     }
 
-    // ⭐ CORRECCIÓN: Esta es la única función que debe ocultar los chips.
+    // ⭐ LÓGICA DE OCULTAMIENTO REVISADA: Solo los botones del menú principal (action chips) controlan la visibilidad.
     function handleMenuAction(actionChip) {
         const action = actionChip.getAttribute('data-action');
         const lang = currentLanguage;
@@ -327,7 +326,10 @@
         } else {
             // Acciones directas (Cómo Llegar, Info)
             if (query) {
-                handleSend(query);
+                // Si la acción es Cómo Llegar o Info, envía la consulta Y oculta los menús activos.
+                handleSend(query); 
+                if (categoriesVisible) { hideChipGroup(categoryChipsGroup, categoryChips); categoriesVisible = false; }
+                if (languageMenuVisible) { hideChipGroup(languageChipsGroup, languageChips); languageMenuVisible = false; }
             }
         }
     }
@@ -390,7 +392,7 @@
         const LONGITUDE = -98.005;
         const targetLang = currentLanguage === 'es' ? 'en español' : 'in English';
         
-        // ⭐ CORRECCIÓN CLAVE: El prompt ahora define cuándo usar el JSON y cuándo no.
+        // El prompt ahora define cuándo usar el JSON y cuándo no.
         const systemPrompt = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (${LATITUDE}, ${LONGITUDE}).
         
         **REGLAS DE RESPUESTA:**
@@ -449,8 +451,12 @@
         const userPrompt = userPromptInput || inputElement.value.trim();
         if (!userPrompt) return;
         
-        // ⭐ CORRECCIÓN: Se eliminó la lógica de ocultamiento de chips aquí.
-        
+        // ⭐ CORRECCIÓN: Oculta los chips si el usuario escribe o usa un botón de acción rápida (Cómo Llegar/Info).
+        hideChipGroup(categoryChipsGroup, categoryChips);
+        categoriesVisible = false;
+        hideChipGroup(languageChipsGroup, languageChips);
+        languageMenuVisible = false;
+
         if (typeof toggleInput === 'function') toggleInput(true);
         chatHistory.push({ role: 'user', text: userPrompt });
         if (typeof renderChat === 'function') renderChat();
@@ -485,10 +491,8 @@
                     };
                     if (typeof alertUser === 'function') alertUser(UI_STRINGS[currentLanguage].alertStructured(finalMessage.placeName), "i");
                 }
-                // Si el JSON existe pero no tiene isStructured: true, cae al caso catch y se trata como texto plano.
             }
         } catch (e) {
-             // Si falla el parseo JSON o no se detecta la estructura, el mensaje se trata como texto plano
             finalMessage.text = modelResponseText;
         }
 
@@ -502,22 +506,26 @@
     if (sendButton) sendButton.addEventListener('click', () => handleSend());
     if (inputElement) inputElement.addEventListener('keypress', function(e) { if (e.key === 'Enter') { handleSend(); } });
     
+    // Listeners para botones del menú principal (Categorías, Lenguaje, etc.)
     menuActionChips.forEach(chip => {
         chip.addEventListener('click', function() {
             handleMenuAction(this);
         });
     });
 
-    // ⭐ CORRECCIÓN: Los chips de categoría SÍ deben enviar un query. 
-    // La persistencia se maneja en 'handleMenuAction' y 'handleSend' (al no forzar el cierre).
+    // ⭐ CORRECCIÓN: Oculta chips de categoría después de usarlos.
     categoryChips.forEach(chip => {
         chip.addEventListener('click', function() {
             const lang = currentLanguage;
             const query = this.getAttribute(`data-query-${lang}`);
             handleSend(query); 
+            // Ocultamiento
+            hideChipGroup(categoryChipsGroup, categoryChips);
+            categoriesVisible = false;
         });
     });
 
+    // ⭐ CORRECCIÓN: Oculta chips de idioma después de usarlos (la función setInterfaceLanguage ya lo hace).
     languageChips.forEach(chip => {
         chip.addEventListener('click', function() {
             const lang = this.getAttribute('data-lang');
