@@ -25,6 +25,29 @@
         .dot-flashing::before { left: -15px; animation-delay: .5s }
         .dot-flashing::after { left: 15px; animation-delay: 1s }
         @keyframes dotFlashing { 0% { background-color: #909090 } 50%, 100% { background-color: #cacaca } }
+
+        /* Estilo personalizado de la barra de chat (el que solicitaste) */
+        .map-search-bar {
+            background-color: white; 
+            border-radius: 20px; /* Bordes redondeados sutiles para el contenedor */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e5e7eb; /* Borde gris sutil */
+        }
+        .map-input {
+            padding: 1rem 1.25rem;
+            color: #9ca3af; /* Color de texto gris claro para 'Ask the map' */
+            font-size: 1.125rem;
+            border-radius: 20px 0 0 20px; 
+            background: transparent;
+        }
+        .go-button {
+            background-color: black;
+            color: white;
+            font-size: 1.125rem;
+            font-weight: bold;
+            border-radius: 0 20px 20px 0;
+            padding: 1rem 1.5rem;
+        }
     </style>
 </head>
 <body>
@@ -59,23 +82,18 @@
                 </div>
             </div>
         </div>
-
-        <div class="flex items-center p-4 border-t border-gray-100 bg-white shadow-lg flex-shrink-0">
-            
-            
-            <input type="text" id="user-input" class="flex-grow p-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" placeholder="Pregunta lo que sea...">
-            
-            <div class="flex items-center ml-3">
+        
+        <div class="p-4 bg-white shadow-xl flex-shrink-0">
+            <div class="map-search-bar flex items-center w-full">
+                <input type="text" id="user-input" class="flex-grow map-input focus:outline-none focus:ring-0" placeholder="Ask the map">
                 
-                
-                <button id="send-button" class="w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center shadow-md transition hover:bg-blue-600 disabled:bg-gray-400 flex-shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.286L12 21l-2.286-6.857L3 12l5.714-2.286L12 3z" />
-                    </svg>
+                <button id="go-button" class="go-button flex items-center justify-center transition hover:opacity-90 disabled:opacity-50 flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-zap mr-1 w-6 h-6"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                    Go
                 </button>
             </div>
         </div>
-    </div>
+        </div>
 
 <script>
     // --- BLOQUE JAVASCRIPT: SETUP Y UTILIDADES ---
@@ -87,7 +105,8 @@
     
     // Referencias a Elementos del DOM
     const inputElement = document.getElementById('user-input');
-    const sendButton = document.getElementById('send-button');
+    // CAMBIADO: Usar 'go-button' en lugar de 'send-button'
+    const sendButton = document.getElementById('go-button'); 
     const messageContainer = document.getElementById('message-container');
     const loadingIndicator = document.getElementById('loading-indicator');
     const appAlertContainer = document.getElementById('app-alert-container');
@@ -118,7 +137,8 @@
         if (inputElement) inputElement.disabled = d;
         if (sendButton) sendButton.disabled = d;
         if (loadingIndicator) loadingIndicator.classList.toggle('hidden', !d);
-        if (inputElement) inputElement.placeholder = d ? "Esperando respuesta de IA..." : "Pregunta lo que sea...";
+        // CAMBIADO: Ajustar el placeholder a "Ask the map" o vacío para la IA
+        if (inputElement) inputElement.placeholder = d ? "" : "Ask the map";
     }
     
     // Función para crear las burbujas de mensaje (User/Model)
@@ -283,6 +303,7 @@
     }
     
     // --- Event Listeners e Inicio ---
+    // CAMBIADO: Usar 'go-button' para el evento click
     if (sendButton) sendButton.addEventListener('click', () => handleSend());
     if (inputElement) inputElement.addEventListener('keypress', function(e) { if (e.key === 'Enter') { handleSend(); } });
     
