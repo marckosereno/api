@@ -26,7 +26,7 @@
         .dot-flashing::after { left: 15px; animation-delay: 1s }
         @keyframes dotFlashing { 0% { background-color: #909090 } 50%, 100% { background-color: #cacaca } }
 
-        /* Estilo personalizado de la barra de chat (el que solicitaste) */
+        /* Estilo personalizado de la barra de chat */
         .map-search-bar {
             background-color: white; 
             border-radius: 20px;
@@ -34,20 +34,17 @@
             border: 1px solid #e5e7eb;
             display: flex;
             align-items: center;
-            /* Se reduce el padding en pantallas pequeñas para evitar el desbordamiento */
-            padding: 4px; /* Ajuste para mayor compactibilidad */
-            width: 100%; /* Asegura que no se desborde */
-            box-sizing: border-box; /* Asegura que el padding no cause desbordamiento */
+            padding: 4px; 
+            width: 100%; 
+            box-sizing: border-box; 
         }
         .map-input {
             flex-grow: 1;
-            /* Se mantiene un padding razonable para la altura */
             padding: 0.75rem 0.75rem; 
             color: #9ca3af;
             font-size: 1.125rem;
             background: transparent;
             border: none;
-            /* Asegura que el input se adapte */
             min-width: 0; 
         }
         .go-button {
@@ -56,7 +53,6 @@
             font-size: 1rem;
             font-weight: bold;
             border-radius: 15px;
-            /* Padding ajustado para un botón más pequeño */
             padding: 0.5rem 1rem; 
             display: flex;
             align-items: center;
@@ -64,16 +60,15 @@
             transition: hover:opacity-90 disabled:opacity-50;
             flex-shrink: 0;
             min-width: 60px;
-            height: 44px; /* Altura fija para alinearse mejor con el padding interno */
+            height: 44px;
             box-sizing: border-box;
-            margin-right: 4px; /* Espaciado con el borde de la caja */
+            margin-right: 4px;
         }
         .go-button svg {
             margin-right: 0.25rem;
-            /* Estilo para el nuevo SVG */
             width: 1.25rem; 
             height: 1.25rem;
-            fill: currentColor; /* Asegura que el SVG tome el color blanco del botón */
+            fill: currentColor;
         }
     </style>
 </head>
@@ -132,7 +127,6 @@
     
     // Referencias a Elementos del DOM
     const inputElement = document.getElementById('user-input');
-    // CAMBIADO: Usar 'go-button' en lugar de 'send-button'
     const sendButton = document.getElementById('go-button'); 
     const messageContainer = document.getElementById('message-container');
     const loadingIndicator = document.getElementById('loading-indicator');
@@ -164,7 +158,6 @@
         if (inputElement) inputElement.disabled = d;
         if (sendButton) sendButton.disabled = d;
         if (loadingIndicator) loadingIndicator.classList.toggle('hidden', !d);
-        // CAMBIADO: Ajustar el placeholder a "Ask the map" o vacío para la IA
         if (inputElement) inputElement.placeholder = d ? "" : "Ask the map";
     }
     
@@ -230,22 +223,30 @@
         const LATITUDE = 26.064;
         const LONGITUDE = -98.005;
 
-        // Se mantiene el System Prompt para la IA
-        const systemPrompt = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (${LATITUDE}, ${LONGITUDE}). Tu objetivo es detectar si el usuario pregunta por un lugar específico. TODOS los lugares DEBEN estar en esta ciudad. Usa el contexto conversacional.
+        // SYSTEM PROMPT AJUSTADO
+        const systemPrompt = `Eres PROGRESO TOUR GUIDE, un guía experto y sumamente cauteloso en Nuevo Progreso, Tamaulipas, México (${LATITUDE}, ${LONGITUDE}). Tu objetivo es ser preciso y NUNCA INVENTAR NOMBRES DE NEGOCIOS.
         
-        **INSTRUCCIONES:** 1. Si detectas un lugar específico: **SOLO UN OBJETO JSON**. 2. Pregunta o categoría general: **SOLO TEXTO PLANO**.
-        
-        **FORMATO JSON REQUERIDO:**
+        **INSTRUCCIONES CLAVE:**
+        1.  **Lugar Específico Detectado (Ej: "Farmacia Guadalajara"):** Si el usuario pregunta por UN lugar exacto que es real y detectable en Nuevo Progreso, responde con el **OBJETO JSON REQUERIDO**.
+        2.  **Solicitud General/Lista (Ej: "Recomiéndame 5 dentistas" o "Lugares para comer"):** Si el usuario solicita UNA LISTA o hace una pregunta general, **DEBES RESPONDER SOLO CON TEXTO PLANO**. En este caso:
+            * Menciona la gran variedad de opciones disponibles en la ciudad (ej: "Hay más de 100 dentistas disponibles.").
+            * NUNCA des un nombre de negocio inventado.
+            * Invita al usuario a ser más específico o a usar los chips de categorías para explorar, o a usar Google Maps directamente.
+            
+        **FORMATO JSON REQUERIDO (Solo para lugares específicos):**
         \`\`\`json
         {
           "placeName": "Nombre del Lugar Exacto",
-          "description": "Saludo y descripción atractiva, enfocada en compras, salud o diversión. Termina invitando al usuario a usar los botones para mapa o contacto.",
+          "description": "Saludo y descripción atractiva, enfocada en compras, salud o diversión. Termina invitando al usuario a usar los botones para mapa o contacto. NUNCA menciones nombres de la competencia.",
           "placePhone": "+52 899 900 0000",
           "isStructured": true
         }
         \`\`\`
-        `;
         
+        Responde a la siguiente solicitud del usuario. Si no puedes detectar un lugar específico, usa tu respuesta de texto plano cautelosa.
+        `;
+        // FIN SYSTEM PROMPT AJUSTADO
+
         let contents = [];
         chatHistoryForAPI.forEach(m => {
             let textToSend = m.isStructured ? `[PROGRESO TOUR GUIDE ENVIÓ FICHA sobre ${m.placeName}]` : m.text;
@@ -330,7 +331,6 @@
     }
     
     // --- Event Listeners e Inicio ---
-    // CAMBIADO: Usar 'go-button' para el evento click
     if (sendButton) sendButton.addEventListener('click', () => handleSend());
     if (inputElement) inputElement.addEventListener('keypress', function(e) { if (e.key === 'Enter') { handleSend(); } });
     
