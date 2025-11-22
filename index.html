@@ -39,6 +39,9 @@
             background: transparent;
             border: none;
             min-width: 0; 
+            /* Elimina el borde azul/celeste al enfocar */
+            outline: none !important;
+            box-shadow: none !important;
         }
         .go-button {
             background-color: black;
@@ -64,16 +67,12 @@
             fill: currentColor;
         }
 
-        /* --- Animación de Vibración (CSS, para simular visualmente) --- */
-        @keyframes vibrate {
-            0% { transform: translate(0); }
-            25% { transform: translate(-1px, 1px); }
-            50% { transform: translate(1px, -1px); }
-            75% { transform: translate(-1px, -1px); }
-            100% { transform: translate(1px, 1px); }
-        }
-        .vibrating {
-            animation: vibrate 0.1s ease-in-out infinite;
+        /* --- Eliminación de efecto celeste en clicks (Ring/Outline) --- */
+        /* Aplicado a todos los chips interactivos */
+        .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active {
+            outline: none;
+            box-shadow: none;
+            --tw-ring-color: transparent; /* Asegura que Tailwind no añada un anillo */
         }
         
         /* --- Efecto Ola y Transición para los Chips --- */
@@ -81,10 +80,13 @@
             opacity: 0;
             transform: translateY(20px);
             transition: opacity 0.3s ease-out, transform 0.3s ease-out;
-            /* Estilo adicional para los chips, si se desean */
             white-space: nowrap;
             display: inline-flex;
             align-items: center;
+            /* Elimina el ring en chips individuales al hacer click */
+            outline: none;
+            box-shadow: none;
+            --tw-ring-color: transparent;
         }
         .visible-chip {
             opacity: 1;
@@ -112,11 +114,11 @@
         <div id="quick-replies-container" class="quick-replies-container p-3 border-t border-gray-100 bg-white flex-shrink-0 flex flex-col space-y-2">
             
             <div id="category-chips-group" class="chip-group-scroll hidden">
-                <div class="inline-flex space-x-3 pb-3 border-b border-gray-200"> 
-                    <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-green-500 bg-green-50 text-green-700 cursor-pointer transition hover:bg-green-100" data-query="Categoría Salud y Estética en Progreso">🏥 Salud & Estética</div>
-                    <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-blue-500 bg-blue-50 text-blue-700 cursor-pointer transition hover:bg-blue-100" data-query="Categoría Compras y Tiendas en Progreso">🛍️ Compras</div>
-                    <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-purple-500 bg-purple-50 text-purple-700 cursor-pointer transition hover:bg-purple-100" data-query="Categoría Entretenimiento y Atracciones en Progreso">🎺 Entretenimiento</div>
-                    <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-yellow-500 bg-yellow-50 text-yellow-700 cursor-pointer transition hover:bg-yellow-100" data-query="Top 10 Dentistas en Progreso">🦷 Top 10 Dental</div>
+                <div id="category-chips-list" class="inline-flex space-x-3 pb-3 border-b border-gray-200"> 
+                    <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-green-500 bg-green-50 text-green-700 cursor-pointer transition hover:bg-green-100" data-query-es="Categoría Salud y Estética en Progreso" data-query-en="Health and Beauty Category in Progreso">🏥 Salud & Estética</div>
+                    <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-blue-500 bg-blue-50 text-blue-700 cursor-pointer transition hover:bg-blue-100" data-query-es="Categoría Compras y Tiendas en Progreso" data-query-en="Shopping and Stores Category in Progreso">🛍️ Compras</div>
+                    <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-purple-500 bg-purple-50 text-purple-700 cursor-pointer transition hover:bg-purple-100" data-query-es="Categoría Entretenimiento y Atracciones en Progreso" data-query-en="Entertainment and Attractions Category in Progreso">🎺 Entretenimiento</div>
+                    <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-yellow-500 bg-yellow-50 text-yellow-700 cursor-pointer transition hover:bg-yellow-100" data-query-es="Top 10 Dentistas en Progreso" data-query-en="Top 10 Dentists in Progreso">🦷 Top 10 Dental</div>
                 </div>
             </div>
 
@@ -131,8 +133,8 @@
                 <div class="inline-flex space-x-3 pt-2">
                     <div id="btn-categorias" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-gray-200 text-gray-800 cursor-pointer transition hover:bg-gray-300" data-action="CATEGORIES">📂 Categorías</div>
                     <div id="btn-lenguaje" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-gray-200 text-gray-800 cursor-pointer transition hover:bg-gray-300" data-action="LANGUAGE">🌐 Lenguaje</div>
-                    <div id="btn-comollegar" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-gray-200 text-gray-800 cursor-pointer transition hover:bg-gray-300" data-action="GET_THERE" data-query="Dime cómo llegar a Progreso, Tamaulipas.">📍 Cómo Llegar</div>
-                    <div id="btn-info" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-gray-200 text-gray-800 cursor-pointer transition hover:bg-gray-300" data-action="INFO" data-query="Información general sobre Nuevo Progreso.">ℹ️ Info</div>
+                    <div id="btn-comollegar" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-gray-200 text-gray-800 cursor-pointer transition hover:bg-gray-300" data-action="GET_THERE" data-query-es="Dime cómo llegar a Progreso, Tamaulipas." data-query-en="Tell me how to get to Progreso, Tamaulipas.">📍 Cómo Llegar</div>
+                    <div id="btn-info" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-gray-200 text-gray-800 cursor-pointer transition hover:bg-gray-300" data-action="INFO" data-query-es="Información general sobre Nuevo Progreso." data-query-en="General information about Nuevo Progreso.">ℹ️ Info</div>
                 </div>
             </div>
         </div>
@@ -143,7 +145,8 @@
                 
                 <button id="go-button" class="go-button transition hover:opacity-90 disabled:opacity-50">
                     <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 122.88 122.88" class="h-5 w-5"><g><path class="st0" d="M62.43,122.88h-1.98c0-16.15-6.04-30.27-18.11-42.34C30.27,68.47,16.16,62.43,0,62.43v-1.98 c16.16,0,30.27-6.04,42.34-18.14C54.41,30.21,60.45,16.1,60.45,0h1.98c0,16.15,6.04,30.27,18.11,42.34 c12.07,12.07,26.18,18.11,42.34,18.11v1.98c-16.15,0-30.27,6.04-42.34,18.11C68.47,92.61,62.43,106.72,62.43,122.88L62.43,122.88z"/></g></svg>
-                    <span id="go-text">Go</span> </button>
+                    <span id="go-text">Go</span> 
+                </button>
             </div>
         </div>
         </div>
@@ -151,11 +154,10 @@
 <script>
     // --- BLOQUE JAVASCRIPT: SETUP Y UTILIDADES ---
     
-    // ✅ RUTA RELATIVA: Usamos /api. Como el frontend y el backend están en el mismo dominio (Vercel), el CORS se elimina.
     const BACKEND_URL = "/api"; 
     
     let chatHistory = [];
-    let currentLanguage = 'es'; // Estado inicial del idioma
+    let currentLanguage = 'es'; 
     let categoriesVisible = false; 
     let languageMenuVisible = false; 
 
@@ -171,7 +173,7 @@
     const languageChips = document.querySelectorAll('#language-chips-group .language-chip');
     const menuActionChips = document.querySelectorAll('#menu-actions .menu-action-chip');
     
-    // Objeto de Traducción
+    // Objeto de Traducción y textos de chips
     const UI_STRINGS = {
         es: {
             header: "PROGRESO TOUR GUIDE",
@@ -181,6 +183,11 @@
             language: "🌐 Lenguaje",
             getThere: "📍 Cómo Llegar",
             info: "ℹ️ Info",
+            alertStructured: (name) => `¡Ficha generada por IA para ${name}!`,
+            chipHealth: "🏥 Salud & Estética",
+            chipShopping: "🛍️ Compras",
+            chipEntertainment: "🎺 Entretenimiento",
+            chipDental: "🦷 Top 10 Dental",
         },
         en: {
             header: "PROGRESO TOUR GUIDE",
@@ -190,6 +197,11 @@
             language: "🌐 Language",
             getThere: "📍 How to get there",
             info: "ℹ️ Info",
+            alertStructured: (name) => `AI card generated for ${name}!`,
+            chipHealth: "🏥 Health & Beauty",
+            chipShopping: "🛍️ Shopping",
+            chipEntertainment: "🎺 Entertainment",
+            chipDental: "🦷 Top 10 Dental",
         }
     };
 
@@ -221,24 +233,15 @@
         if (inputElement) inputElement.placeholder = d ? "" : UI_STRINGS[currentLanguage].placeholder;
     }
 
-    // --- NUEVAS FUNCIONES DE INTERACCIÓN ---
+    // --- FUNCIONES DE INTERACCIÓN ---
 
-    // Función para la vibración del dispositivo
+    // Función para la vibración del dispositivo (Haptic Feedback)
     function vibrateDevice() {
         if ("vibrate" in navigator) {
-            navigator.vibrate(100); // 100ms de vibración
+            navigator.vibrate(100); 
         }
     }
     
-    // Aplica la animación de vibración visual (CSS) y llama a la vibración del dispositivo
-    function triggerVibration(element) {
-        vibrateDevice();
-        element.classList.add('vibrating');
-        setTimeout(() => {
-            element.classList.remove('vibrating');
-        }, 300); 
-    }
-
     // Oculta un grupo de chips (categoría o idioma)
     function hideChipGroup(groupElement, chipElements) {
         groupElement.classList.add('hidden');
@@ -248,7 +251,7 @@
     }
 
     // Muestra un grupo de chips con efecto "ola"
-    function showChipGroupWithWave(groupElement, chipElements, callback) {
+    function showChipGroupWithWave(groupElement, chipElements) {
         groupElement.classList.remove('hidden');
         chipElements.forEach((chip, index) => {
             // Reinicia la animación
@@ -262,7 +265,6 @@
             setTimeout(() => {
                 chip.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
                 chip.classList.add('visible-chip');
-                if (index === chipElements.length - 1 && callback) { callback(); }
             }, index * 100); 
         });
     }
@@ -286,18 +288,25 @@
         document.getElementById('btn-comollegar').textContent = strings.getThere;
         document.getElementById('btn-info').textContent = strings.info;
 
-        // 3. Notificar al usuario
+        // 3. Actualizar textos de los chips de categoría
+        const categoryChipTexts = [strings.chipHealth, strings.chipShopping, strings.chipEntertainment, strings.chipDental];
+        categoryChips.forEach((chip, index) => {
+            chip.textContent = categoryChipTexts[index];
+        });
+
+        // 4. Notificar al usuario
         alertUser(`Interfaz y conversación cambiadas a ${lang === 'es' ? 'Español' : 'English'}`, 'i');
     }
 
     // Maneja la acción de los botones del menú principal
     function handleMenuAction(actionChip) {
         const action = actionChip.getAttribute('data-action');
-        const query = actionChip.getAttribute('data-query');
+        const lang = currentLanguage;
+        const query = actionChip.getAttribute(`data-query-${lang}`);
 
-        triggerVibration(actionChip);
+        vibrateDevice(); // Solo vibra el dispositivo
 
-        // Ocultar categorías y lenguaje si no son el objetivo
+        // Lógica para ocultar otros menús
         if (action !== 'CATEGORIES' && categoriesVisible) {
             hideChipGroup(categoryChipsGroup, categoryChips);
             categoriesVisible = false;
@@ -355,12 +364,13 @@
                 
                 content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">¡Claro! Aquí está la información sobre **${placeName}** que tengo como tu guía local:<br><br>${m.text}</div>`;
                 
+                // Los textos de los botones son fijos, pero la ficha y la conversación serán en el idioma correcto.
                 const actionsBar = `
                     <div class="action-bar-container">
                         <div class="inline-flex space-x-3 p-1">
-                            <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition flex-shrink-0 text-sm">Ver en Mapa 🗺️</a>
-                            <a href="${phoneUrl}" class="action-btn ${isGenericPhone ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600' } text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">Llamar 📞</a>
-                            <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-500 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-600 transition flex-shrink-0 text-sm">Buscar en Google 🔍</a>
+                            <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Ver en Mapa 🗺️' : 'View on Map 🗺️'}</a>
+                            <a href="${phoneUrl}" class="action-btn ${isGenericPhone ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600' } text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}</a>
+                            <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-500 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-600 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Buscar en Google 🔍' : 'Search on Google 🔍'}</a>
                         </div>
                     </div>
                 `;
@@ -384,28 +394,28 @@
         }
     }
 
-    // --- BLOQUE JAVASCRIPT: LÓGICA CENTRAL Y EVENTOS ---
+    // --- LÓGICA DE CONEXIÓN CON GEMINI (AJUSTE DE IDIOMA EN PROMPT) ---
 
     // Función que llama al proxy de Vercel (con ajuste de idioma)
     async function getGeminiResponse(userPrompt, chatHistoryForAPI) {
         
         const LATITUDE = 26.064;
         const LONGITUDE = -98.005;
+        // ⭐ Clave del cambio: el prompt ahora exige la respuesta en el idioma seleccionado.
         const targetLang = currentLanguage === 'es' ? 'en español' : 'in English';
 
-        // SYSTEM PROMPT RESTABLECIDO: Prioriza SIEMPRE la ficha JSON, e INCLUYE el requisito de idioma.
         const systemPrompt = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (${LATITUDE}, ${LONGITUDE}). Tu objetivo principal es ofrecer una ficha estructurada con información útil para el turista.
         
         **REGLAS DE RESPUESTA:**
         1.  **RESPONDE SIEMPRE ${targetLang}.**
         2.  **SIEMPRE responde con el objeto JSON requerido**, independientemente de si tienes información verificada del lugar. Si no conoces el lugar exacto, inventa una descripción plausible y un número de teléfono genérico (+52 899 900 0000) para asegurar que la ficha de información se muestre al usuario.
-        3.  Si el usuario pide una lista o recomendación general (ej: "5 restaurantes"), genera una descripción general en la ficha JSON y usa un nombre genérico (ej: "Restaurantes Populares").
+        3.  Si el usuario pide una lista o recomendación general (ej: "5 restaurants"), genera una descripción general en la ficha JSON y usa un nombre genérico (ej: "Popular Restaurants").
             
         **FORMATO JSON REQUERIDO:**
         \`\`\`json
         {
-          "placeName": "Nombre del Lugar (Puede ser inventado o genérico si no se encuentra)",
-          "description": "Saludo y descripción corta y atractiva sobre el lugar.",
+          "placeName": "Nombre del Lugar (SIEMPRE en el idioma solicitado)",
+          "description": "Saludo y descripción corta y atractiva sobre el lugar (SIEMPRE en el idioma solicitado).",
           "placePhone": "+52 899 900 0000",
           "isStructured": true
         }
@@ -413,11 +423,10 @@
         
         Responde a la siguiente solicitud del usuario.
         `;
-        // FIN SYSTEM PROMPT RESTABLECIDO
 
         let contents = [];
         chatHistoryForAPI.forEach(m => {
-            let textToSend = m.isStructured ? `[PROGRESO TOUR GUIDE ENVIÓ FICHA sobre ${m.placeName}]` : m.text;
+            let textToSend = m.isStructured ? `[PROGRESO TOUR GUIDE SENT CARD about ${m.placeName}]` : m.text;
             if (m.role && textToSend && textToSend.length > 5) { contents.push({ role: m.role, parts: [{ text: textToSend }] }); }
         });
 
@@ -441,7 +450,7 @@
         } catch (error) {
             console.error("Fallo del Proxy o API de Gemini:", error);
             if (typeof alertUser === 'function') {
-                alertUser(UI_STRINGS[currentLanguage].alertError(error.message), 'error');
+                alertUser(`Error de conexión: ${error.message}.`, 'error');
             }
             return null;
         }
@@ -517,8 +526,8 @@
     // 2. Listeners para los chips de categorías (los que envían queries)
     categoryChips.forEach(chip => {
         chip.addEventListener('click', function() {
-            // Ya no ocultamos aquí, la persistencia es por el click en otro botón de menú
-            const query = this.getAttribute('data-query');
+            const lang = currentLanguage;
+            const query = this.getAttribute(`data-query-${lang}`);
             handleSend(query); 
         });
     });
@@ -533,10 +542,9 @@
 
     // Inicializar el idioma de la interfaz al cargar
     document.addEventListener('DOMContentLoaded', () => {
-        // Inicializamos la interfaz en Español por defecto (ya que el HTML está en ES)
+        // Inicializamos la interfaz en Español por defecto, lo que también actualiza los chips
         setInterfaceLanguage('es'); 
     });
-
 </script>
 </body>
 </html>
