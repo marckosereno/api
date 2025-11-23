@@ -3,9 +3,8 @@
   "buildCommand": "echo 'No build step required'",
   "functions": {
     "api/*.js": {
-      "runtime": "@vercel/node@20.x"
-     }
-    
+      "runtime": "nodejs20.x" 
+      // Usamos el formato simple "nodejs20.x" para evitar el error de "valid version"
+    }
   }
-  
 }
