@@ -103,15 +103,22 @@
             margin-top: 2px;
         }
 
-        /* --- NUEVO CSS: Efecto de Desvanecimiento Suave --- */
+        /* --- NUEVO CSS CORREGIDO: Efecto de Desvanecimiento Suave --- */
 
-        /* 1. Prepara el contenedor de mensajes */
+        /* 1. Prepara el contenedor de mensajes (Solo posición relativa) */
         #message-container {
             position: relative;
-            padding-top: 50px; /* Espacio para que el gradiente sea visible */
+            /* Se quitó el padding-top: 50px */
         }
 
-        /* 2. Crea la máscara de difuminación (el efecto de desvanecimiento) */
+        /* 2. Fija el Header y le da alto z-index */
+        .header-container {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        /* 3. Crea la máscara de difuminación (el efecto de desvanecimiento) */
         #message-container::before {
             content: ''; 
             position: absolute;
@@ -119,7 +126,7 @@
             left: 0;
             right: 0;
             height: 50px; /* Altura del área de difuminación */
-            z-index: 50; /* Debe estar por encima de los mensajes */
+            z-index: 50; 
             
             /* El gradiente va de blanco (color del header) a transparente */
             background: linear-gradient(
@@ -127,13 +134,12 @@
                 rgba(255, 255, 255, 1) 0%, 
                 rgba(255, 255, 255, 0) 100% 
             );
-            background-color: transparent; 
-        }
-
-        /* 3. Asegura que el HEADER esté sobre el gradiente */
-        .header-container {
-            position: relative;
-            z-index: 100;
+            
+            /* **CRÍTICO:** Mueve esta capa hacia abajo para que empiece justo debajo del header. 
+               Asumimos que la altura total del header es ~74px. */
+            transform: translateY(74px); 
+            
+            pointer-events: none; /* Permite clickear/scrollear a través de él */
         }
 
     </style>
@@ -141,6 +147,7 @@
 </head>
 <body>
     <div id="chat-window" class="chat-window h-screen w-full"> 
+        
         <div class="header-container flex items-center justify-between p-4 bg-white text-gray-800 font-bold border-b border-gray-200 flex-shrink-0 shadow-sm">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
             <span id="header-text" class="text-lg">PROGRESO TOUR GUIDE</span>
@@ -528,7 +535,7 @@
         
         // Limitar historial para el backend (optimizacion)
         const MAX_MESSAGES = 10; 
-        let limitedHistory = historyForGemini.length > MAX_MESSAGES ? historyForGemini.slice(historyForGemini.length - MAX_MESSAGES) : historyForGemini;
+        let limitedHistory = historyForGemini.length > MAX_MESSAGES ? historyForAPI.slice(historyForGemini.length - MAX_MESSAGES) : historyForGemini;
         
         let modelResponseText = await getGeminiResponse(userPrompt, limitedHistory);
         
