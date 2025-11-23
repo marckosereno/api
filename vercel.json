@@ -1,0 +1,9 @@
+{
+  "installCommand": "npm install",
+  "buildCommand": "echo 'No build step required'",
+  "functions": {
+    "api/*.js": {
+      "runtime": "nodejs20.x"
+    }
+  }
+}
