@@ -8,7 +8,10 @@
                 
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
-        /* Estilos base */
+        /* ========================================================= */
+        /* BASE & LAYOUT */
+        /* ========================================================= */
+
         html, body { font-family:Avenir; height: 100%; margin: 0; padding: 0; }
         .chat-window { height: 100%; width: 100vw; display: flex; flex-direction: column; background-color: #f7f7f7; overflow: hidden }
         .user-bubble { border-radius: 18px 18px 0 18px; max-width: 80% }
@@ -17,7 +20,7 @@
         .action-btn { white-space: nowrap }
         .chip-group-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
         
-        /* Estilo de la barra de chat */
+        /* Estilo de la barra de chat (Input inferior) */
         .map-search-bar {
             background-color: white; 
             border-radius: 20px;
@@ -32,7 +35,7 @@
         .map-input {
             flex-grow: 1;
             padding: 0.75rem 0.75rem; 
-            color: #9ca3af;
+            color: #1f2937;
             font-size: 1.125rem;
             background: transparent;
             border: none;
@@ -50,7 +53,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: hover:opacity-90 disabled:opacity-50;
+            transition: opacity 0.3s;
             flex-shrink: 0;
             min-width: 60px;
             height: 44px;
@@ -58,21 +61,9 @@
             margin-right: 4px;
             outline: none !important;
         }
-        .go-button svg {
-            margin-right: 0.25rem;
-            width: 1.25rem; 
-            height: 1.25rem;
-            fill: currentColor;
-        }
 
-        /* --- Eliminación de Efecto Celeste/Ring/Highlight en TODOS los botones y chips --- */
-        
-        /* 1. Para navegadores basados en Webkit (Chrome, Safari, Android) */
-        * {
-            -webkit-tap-highlight-color: transparent !important; /* SOLUCIÓN CLAVE para el toque en móvil */
-        }
-        
-        /* 2. Asegura la eliminación del outline/ring en estados focus/active */
+        /* Eliminación de Efecto Celeste/Ring/Highlight en TODOS los botones y chips */
+        * { -webkit-tap-highlight-color: transparent !important; }
         .action-chip, .category-chip, .language-chip, .go-button, .map-input {
             outline: none !important;
             box-shadow: none !important;
@@ -83,11 +74,9 @@
             box-shadow: none !important;
             --tw-ring-color: transparent !important;
         }
-        .hover\:bg-gray-300:active {
-            background-color: #d1d5db; /* mantiene el color del hover al hacer click */
-        }
+        .hover\:bg-gray-300:active { background-color: #d1d5db; }
         
-        /* --- Efecto Ola y Transición para los Chips --- */
+        /* Efecto Ola y Transición para los Chips */
         .category-chip, .language-chip {
             opacity: 0;
             transform: translateY(20px);
@@ -103,21 +92,106 @@
 
         /* Estilo para el Timestamp */
         .timestamp {
-            font-size: 0.7rem; /* Fuente pequeña */
-            color: #9ca3af; /* Color gris suave */
+            font-size: 0.7rem;
+            color: #9ca3af; 
             margin-top: 2px;
         }
+
+
+        /* ========================================================= */
+        /* ⭐ NUEVOS ESTILOS DEL HEADER (Frosted Glass) ⭐ */
+        /* ========================================================= */
+        .header-bar {
+            background-color: rgba(255, 255, 255, 0.85); /* Fondo blanco semi-transparente */
+            position: absolute; 
+            top: 0;
+            left: 0;
+            z-index: 10;
+            width: 100%;
+            border-bottom: none !important;
+            box-shadow: none !important;
+            color: #1f2937;
+            
+            /* Efecto Frosted Glass/Desenfoque de fondo */
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            /* Sombra sutil inferior como en la imagen */
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05); 
+        }
+        
+        /* Ajustar el contenedor de mensajes para que no esté debajo del header transparente */
+        #message-container {
+            padding-top: 5.5rem; /* Ajuste el padding para dejar espacio suficiente */
+        }
+
+        /* 1. Icono Izquierdo: Estilo del avatar redondo */
+        .ai-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid #e5e7eb; /* Borde sutil */
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 2. Botón de Compartir (Share) - Estilo Ovalado con Sombra */
+        .share-button {
+            background-color: white;
+            color: #1f2937; 
+            font-weight: 600; /* Semibold */
+            border: none;
+            border-radius: 9999px; /* Fully rounded/Ovalado */
+            padding: 0.5rem 1rem; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+            cursor: pointer;
+            font-size: 1rem;
+            height: 40px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Sombra más fuerte */
+        }
+        .share-button:hover {
+            background-color: #f3f4f6;
+        }
+        .share-button svg {
+            margin-right: 0.25rem;
+            width: 1.125rem; /* H-5 */
+            height: 1.125rem; /* W-5 */
+        }
+
+        /* 3. Icono Derecho: Tres Puntos */
+        .dots-icon {
+            color: #4b5563; /* Gris oscuro para mayor contraste */
+        }
+
     </style>
     <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
 </head>
 <body>
     <div id="chat-window" class="chat-window h-screen w-full"> 
-        <div class="flex items-center justify-between p-4 bg-white text-gray-800 font-bold border-b border-gray-200 flex-shrink-0 shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
-            <span id="header-text" class="text-lg">PROGRESO TOUR GUIDE</span>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+        
+        <div class="header-bar flex items-center justify-between p-4 flex-shrink-0">
+            
+            <div class="ai-avatar flex items-center justify-center bg-gray-100">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                </svg>
+            </div>
+            
+            <button id="share-button" class="share-button">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.882 13.255 9 13.111 9 12.879V5.5L16.5 12 9 18.5v-7.379c0-.232-.118-.376-.316-.463l-4-1.75V11.5l4 1.75zM12 21a9 9 0 100-18 9 9 0 000 18z"/>
+                </svg>
+                <span id="share-text">Share</span>
+            </button>
+            
+            <div class="cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 dots-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
+                </svg>
+            </div>
         </div>
-
         <div id="message-container" class="flex-grow overflow-y-auto p-4 flex flex-col"></div>
 
         <div id="loading-indicator" class="flex justify-start hidden p-4 pl-1 flex-shrink-0" style="margin-left:-42px;margin-bottom:-22px;">
@@ -179,6 +253,7 @@
     // Referencias a Elementos del DOM
     const inputElement = document.getElementById('user-input');
     const sendButton = document.getElementById('go-button'); 
+    const shareButton = document.getElementById('share-button'); 
     const messageContainer = document.getElementById('message-container');
     const loadingIndicator = document.getElementById('loading-indicator');
     const appAlertContainer = document.getElementById('app-alert-container');
@@ -191,7 +266,7 @@
     // Objeto de Traducción y textos de chips
     const UI_STRINGS = {
         es: {
-            header: "PROGRESO TOUR GUIDE",
+            shareText: "Compartir", 
             placeholder: "Pregúntale al mapa",
             goButton: "Ir",
             categories: "📂 Categorías",
@@ -199,13 +274,15 @@
             getThere: "📍 Cómo Llegar",
             info: "ℹ️ Info",
             alertStructured: (name) => `¡Ficha generada por IA para ${name}!`,
+            shareTitle: "Progreso Tour Guide Chat",
+            shareText: "¡Revisa este chat con Progreso Tour Guide! Descubre los mejores lugares en Nuevo Progreso, Tamaulipas.",
             chipHealth: "🏥 Salud & Estética",
             chipShopping: "🛍️ Compras",
             chipEntertainment: "🎺 Entretenimiento",
             chipDental: "🦷 Top 10 Dental",
         },
         en: {
-            header: "PROGRESO TOUR GUIDE",
+            shareText: "Share",
             placeholder: "Ask the map",
             goButton: "Go",
             categories: "📂 Categories",
@@ -213,6 +290,8 @@
             getThere: "📍 How to get there",
             info: "ℹ️ Info",
             alertStructured: (name) => `AI card generated for ${name}!`,
+            shareTitle: "Progreso Tour Guide Chat",
+            shareText: "Check out this chat with Progreso Tour Guide! Discover the best places in Nuevo Progreso, Tamaulipas.",
             chipHealth: "🏥 Health & Beauty",
             chipShopping: "🛍️ Shopping",
             chipEntertainment: "🎺 Entertainment",
@@ -296,7 +375,7 @@
         languageMenuVisible = false;
 
         // Actualizar textos de la interfaz
-        document.getElementById('header-text').textContent = strings.header;
+        document.getElementById('share-text').textContent = strings.shareText; 
         inputElement.placeholder = strings.placeholder;
         document.getElementById('go-text').textContent = strings.goButton; 
 
@@ -313,6 +392,37 @@
 
         alertUser(`Interfaz y conversación cambiadas a ${lang === 'es' ? 'Español' : 'English'}`, 'i');
     }
+
+    // FUNCIÓN NATIVA DE COMPARTIR
+    async function handleShare() {
+        vibrateDevice();
+
+        const shareData = {
+            title: UI_STRINGS[currentLanguage].shareTitle,
+            text: UI_STRINGS[currentLanguage].shareText,
+            url: window.location.href, 
+        };
+
+        if (navigator.share) {
+            try {
+                await navigator.share(shareData);
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    alertUser(`Error al compartir: ${err.message}`, 'error');
+                    console.error('Error sharing:', err);
+                }
+            }
+        } else {
+            alertUser('La función de compartir no es compatible con este dispositivo. Copiando al portapapeles...', 'i');
+            navigator.clipboard.writeText(shareData.text + " " + shareData.url).then(() => {
+                alertUser('URL y texto copiados al portapapeles.', 'i');
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                alertUser('Falló la copia al portapapeles.', 'error');
+            });
+        }
+    }
+
 
     // LÓGICA DE OCULTAMIENTO REVISADA: Solo los botones del menú principal (action chips) controlan la visibilidad.
     function handleMenuAction(actionChip) {
@@ -505,7 +615,7 @@
 
         if (typeof toggleInput === 'function') toggleInput(true);
         
-        // ⭐ Almacenar el tiempo de envío del usuario
+        // Almacenar el tiempo de envío del usuario
         chatHistory.push({ role: 'user', text: userPrompt, timestamp: new Date() });
         if (typeof renderChat === 'function') renderChat();
         inputElement.value = '';
@@ -518,7 +628,7 @@
         
         let modelResponseText = await getGeminiResponse(userPrompt, limitedHistory);
         
-        // ⭐ Almacenar el tiempo de respuesta del modelo
+        // Almacenar el tiempo de respuesta del modelo
         let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date() };
 
         // Intenta parsear la respuesta como JSON estructurado
@@ -557,6 +667,11 @@
     if (sendButton) sendButton.addEventListener('click', () => handleSend());
     if (inputElement) inputElement.addEventListener('keypress', function(e) { if (e.key === 'Enter') { handleSend(); } });
     
+    // Listener para el botón Share
+    if (shareButton) {
+        shareButton.addEventListener('click', handleShare);
+    }
+
     // Listeners para botones del menú principal (Categorías, Lenguaje, etc.)
     menuActionChips.forEach(chip => {
         chip.addEventListener('click', function() {
