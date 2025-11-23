@@ -69,7 +69,7 @@
         
         /* 1. Para navegadores basados en Webkit (Chrome, Safari, Android) */
         * {
-            -webkit-tap-highlight-color: transparent !important; /* ⭐ SOLUCIÓN CLAVE para el toque en móvil */
+            -webkit-tap-highlight-color: transparent !important; /* SOLUCIÓN CLAVE para el toque en móvil */
         }
         
         /* 2. Asegura la eliminación del outline/ring en estados focus/active */
@@ -99,6 +99,13 @@
         .visible-chip {
             opacity: 1;
             transform: translateY(0);
+        }
+
+        /* Estilo para el Timestamp */
+        .timestamp {
+            font-size: 0.7rem; /* Fuente pequeña */
+            color: #9ca3af; /* Color gris suave */
+            margin-top: 2px;
         }
     </style>
     <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
@@ -216,6 +223,18 @@
     // Inicialización del estado
     if (inputElement) inputElement.disabled = false;
     if (sendButton) sendButton.disabled = false;
+
+    // --- Funciones de utilidad de tiempo ---
+    function formatTime(date) {
+        if (!date) return '';
+        let hours = date.getHours();
+        const minutes = date.getMinutes();
+        const ampm = hours >= 12 ? 'pm' : 'am';
+        hours = hours % 12;
+        hours = hours ? hours : 12; // the hour '0' should be '12'
+        const minutesStr = minutes < 10 ? '0'+minutes : minutes;
+        return hours + ':' + minutesStr + ' ' + ampm;
+    }
 
     function alertUser(m, t='i') {
         if (appAlertContainer && appAlertContainer.querySelector('.app-alert')) appAlertContainer.querySelector('.app-alert').remove();
@@ -345,9 +364,18 @@
     function createMessageBubble(m) {
         const w = document.createElement('div');
         
+        // Formatear el tiempo
+        const timeStr = m.timestamp ? formatTime(m.timestamp) : '';
+        const timeSpan = timeStr ? `<span class="timestamp">${timeStr}</span>` : '';
+
         if (m.role === 'user') { 
             w.className = 'flex justify-end mb-2'; 
-            w.innerHTML = `<div class="user-bubble bg-blue-500 text-white p-3 shadow-md">${m.text}</div>`; 
+            w.innerHTML = `
+                <div class="flex flex-col items-end">
+                    <div class="user-bubble bg-blue-500 text-white p-3 shadow-md">${m.text}</div>
+                    ${timeSpan}
+                </div>
+            `; 
         } 
         else if (m.role === 'model') {
             w.className = 'flex flex-col justify-start w-full mb-2';
@@ -373,11 +401,22 @@
                     </div>
                 `;
                 
-                w.innerHTML = content + actionsBar;
+                w.innerHTML = `
+                    <div class="flex flex-col items-start">
+                        ${content}
+                        ${actionsBar}
+                        ${timeSpan}
+                    </div>
+                `;
 
             } else {
                 content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">${m.text || ''}</div>`;
-                w.innerHTML = content;
+                w.innerHTML = `
+                    <div class="flex flex-col items-start">
+                        ${content}
+                        ${timeSpan}
+                    </div>
+                `;
             }
         }
         return w;
@@ -465,7 +504,9 @@
         languageMenuVisible = false;
 
         if (typeof toggleInput === 'function') toggleInput(true);
-        chatHistory.push({ role: 'user', text: userPrompt });
+        
+        // ⭐ Almacenar el tiempo de envío del usuario
+        chatHistory.push({ role: 'user', text: userPrompt, timestamp: new Date() });
         if (typeof renderChat === 'function') renderChat();
         inputElement.value = '';
 
@@ -476,7 +517,9 @@
         let limitedHistory = historyForGemini.length > MAX_MESSAGES ? historyForGemini.slice(historyForGemini.length - MAX_MESSAGES) : historyForGemini;
         
         let modelResponseText = await getGeminiResponse(userPrompt, limitedHistory);
-        let finalMessage = { role: 'model', text: modelResponseText };
+        
+        // ⭐ Almacenar el tiempo de respuesta del modelo
+        let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date() };
 
         // Intenta parsear la respuesta como JSON estructurado
         try {
@@ -494,7 +537,8 @@
                         text: parsedJson.description || modelResponseText,
                         placeName: parsedJson.placeName || "Lugar Desconocido", 
                         placePhone: parsedJson.placePhone || null, 
-                        placeId: true 
+                        placeId: true,
+                        timestamp: finalMessage.timestamp // Reutiliza el timestamp
                     };
                     if (typeof alertUser === 'function') alertUser(UI_STRINGS[currentLanguage].alertStructured(finalMessage.placeName), "i");
                 }
