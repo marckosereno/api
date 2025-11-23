@@ -169,6 +169,7 @@
 <script>
     // --- BLOQUE JAVASCRIPT: SETUP Y UTILIDADES ---
     
+    // **NOTA: Cambiará la ruta de llamada para la función serverless**
     const BACKEND_URL = "/api"; 
     
     let chatHistory = [];
@@ -383,6 +384,7 @@
 
             if (m.isStructured) { 
                 const placeName = m.placeName || 'Ubicación'; 
+                // **NOTA: URL del mapa corregida para ser funcional**
                 const nameAndCity = encodeURIComponent(placeName + " Nuevo Progreso Tamps");
                 const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${nameAndCity}`; 
                 const searchUrl = `https://www.google.com/search?q=${nameAndCity}`;
@@ -430,67 +432,52 @@
         }
     }
 
-    // --- LÓGICA DE CONEXIÓN CON GEMINI (AJUSTE DE IDIOMA Y MODO CONVERSACIONAL) ---
+    // --- CÓDIGO A REEMPLAZAR: LÓGICA DE CONEXIÓN CON GEMINI (AJUSTADA AL BACKEND) ---
 
     async function getGeminiResponse(userPrompt, chatHistoryForAPI) {
         
-        const LATITUDE = 26.064;
-        const LONGITUDE = -98.005;
-        const targetLang = currentLanguage === 'es' ? 'en español' : 'in English';
-        
-        // El prompt ahora define cuándo usar el JSON y cuándo no.
-        const systemPrompt = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (${LATITUDE}, ${LONGITUDE}).
-        
-        **REGLAS DE RESPUESTA:**
-        1. **RESPONDE SIEMPRE ${targetLang}.**
-        2. **MODO DE RESPUESTA:**
-           - **MODO FICHA (JSON):** Úsalo **SOLO** si la solicitud del usuario es claramente una búsqueda de un **lugar, negocio, servicio, o categoría específica** (ej: "mejor restaurante", "Top 10 Dentistas", "Salud y Estética").
-           - **MODO CONVERSACIONAL (Texto Plano):** Úsalo si la solicitud es general, de saludo, de seguimiento de chat, o preguntas abiertas (ej: "¿Cómo estás?", "¿Qué tal el clima?", "Gracias").
-        3. **FORMATO JSON REQUERIDO (Solo en MODO FICHA):**
-           \`\`\`json
-           {
-             "placeName": "Nombre del Lugar (en el idioma solicitado)",
-             "description": "Saludo y descripción corta y atractiva (en el idioma solicitado).",
-             "placePhone": "+52 899 900 0000",
-             "isStructured": true
-           }
-           \`\`\`
-        4. Si usas el MODO FICHA, la única respuesta debe ser el bloque JSON. Si usas el MODO CONVERSACIONAL, la respuesta debe ser texto plano.
-
-        Responde a la siguiente solicitud del usuario.
-        `;
-
-        let contents = [];
-        chatHistoryForAPI.forEach(m => {
-            let textToSend = m.isStructured ? `[PROGRESO TOUR GUIDE SENT CARD about ${m.placeName}]` : m.text;
-            if (m.role && textToSend && textToSend.length > 5) { contents.push({ role: m.role, parts: [{ text: textToSend }] }); }
+        // 1. Mapeamos el historial de nuestro chatHistory (con campos extras) 
+        // al formato limpio que espera el SDK de Gemini en el backend.
+        const historyForAPI = chatHistoryForAPI.map(m => {
+            // Aseguramos que solo enviamos el rol y el texto.
+            // Si es un mensaje del modelo estructurado, usamos el campo 'description' como texto.
+            const textContent = m.isStructured && m.description ? m.description : m.text;
+            
+            return {
+                role: m.role,
+                parts: [{ text: textContent }]
+            };
         });
 
-        contents.push({ role: "user", parts: [{ text: systemPrompt + "\n\nSolicitud del usuario: " + userPrompt }] });
-
         try {
-            const response = await fetch(BACKEND_URL, { 
+            // Cambiamos el endpoint de /api a /api/chat
+            const response = await fetch(BACKEND_URL + '/chat', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: contents }) 
+                body: JSON.stringify({ 
+                    history: historyForAPI, 
+                    userPrompt: userPrompt, 
+                    currentLanguage: currentLanguage // Enviamos el idioma para que el backend lo configure
+                }) 
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(`Error HTTP: ${response.status}. Mensaje: ${errorData.error.message || 'El proxy de Vercel falló.'}`);
+                throw new Error(`Error HTTP: ${response.status}. Mensaje: ${errorData.message || 'El servicio de chat falló.'}`);
             }
 
             const data = await response.json();
-            return data.candidates[0].content.parts[0].text.trim();
+            // El backend ahora solo devuelve el texto puro.
+            return data.responseText; 
 
         } catch (error) {
             console.error("Fallo del Proxy o API de Gemini:", error);
-            if (typeof alertUser === 'function') {
-                alertUser(`Error de conexión: ${error.message}.`, 'error');
-            }
+            alertUser(`Error de conexión: ${error.message}.`, 'error');
             return null;
         }
     }
+
+    // --- FIN DEL CÓDIGO A REEMPLAZAR ---
 
     // --- Lógica Principal del Chatbot (handleSend) ---
     async function handleSend(userPromptInput = null) {
@@ -513,7 +500,8 @@
         const historyForGemini = [...chatHistory];
         historyForGemini.pop(); 
         
-        const MAX_MESSAGES = 6;
+        // El límite de mensajes ahora es manejado por el historial enviado al backend.
+        const MAX_MESSAGES = 10; // Aumentado ligeramente ya que el backend maneja mejor el contexto.
         let limitedHistory = historyForGemini.length > MAX_MESSAGES ? historyForGemini.slice(historyForGemini.length - MAX_MESSAGES) : historyForGemini;
         
         let modelResponseText = await getGeminiResponse(userPrompt, limitedHistory);
@@ -534,7 +522,8 @@
                     finalMessage = {
                         role: 'model',
                         isStructured: true, 
-                        text: parsedJson.description || modelResponseText,
+                        // El campo 'text' ahora contendrá la descripción para que se muestre en la burbuja
+                        text: parsedJson.description || modelResponseText, 
                         placeName: parsedJson.placeName || "Lugar Desconocido", 
                         placePhone: parsedJson.placePhone || null, 
                         placeId: true,
@@ -544,6 +533,7 @@
                 }
             }
         } catch (e) {
+            // Si falla el parseo, el mensaje sigue siendo el texto plano original.
             finalMessage.text = modelResponseText;
         }
 
