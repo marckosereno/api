@@ -8,6 +8,7 @@
     "start": "node api/chat.js"
   },
   "dependencies": {
-    "@google/genai": "^0.1.0"
+    "@google/genai": "^0.1.1" 
+    // ¡CAMBIA ESTA LÍNEA A 0.1.1!
   }
 }
