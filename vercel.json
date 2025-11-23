@@ -1,9 +1,5 @@
 {
   "installCommand": "npm install",
-  "buildCommand": "echo 'No build step required'",
-  "functions": {
-    "api/*.js": {
-      "runtime": "nodejs22.x"
-    }
-  }
+  "buildCommand": "echo 'No build step required'"
+  // ¡Se eliminó la sección "functions" completa!
 }
