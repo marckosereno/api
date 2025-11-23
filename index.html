@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Progreso Tour Guide</title>
-<link href="https://fonts.cdnfonts.com/css/avenir" rel="stylesheet">
-                
+    <link href="https://fonts.cdnfonts.com/css/avenir" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
         /* Estilos base */
@@ -66,13 +65,9 @@
         }
 
         /* --- Eliminación de Efecto Celeste/Ring/Highlight en TODOS los botones y chips --- */
-        
-        /* 1. Para navegadores basados en Webkit (Chrome, Safari, Android) */
         * {
-            -webkit-tap-highlight-color: transparent !important; /* SOLUCIÓN CLAVE para el toque en móvil */
+            -webkit-tap-highlight-color: transparent !important; 
         }
-        
-        /* 2. Asegura la eliminación del outline/ring en estados focus/active */
         .action-chip, .category-chip, .language-chip, .go-button, .map-input {
             outline: none !important;
             box-shadow: none !important;
@@ -84,7 +79,7 @@
             --tw-ring-color: transparent !important;
         }
         .hover\:bg-gray-300:active {
-            background-color: #d1d5db; /* mantiene el color del hover al hacer click */
+            background-color: #d1d5db; 
         }
         
         /* --- Efecto Ola y Transición para los Chips --- */
@@ -103,16 +98,50 @@
 
         /* Estilo para el Timestamp */
         .timestamp {
-            font-size: 0.7rem; /* Fuente pequeña */
-            color: #9ca3af; /* Color gris suave */
+            font-size: 0.7rem; 
+            color: #9ca3af; 
             margin-top: 2px;
         }
+
+        /* --- NUEVO CSS: Efecto de Desvanecimiento Suave --- */
+
+        /* 1. Prepara el contenedor de mensajes */
+        #message-container {
+            position: relative;
+            padding-top: 50px; /* Espacio para que el gradiente sea visible */
+        }
+
+        /* 2. Crea la máscara de difuminación (el efecto de desvanecimiento) */
+        #message-container::before {
+            content: ''; 
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50px; /* Altura del área de difuminación */
+            z-index: 50; /* Debe estar por encima de los mensajes */
+            
+            /* El gradiente va de blanco (color del header) a transparente */
+            background: linear-gradient(
+                to bottom, 
+                rgba(255, 255, 255, 1) 0%, 
+                rgba(255, 255, 255, 0) 100% 
+            );
+            background-color: transparent; 
+        }
+
+        /* 3. Asegura que el HEADER esté sobre el gradiente */
+        .header-container {
+            position: relative;
+            z-index: 100;
+        }
+
     </style>
     <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
 </head>
 <body>
     <div id="chat-window" class="chat-window h-screen w-full"> 
-        <div class="flex items-center justify-between p-4 bg-white text-gray-800 font-bold border-b border-gray-200 flex-shrink-0 shadow-sm">
+        <div class="header-container flex items-center justify-between p-4 bg-white text-gray-800 font-bold border-b border-gray-200 flex-shrink-0 shadow-sm">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
             <span id="header-text" class="text-lg">PROGRESO TOUR GUIDE</span>
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
@@ -169,7 +198,7 @@
 <script>
     // --- BLOQUE JAVASCRIPT: SETUP Y UTILIDADES ---
     
-    // **NOTA: Cambiará la ruta de llamada para la función serverless**
+    // **NOTA: Ruta de llamada a la función serverless**
     const BACKEND_URL = "/api"; 
     
     let chatHistory = [];
@@ -217,7 +246,7 @@
             chipHealth: "🏥 Health & Beauty",
             chipShopping: "🛍️ Shopping",
             chipEntertainment: "🎺 Entertainment",
-            chipDental: "🦷 Top 10 Dental",
+            chipDental: "🦷 Top 10 Dentists",
         }
     };
 
@@ -386,9 +415,10 @@
                 const placeName = m.placeName || 'Ubicación'; 
                 // **NOTA: URL del mapa corregida para ser funcional**
                 const nameAndCity = encodeURIComponent(placeName + " Nuevo Progreso Tamps");
+                // La URL de Google Maps debe ser correcta para direcciones/búsquedas
                 const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${nameAndCity}`; 
                 const searchUrl = `https://www.google.com/search?q=${nameAndCity}`;
-                const phoneUrl = m.placePhone ? `tel:${m.placePhone}` : `javascript:alert('Número de teléfono no disponible. Intenta buscar en Google.')`;
+                const phoneUrl = m.placePhone ? `tel:${m.placePhone}` : `javascript:alert('${currentLanguage === 'es' ? 'Número de teléfono no disponible.' : 'Phone number not available.'}')`;
                 const isGenericPhone = !m.placePhone || m.placePhone === '+52 899 900 0000';
                 
                 content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">¡Claro! Aquí está la información sobre **${placeName}** que tengo como tu guía local:<br><br>${m.text}</div>`;
@@ -432,7 +462,7 @@
         }
     }
 
-    // --- CÓDIGO A REEMPLAZAR: LÓGICA DE CONEXIÓN CON GEMINI (AJUSTADA AL BACKEND) ---
+    // --- LÓGICA DE CONEXIÓN CON GEMINI (AJUSTADA AL BACKEND) ---
 
     async function getGeminiResponse(userPrompt, chatHistoryForAPI) {
         
@@ -440,8 +470,7 @@
         // al formato limpio que espera el SDK de Gemini en el backend.
         const historyForAPI = chatHistoryForAPI.map(m => {
             // Aseguramos que solo enviamos el rol y el texto.
-            // Si es un mensaje del modelo estructurado, usamos el campo 'description' como texto.
-            const textContent = m.isStructured && m.description ? m.description : m.text;
+            const textContent = m.isStructured ? m.description || m.text : m.text;
             
             return {
                 role: m.role,
@@ -450,14 +479,14 @@
         });
 
         try {
-            // Cambiamos el endpoint de /api a /api/chat
+            // Llamamos al endpoint serverless
             const response = await fetch(BACKEND_URL + '/chat', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     history: historyForAPI, 
                     userPrompt: userPrompt, 
-                    currentLanguage: currentLanguage // Enviamos el idioma para que el backend lo configure
+                    currentLanguage: currentLanguage // Enviamos el idioma
                 }) 
             });
 
@@ -467,7 +496,6 @@
             }
 
             const data = await response.json();
-            // El backend ahora solo devuelve el texto puro.
             return data.responseText; 
 
         } catch (error) {
@@ -477,14 +505,12 @@
         }
     }
 
-    // --- FIN DEL CÓDIGO A REEMPLAZAR ---
-
     // --- Lógica Principal del Chatbot (handleSend) ---
     async function handleSend(userPromptInput = null) {
         const userPrompt = userPromptInput || inputElement.value.trim();
         if (!userPrompt) return;
         
-        // Oculta los chips si el usuario escribe o usa un botón de acción rápida (Cómo Llegar/Info).
+        // Ocultar chips
         hideChipGroup(categoryChipsGroup, categoryChips);
         categoriesVisible = false;
         hideChipGroup(languageChipsGroup, languageChips);
@@ -492,7 +518,7 @@
 
         if (typeof toggleInput === 'function') toggleInput(true);
         
-        // ⭐ Almacenar el tiempo de envío del usuario
+        // Almacenar el tiempo de envío del usuario
         chatHistory.push({ role: 'user', text: userPrompt, timestamp: new Date() });
         if (typeof renderChat === 'function') renderChat();
         inputElement.value = '';
@@ -500,16 +526,16 @@
         const historyForGemini = [...chatHistory];
         historyForGemini.pop(); 
         
-        // El límite de mensajes ahora es manejado por el historial enviado al backend.
-        const MAX_MESSAGES = 10; // Aumentado ligeramente ya que el backend maneja mejor el contexto.
+        // Limitar historial para el backend (optimizacion)
+        const MAX_MESSAGES = 10; 
         let limitedHistory = historyForGemini.length > MAX_MESSAGES ? historyForGemini.slice(historyForGemini.length - MAX_MESSAGES) : historyForGemini;
         
         let modelResponseText = await getGeminiResponse(userPrompt, limitedHistory);
         
-        // ⭐ Almacenar el tiempo de respuesta del modelo
+        // Almacenar el tiempo de respuesta del modelo
         let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date() };
 
-        // Intenta parsear la respuesta como JSON estructurado
+        // Intenta parsear la respuesta como JSON estructurado (sin la Places API)
         try {
             const jsonStart = modelResponseText.indexOf('{');
             const jsonEnd = modelResponseText.lastIndexOf('}');
@@ -522,18 +548,16 @@
                     finalMessage = {
                         role: 'model',
                         isStructured: true, 
-                        // El campo 'text' ahora contendrá la descripción para que se muestre en la burbuja
                         text: parsedJson.description || modelResponseText, 
                         placeName: parsedJson.placeName || "Lugar Desconocido", 
                         placePhone: parsedJson.placePhone || null, 
                         placeId: true,
-                        timestamp: finalMessage.timestamp // Reutiliza el timestamp
+                        timestamp: finalMessage.timestamp 
                     };
                     if (typeof alertUser === 'function') alertUser(UI_STRINGS[currentLanguage].alertStructured(finalMessage.placeName), "i");
                 }
             }
         } catch (e) {
-            // Si falla el parseo, el mensaje sigue siendo el texto plano original.
             finalMessage.text = modelResponseText;
         }
 
