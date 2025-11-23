@@ -6,12 +6,12 @@
   "type": "module",
   "scripts": {
     "start": "node api/chat.js"
-    // <-- La última propiedad de este bloque (scripts) NO lleva coma.
+  
   }, 
-  // <-- Esta llave SÍ lleva coma para separar los bloques (scripts de dependencies).
+  
   "dependencies": {
     "@google/genai": "^0.1.1" 
-    // <-- La última propiedad de este bloque NO lleva coma.
+    
   }
 } 
-// <-- Esta es la llave de cierre final y NO lleva coma.
+
