@@ -1,5 +1,3 @@
 {
-  "installCommand": "npm install",
-  "buildCommand": "echo 'No build step required'"
-  // ¡Se eliminó la sección "functions" completa!
+  "installCommand": "npm install"
 }
