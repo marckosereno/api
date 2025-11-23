@@ -65,19 +65,26 @@
             fill: currentColor;
         }
 
-        /* --- Eliminación de Efecto Celeste/Ring en TODOS los botones y chips --- */
-        .action-chip, .category-chip, .language-chip {
+        /* --- Eliminación de Efecto Celeste/Ring/Highlight en TODOS los botones y chips --- */
+        
+        /* 1. Para navegadores basados en Webkit (Chrome, Safari, Android) */
+        * {
+            -webkit-tap-highlight-color: transparent !important; /* ⭐ SOLUCIÓN CLAVE para el toque en móvil */
+        }
+        
+        /* 2. Asegura la eliminación del outline/ring en estados focus/active */
+        .action-chip, .category-chip, .language-chip, .go-button, .map-input {
             outline: none !important;
             box-shadow: none !important;
             --tw-ring-color: transparent !important;
         }
-        .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active {
+        .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active, .go-button:focus, .go-button:active {
             outline: none !important;
             box-shadow: none !important;
             --tw-ring-color: transparent !important;
         }
         .hover\:bg-gray-300:active {
-            background-color: #d1d5db; /* color del hover */
+            background-color: #d1d5db; /* mantiene el color del hover al hacer click */
         }
         
         /* --- Efecto Ola y Transición para los Chips --- */
@@ -288,7 +295,7 @@
         alertUser(`Interfaz y conversación cambiadas a ${lang === 'es' ? 'Español' : 'English'}`, 'i');
     }
 
-    // ⭐ LÓGICA DE OCULTAMIENTO REVISADA: Solo los botones del menú principal (action chips) controlan la visibilidad.
+    // LÓGICA DE OCULTAMIENTO REVISADA: Solo los botones del menú principal (action chips) controlan la visibilidad.
     function handleMenuAction(actionChip) {
         const action = actionChip.getAttribute('data-action');
         const lang = currentLanguage;
@@ -451,7 +458,7 @@
         const userPrompt = userPromptInput || inputElement.value.trim();
         if (!userPrompt) return;
         
-        // ⭐ CORRECCIÓN: Oculta los chips si el usuario escribe o usa un botón de acción rápida (Cómo Llegar/Info).
+        // Oculta los chips si el usuario escribe o usa un botón de acción rápida (Cómo Llegar/Info).
         hideChipGroup(categoryChipsGroup, categoryChips);
         categoriesVisible = false;
         hideChipGroup(languageChipsGroup, languageChips);
@@ -513,7 +520,7 @@
         });
     });
 
-    // ⭐ CORRECCIÓN: Oculta chips de categoría después de usarlos.
+    // Oculta chips de categoría después de usarlos.
     categoryChips.forEach(chip => {
         chip.addEventListener('click', function() {
             const lang = currentLanguage;
@@ -525,7 +532,7 @@
         });
     });
 
-    // ⭐ CORRECCIÓN: Oculta chips de idioma después de usarlos (la función setInterfaceLanguage ya lo hace).
+    // Oculta chips de idioma después de usarlos (la función setInterfaceLanguage ya lo hace).
     languageChips.forEach(chip => {
         chip.addEventListener('click', function() {
             const lang = this.getAttribute('data-lang');
