@@ -3,7 +3,8 @@
   "buildCommand": "echo 'No build step required'",
   "functions": {
     "api/*.js": {
-      "runtime": "nodejs20.x"
+      "runtime": "@vercel/node@20.x" 
+      // ¡CAMBIA ESTA LÍNEA! Esto especifica correctamente el entorno Node.js
     }
   }
 }
