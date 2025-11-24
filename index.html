@@ -108,6 +108,7 @@
             border-bottom: none !important;
             box-shadow: none !important;
             padding: 1rem 1rem 0.5rem 1rem; 
+            height: 80px; /* Se define una altura fija para la máscara */
         }
         
         /* 2. El contenedor de chat deja espacio para el header fijo */
@@ -119,11 +120,11 @@
         /* 3. Crea la MÁSCARA DE DIFUMINACIÓN (El efecto de desvanecimiento) */
         #message-container::before {
             content: ''; 
-            position: sticky; /* Se usa sticky para que se pegue al scroll del contenedor */
+            position: absolute; /* CORRECCIÓN CLAVE: Usamos absolute en lugar de sticky */
             top: 0; 
             left: 0;
             right: 0;
-            height: 80px; /* Altura del área de difuminación */
+            height: 80px; /* Altura de la máscara, igual al padding-top */
             z-index: 50; 
             
             background: linear-gradient(
@@ -189,7 +190,7 @@
                 
                 <button id="go-button" class="go-button transition hover:opacity-90 disabled:opacity-50">
                     <svg version="1.1" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" xmlns:xlink="[http://www.w3.org/1999/xlink](http://www.w3.org/1999/xlink)" x="0px" y="0px" viewBox="0 0 122.88 122.88" class="h-5 w-5"><g><path class="st0" d="M62.43,122.88h-1.98c0-16.15-6.04-30.27-18.11-42.34C30.27,68.47,16.16,62.43,0,62.43v-1.98 c16.16,0,30.27-6.04,42.34-18.14C54.41,30.21,60.45,16.1,60.45,0h1.98c0,16.15,6.04,30.27,18.11,42.34 c12.07,12.07,26.18,18.11,42.34,18.11v1.98c-16.15,0-30.27,6.04-42.34,18.11C68.47,92.61,62.43,106.72,62.43,122.88L62.43,122.88z"/></g></svg>
-                    <span id="go-text">Go</span> 
+                    <span id="go-text">Ir</span> 
                 </button>
             </div>
         </div>
@@ -433,6 +434,7 @@
                         htmlContent += `<p class="text-sm">${description}</p>`;
                         
                         const nameAndCity = encodeURIComponent(placeName + " Nuevo Progreso Tamps");
+                        // CORRECCIÓN URL: Usar el formato de búsqueda web correcto
                         const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${nameAndCity}`; 
                         const phoneUrl = item.placePhone ? `tel:${item.placePhone}` : `javascript:alert('${currentLanguage === 'es' ? 'Número no disponible.' : 'Phone not available.'}')`;
                         const searchUrl = `https://www.google.com/search?q=${nameAndCity}`;
@@ -456,7 +458,8 @@
                     // Si es un solo lugar (objeto) - Usar el formato antiguo
                     const placeName = m.placeName || 'Ubicación'; 
                     const nameAndCity = encodeURIComponent(placeName + " Nuevo Progreso Tamps");
-                    const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${nameAndCity}`; 
+                    // CORRECCIÓN URL: Usar el formato de búsqueda web correcto
+                    const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${nameAndCity}`;
                     const searchUrl = `https://www.google.com/search?q=${nameAndCity}`;
                     const phoneUrl = m.placePhone ? `tel:${m.placePhone}` : `javascript:alert('${currentLanguage === 'es' ? 'Número de teléfono no disponible.' : 'Phone number not available.'}')`;
                     const isGenericPhone = !m.placePhone || m.placePhone === '+52 899 900 0000';
