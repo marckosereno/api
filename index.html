@@ -103,31 +103,40 @@
             margin-top: 2px;
         }
 
-        /* --- CSS CORREGIDO: Efecto de Desvanecimiento Suave --- */
+        /* --- CSS CORREGIDO: Header Transparente con Efecto de Desvanecimiento --- */
 
-        /* 1. Fija el Header (CRÍTICO) */
+        /* 1. Header Fijo y Transparente (Flota sobre el contenido) */
         .header-container {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        /* 2. Prepara el contenedor de mensajes (Solo posición relativa para el gradiente) */
-        #message-container {
-            position: relative; 
-            /* Se eliminó el padding-top del HTML, para que el scroll empiece en la cima. */
-        }
-
-        /* 3. Crea la máscara de difuminación (el efecto de desvanecimiento) */
-        #message-container::before {
-            content: ''; 
-            position: absolute;
+            position: fixed; 
             top: 0;
             left: 0;
             right: 0;
-            height: 74px; /* Altura que cubre visualmente el header */
-            z-index: 50; 
+            z-index: 100;
+            /* CRÍTICO: Fondo transparente, sin borde ni sombra */
+            background-color: transparent; 
+            border-bottom: none !important;
+            box-shadow: none !important;
+            padding: 1rem 1rem 0.5rem 1rem; /* Mantiene la distribución de los íconos */
+        }
+        
+        /* 2. El contenedor de chat deja espacio para el header fijo */
+        #message-container {
+            position: relative; 
+            /* Agrega padding superior para desplazar el primer mensaje por debajo del header fijo */
+            padding-top: 80px; 
+        }
+        
+        /* 3. Crea la MÁSCARA DE DIFUMINACIÓN (El efecto de desvanecimiento) */
+        #message-container::before {
+            content: ''; 
+            position: sticky;
+            top: 0; /* Se pega en la parte superior del área de scroll */
+            left: 0;
+            right: 0;
+            height: 80px; /* Altura del área de difuminación (debe coincidir con el padding-top) */
+            z-index: 50; /* Por debajo del header, pero por encima de los mensajes */
             
+            /* El gradiente va del color del fondo (blanco/claro) a transparente */
             background: linear-gradient(
                 to bottom, 
                 rgba(255, 255, 255, 1) 0%, 
@@ -143,7 +152,7 @@
 <body>
     <div id="chat-window" class="chat-window h-screen w-full"> 
         
-        <div class="header-container flex items-center justify-between p-4 bg-white text-gray-800 font-bold border-b border-gray-200 flex-shrink-0 shadow-sm">
+        <div class="header-container flex items-center justify-between text-gray-800 font-bold flex-shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
             <span id="header-text" class="text-lg">PROGRESO TOUR GUIDE</span>
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
