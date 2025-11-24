@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Progreso Tour Guide</title>
-    <link href="[https://fonts.cdnfonts.com/css/avenir](https://fonts.cdnfonts.com/css/avenir)" rel="stylesheet">
-    <link href="[https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css](https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css)" rel="stylesheet">
+    <link href="https://fonts.cdnfonts.com/css/avenir" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
         /* Estilos base */
         html, body { font-family:Avenir; height: 100%; margin: 0; padding: 0; }
@@ -64,8 +64,10 @@
             fill: currentColor;
         }
 
-        /* --- Eliminación de Efecto Celeste/Ring/Highlight --- */
-        * { -webkit-tap-highlight-color: transparent !important; }
+        /* --- Eliminación de Efecto Celeste/Ring/Highlight en TODOS los botones y chips --- */
+        * {
+            -webkit-tap-highlight-color: transparent !important; 
+        }
         .action-chip, .category-chip, .language-chip, .go-button, .map-input {
             outline: none !important;
             box-shadow: none !important;
@@ -76,7 +78,9 @@
             box-shadow: none !important;
             --tw-ring-color: transparent !important;
         }
-        .hover\:bg-gray-300:active { background-color: #d1d5db; }
+        .hover\:bg-gray-300:active {
+            background-color: #d1d5db; 
+        }
         
         /* --- Efecto Ola y Transición para los Chips --- */
         .category-chip, .language-chip {
@@ -93,48 +97,71 @@
         }
 
         /* Estilo para el Timestamp */
-        .timestamp { font-size: 0.7rem; color: #9ca3af; margin-top: 2px; }
+        .timestamp {
+            font-size: 0.7rem; 
+            color: #9ca3af; 
+            margin-top: 2px;
+        }
 
-        /* --- CSS ESTABLE (Header Fijo, SÓLIDO y SIN MÁSCARA DE DESVANECIMIENTO) --- */
+        /* --- CSS CORREGIDO: Header Transparente con Efecto de Desvanecimiento --- */
 
+        /* 1. Header Fijo y Transparente (Flota sobre el contenido) */
         .header-container {
-            /* Header SÓLIDO */
-            background-color: white; 
-            border-bottom: 1px solid #e5e7eb;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            padding: 1rem;
-            /* Fijo */
-            position: sticky; 
+            position: fixed; 
             top: 0;
             left: 0;
             right: 0;
             z-index: 100;
+            /* CRÍTICO: Fondo transparente, sin borde ni sombra */
+            background-color: transparent; 
+            border-bottom: none !important;
+            box-shadow: none !important;
+            padding: 1rem 1rem 0.5rem 1rem; /* Mantiene la distribución de los íconos */
         }
         
-        /* El contenedor de mensajes ahora es simple y dependiente del header */
+        /* 2. El contenedor de chat deja espacio para el header fijo */
         #message-container {
             position: relative; 
-            padding-top: 0; /* Ya no necesita padding, el header no flota */
+            /* Agrega padding superior para desplazar el primer mensaje por debajo del header fijo */
+            padding-top: 80px; 
         }
         
-        /* LA MÁSCARA DE DESVANECIMIENTO SE ELIMINA (ya que causaba problemas) */
+        /* 3. Crea la MÁSCARA DE DIFUMINACIÓN (El efecto de desvanecimiento) */
+        #message-container::before {
+            content: ''; 
+            position: sticky;
+            top: 0; /* Se pega en la parte superior del área de scroll */
+            left: 0;
+            right: 0;
+            height: 80px; /* Altura del área de difuminación (debe coincidir con el padding-top) */
+            z-index: 50; /* Por debajo del header, pero por encima de los mensajes */
+            
+            /* El gradiente va del color del fondo (blanco/claro) a transparente */
+            background: linear-gradient(
+                to bottom, 
+                rgba(255, 255, 255, 1) 0%, 
+                rgba(255, 255, 255, 0) 100% 
+            );
+            
+            pointer-events: none; /* Deja pasar el scroll */
+        }
 
     </style>
-    <script src="[https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js](https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js)" type="module"></script>
+    <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
 </head>
 <body>
     <div id="chat-window" class="chat-window h-screen w-full"> 
         
         <div class="header-container flex items-center justify-between text-gray-800 font-bold flex-shrink-0">
-            <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" class="h-6 w-6 text-green-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
             <span id="header-text" class="text-lg">PROGRESO TOUR GUIDE</span>
-            <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
         </div>
 
         <div id="message-container" class="flex-grow overflow-y-auto px-4 pb-4 flex flex-col"></div>
 
         <div id="loading-indicator" class="flex justify-start hidden p-4 pl-1 flex-shrink-0" style="margin-left:-42px;margin-bottom:-22px;">
-            <dotlottie-wc src="[https://lottie.host/65b2d1fc-9840-476c-867e-6236ce234b38/SwsGK4ZVOj.lottie](https://lottie.host/65b2d1fc-9840-476c-867e-6236ce234b38/SwsGK4ZVOj.lottie)" style="width: 150px; height:" autoplay loop></dotlottie-wc>
+            <dotlottie-wc src="https://lottie.host/65b2d1fc-9840-476c-867e-6236ce234b38/SwsGK4ZVOj.lottie" style="width: 150px; height:" autoplay loop></dotlottie-wc>
         </div>
         
         <div id="app-alert-container" class="fixed top-2 w-full flex justify-center z-50"></div>
@@ -172,8 +199,8 @@
                 <input type="text" id="user-input" class="map-input focus:outline-none focus:ring-0" placeholder="Ask the map">
                 
                 <button id="go-button" class="go-button transition hover:opacity-90 disabled:opacity-50">
-                    <svg version="1.1" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" xmlns:xlink="[http://www.w3.org/1999/xlink](http://www.w3.org/1999/xlink)" x="0px" y="0px" viewBox="0 0 122.88 122.88" class="h-5 w-5"><g><path class="st0" d="M62.43,122.88h-1.98c0-16.15-6.04-30.27-18.11-42.34C30.27,68.47,16.16,62.43,0,62.43v-1.98 c16.16,0,30.27-6.04,42.34-18.14C54.41,30.21,60.45,16.1,60.45,0h1.98c0,16.15,6.04,30.27,18.11,42.34 c12.07,12.07,26.18,18.11,42.34,18.11v1.98c-16.15,0-30.27,6.04-42.34,18.11C68.47,92.61,62.43,106.72,62.43,122.88L62.43,122.88z"/></g></svg>
-                    <span id="go-text">Ir</span> 
+                    <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 122.88 122.88" class="h-5 w-5"><g><path class="st0" d="M62.43,122.88h-1.98c0-16.15-6.04-30.27-18.11-42.34C30.27,68.47,16.16,62.43,0,62.43v-1.98 c16.16,0,30.27-6.04,42.34-18.14C54.41,30.21,60.45,16.1,60.45,0h1.98c0,16.15,6.04,30.27,18.11,42.34 c12.07,12.07,26.18,18.11,42.34,18.11v1.98c-16.15,0-30.27,6.04-42.34,18.11C68.47,92.61,62.43,106.72,62.43,122.88L62.43,122.88z"/></g></svg>
+                    <span id="go-text">Go</span> 
                 </button>
             </div>
         </div>
@@ -396,79 +423,36 @@
             let content = '';
 
             if (m.isStructured) { 
-                const isArray = Array.isArray(m.structuredData);
-                let htmlContent = '';
+                const placeName = m.placeName || 'Ubicación'; 
+                // **NOTA: URL del mapa corregida para ser funcional**
+                const nameAndCity = encodeURIComponent(placeName + " Nuevo Progreso Tamps");
+                // La URL de Google Maps debe ser correcta para direcciones/búsquedas
+                const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${nameAndCity}`; 
+                const searchUrl = `https://www.google.com/search?q=${nameAndCity}`;
+                const phoneUrl = m.placePhone ? `tel:${m.placePhone}` : `javascript:alert('${currentLanguage === 'es' ? 'Número de teléfono no disponible.' : 'Phone number not available.'}')`;
+                const isGenericPhone = !m.placePhone || m.placePhone === '+52 899 900 0000';
                 
-                if (isArray) {
-                    // Si es una lista de lugares (array)
-                    htmlContent = '<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">';
-                    
-                    m.structuredData.forEach((item, index) => {
-                        const placeName = item.placeName || `Elemento ${index + 1}`;
-                        const description = item.description || '';
-                        
-                        // Añade una pequeña separación visual si no es el primer elemento
-                        if (index > 0) {
-                            htmlContent += '<hr class="my-2 border-gray-300">';
-                        }
-                        
-                        // Contenido del lugar
-                        htmlContent += `<p class="font-bold text-base mb-1">${placeName}</p>`;
-                        htmlContent += `<p class="text-sm">${description}</p>`;
-                        
-                        const nameAndCity = encodeURIComponent(placeName + " Nuevo Progreso Tamps");
-                        const directionsUrl = `http://maps.google.com/maps?q=${nameAndCity}`; 
-                        const phoneUrl = item.placePhone ? `tel:${item.placePhone}` : `javascript:alert('${currentLanguage === 'es' ? 'Número no disponible.' : 'Phone not available.'}')`;
-                        const searchUrl = `https://www.google.com/search?q=${nameAndCity}`;
-                        const isGenericPhone = !item.placePhone;
-                        
-                        // Barra de Acciones por Elemento
-                        htmlContent += `
-                            <div class="action-bar-container pt-2">
-                                <div class="inline-flex space-x-2">
-                                    <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-1 px-2 rounded-lg hover:bg-green-600 transition flex-shrink-0 text-xs">${currentLanguage === 'es' ? 'Mapa 🗺️' : 'Map 🗺️'}</a>
-                                    <a href="${phoneUrl}" class="action-btn ${isGenericPhone ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600' } text-white font-semibold py-1 px-2 rounded-lg transition flex-shrink-0 text-xs">${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}</a>
-                                    <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-500 text-gray-800 font-semibold py-1 px-2 rounded-lg hover:bg-yellow-600 transition flex-shrink-0 text-xs">${currentLanguage === 'es' ? 'Buscar 🔍' : 'Search 🔍'}</a>
-                                </div>
-                            </div>
-                        `;
-                    });
-                    
-                    htmlContent += '</div>';
-
-                } else {
-                    // Si es un solo lugar (objeto) - Usar el formato antiguo
-                    const placeName = m.placeName || 'Ubicación'; 
-                    const nameAndCity = encodeURIComponent(placeName + " Nuevo Progreso Tamps");
-                    const directionsUrl = `http://maps.google.com/maps?q=${nameAndCity}`; 
-                    const searchUrl = `https://www.google.com/search?q=${nameAndCity}`;
-                    const phoneUrl = m.placePhone ? `tel:${m.placePhone}` : `javascript:alert('${currentLanguage === 'es' ? 'Número de teléfono no disponible.' : 'Phone number not available.'}')`;
-                    const isGenericPhone = !m.placePhone || m.placePhone === '+52 899 900 0000';
-                    
-                    content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">¡Claro! Aquí está la información sobre **${placeName}** que tengo como tu guía local:<br><br>${m.text}</div>`;
-                    
-                    const actionsBar = `
-                        <div class="action-bar-container">
-                            <div class="inline-flex space-x-3 p-1">
-                                <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Ver en Mapa 🗺️' : 'View on Map 🗺️'}</a>
-                                <a href="${phoneUrl}" class="action-btn ${isGenericPhone ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600' } text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}</a>
-                                <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-500 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-600 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Buscar en Google 🔍' : 'Search on Google 🔍'}</a>
-                            </div>
+                content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">¡Claro! Aquí está la información sobre **${placeName}** que tengo como tu guía local:<br><br>${m.text}</div>`;
+                
+                const actionsBar = `
+                    <div class="action-bar-container">
+                        <div class="inline-flex space-x-3 p-1">
+                            <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Ver en Mapa 🗺️' : 'View on Map 🗺️'}</a>
+                            <a href="${phoneUrl}" class="action-btn ${isGenericPhone ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600' } text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}</a>
+                            <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-500 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-600 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Buscar en Google 🔍' : 'Search on Google 🔍'}</a>
                         </div>
-                    `;
-
-                    htmlContent = content + actionsBar;
-                }
+                    </div>
+                `;
                 
                 w.innerHTML = `
                     <div class="flex flex-col items-start">
-                        ${htmlContent}
+                        ${content}
+                        ${actionsBar}
                         ${timeSpan}
                     </div>
                 `;
 
             } else {
-                // Mensaje de texto plano (sin isStructured)
                 content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">${m.text || ''}</div>`;
                 w.innerHTML = `
                     <div class="flex flex-col items-start">
@@ -496,8 +480,8 @@
         // 1. Mapeamos el historial de nuestro chatHistory (con campos extras) 
         // al formato limpio que espera el SDK de Gemini en el backend.
         const historyForAPI = chatHistoryForAPI.map(m => {
-            // Usar el texto formateado o el texto plano
-            const textContent = m.isStructured ? m.text : m.text;
+            // Aseguramos que solo enviamos el rol y el texto.
+            const textContent = m.isStructured ? m.description || m.text : m.text;
             
             return {
                 role: m.role,
@@ -562,61 +546,29 @@
         // Almacenar el tiempo de respuesta del modelo
         let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date() };
 
-        // Intenta parsear la respuesta como JSON estructurado (Manejo de arrays JSON)
+        // Intenta parsear la respuesta como JSON estructurado (sin la Places API)
         try {
-            // 1. Limpiar ```json y ```
-            let cleanResponseText = modelResponseText.trim();
-            if (cleanResponseText.startsWith('```json')) {
-                cleanResponseText = cleanResponseText.substring(7, cleanResponseText.lastIndexOf('```')).trim();
-            }
-
-            // 2. Intentar parsear como Array JSON
-            const jsonStart = cleanResponseText.indexOf('['); 
-            const jsonEnd = cleanResponseText.lastIndexOf(']');
+            const jsonStart = modelResponseText.indexOf('{');
+            const jsonEnd = modelResponseText.lastIndexOf('}');
             
             if (jsonStart !== -1 && jsonEnd !== -1) {
-                const jsonString = cleanResponseText.substring(jsonStart, jsonEnd + 1);
-                const parsedJsonArray = JSON.parse(jsonString);
+                const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
+                const parsedJson = JSON.parse(jsonString);
 
-                if (Array.isArray(parsedJsonArray) && parsedJsonArray.length > 0) {
-                    // Es un array, guardar todo el array para renderizarlo en createMessageBubble
+                if (parsedJson.isStructured === true) {
                     finalMessage = {
                         role: 'model',
                         isStructured: true, 
-                        text: `¡Lista de ${parsedJsonArray.length} lugares encontrados!`, // Texto simple para el historial
-                        structuredData: parsedJsonArray, // Guardar el array completo
+                        text: parsedJson.description || modelResponseText, 
+                        placeName: parsedJson.placeName || "Lugar Desconocido", 
+                        placePhone: parsedJson.placePhone || null, 
+                        placeId: true,
                         timestamp: finalMessage.timestamp 
                     };
-                    if (typeof alertUser === 'function') alertUser(UI_STRINGS[currentLanguage].alertStructured("Lista de Lugares"), "i");
+                    if (typeof alertUser === 'function') alertUser(UI_STRINGS[currentLanguage].alertStructured(finalMessage.placeName), "i");
                 }
             }
-            
-            // 3. Si no se detectó array, intenta parsear como Objeto JSON simple
-            if (!finalMessage.isStructured) {
-                const objJsonStart = cleanResponseText.indexOf('{');
-                const objJsonEnd = cleanResponseText.lastIndexOf('}');
-
-                if (objJsonStart !== -1 && objJsonEnd !== -1) {
-                    const objJsonString = cleanResponseText.substring(objJsonStart, objJsonEnd + 1);
-                    const parsedJsonObject = JSON.parse(objJsonString);
-
-                    if (parsedJsonObject.isStructured === true) {
-                        finalMessage = {
-                            role: 'model',
-                            isStructured: true, 
-                            text: parsedJsonObject.description || modelResponseText, 
-                            placeName: parsedJsonObject.placeName || "Lugar Desconocido", 
-                            placePhone: parsedJsonObject.placePhone || null, 
-                            placeId: true,
-                            timestamp: finalMessage.timestamp 
-                        };
-                        if (typeof alertUser === 'function') alertUser(UI_STRINGS[currentLanguage].alertStructured(finalMessage.placeName), "i");
-                    }
-                }
-            }
-
         } catch (e) {
-            // Si el parseo falla, simplemente usa el texto original del modelo
             finalMessage.text = modelResponseText;
         }
 
