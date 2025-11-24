@@ -9,7 +9,6 @@
     <style>
         /* Estilos base */
         html, body { font-family:Avenir; height: 100%; margin: 0; padding: 0; }
-        /* CRÍTICO: El color de fondo se mantiene en el contenedor principal del chat */
         .chat-window { height: 100%; width: 100vw; display: flex; flex-direction: column; background-color: #f7f7f7; overflow: hidden }
         .user-bubble { border-radius: 18px 18px 0 18px; max-width: 80% }
         .model-bubble { border-radius: 18px 18px 18px 0; max-width: 80%;padding-left:8px; }
@@ -17,7 +16,7 @@
         .action-btn { white-space: nowrap }
         .chip-group-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
         
-        /* Estilo de la barra de chat (INPUT) */
+        /* Estilo de la barra de chat */
         .map-search-bar {
             background-color: white; 
             border-radius: 20px;
@@ -65,8 +64,10 @@
             fill: currentColor;
         }
 
-        /* --- Eliminación de Efecto Celeste/Ring/Highlight --- */
-        * { -webkit-tap-highlight-color: transparent !important; }
+        /* --- Eliminación de Efecto Celeste/Ring/Highlight en TODOS los botones y chips --- */
+        * {
+            -webkit-tap-highlight-color: transparent !important; 
+        }
         .action-chip, .category-chip, .language-chip, .go-button, .map-input {
             outline: none !important;
             box-shadow: none !important;
@@ -77,7 +78,9 @@
             box-shadow: none !important;
             --tw-ring-color: transparent !important;
         }
-        .hover\:bg-gray-300:active { background-color: #d1d5db; }
+        .hover\:bg-gray-300:active {
+            background-color: #d1d5db; 
+        }
         
         /* --- Efecto Ola y Transición para los Chips --- */
         .category-chip, .language-chip {
@@ -94,7 +97,11 @@
         }
 
         /* Estilo para el Timestamp */
-        .timestamp { font-size: 0.7rem; color: #9ca3af; margin-top: 2px; }
+        .timestamp {
+            font-size: 0.7rem; 
+            color: #9ca3af; 
+            margin-top: 2px;
+        }
 
         /* --- CSS CORREGIDO: Header Transparente con Efecto de Desvanecimiento --- */
 
@@ -105,38 +112,38 @@
             left: 0;
             right: 0;
             z-index: 100;
+            /* CRÍTICO: Fondo transparente, sin borde ni sombra */
             background-color: transparent; 
             border-bottom: none !important;
             box-shadow: none !important;
-            padding: 1rem 1rem 0.5rem 1rem; 
+            padding: 1rem 1rem 0.5rem 1rem; /* Mantiene la distribución de los íconos */
         }
         
         /* 2. El contenedor de chat deja espacio para el header fijo */
         #message-container {
             position: relative; 
-            /* CRÍTICO: Espacio para el header fijo. Ajusta si los iconos son más grandes. */
+            /* Agrega padding superior para desplazar el primer mensaje por debajo del header fijo */
             padding-top: 80px; 
-            overflow-y: auto; /* Permite el scroll */
         }
         
-        /* 3. Crea la MÁSCARA DE DIFUMINACIÓN */
+        /* 3. Crea la MÁSCARA DE DIFUMINACIÓN (El efecto de desvanecimiento) */
         #message-container::before {
             content: ''; 
-            position: sticky; /* CLAVE: Usa sticky para que la máscara se pegue al inicio del scroll */
-            top: 0; 
+            position: sticky;
+            top: 0; /* Se pega en la parte superior del área de scroll */
             left: 0;
             right: 0;
-            height: 80px; /* Altura de la máscara, igual al padding-top */
-            z-index: 50; 
+            height: 80px; /* Altura del área de difuminación (debe coincidir con el padding-top) */
+            z-index: 50; /* Por debajo del header, pero por encima de los mensajes */
             
-            /* El degradado usa el color de fondo del chat: #f7f7f7 */
+            /* El gradiente va del color del fondo (blanco/claro) a transparente */
             background: linear-gradient(
                 to bottom, 
-                rgba(247, 247, 247, 1) 0%, 
-                rgba(247, 247, 247, 0) 100% 
+                rgba(255, 255, 255, 1) 0%, 
+                rgba(255, 255, 255, 0) 100% 
             );
             
-            pointer-events: none; /* Permite que los clics pasen a través, pero lo más importante: permite el scroll */
+            pointer-events: none; /* Deja pasar el scroll */
         }
 
     </style>
@@ -193,7 +200,7 @@
                 
                 <button id="go-button" class="go-button transition hover:opacity-90 disabled:opacity-50">
                     <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 122.88 122.88" class="h-5 w-5"><g><path class="st0" d="M62.43,122.88h-1.98c0-16.15-6.04-30.27-18.11-42.34C30.27,68.47,16.16,62.43,0,62.43v-1.98 c16.16,0,30.27-6.04,42.34-18.14C54.41,30.21,60.45,16.1,60.45,0h1.98c0,16.15,6.04,30.27,18.11,42.34 c12.07,12.07,26.18,18.11,42.34,18.11v1.98c-16.15,0-30.27,6.04-42.34,18.11C68.47,92.61,62.43,106.72,62.43,122.88L62.43,122.88z"/></g></svg>
-                    <span id="go-text">Ir</span> 
+                    <span id="go-text">Go</span> 
                 </button>
             </div>
         </div>
@@ -541,22 +548,14 @@
 
         // Intenta parsear la respuesta como JSON estructurado (sin la Places API)
         try {
-            // 1. Limpiar ```json y ```
-            let cleanResponseText = modelResponseText.trim();
-            if (cleanResponseText.startsWith('```json')) {
-                cleanResponseText = cleanResponseText.substring(7, cleanResponseText.lastIndexOf('```')).trim();
-            }
-            
-            // 2. Intentar parsear como Objeto JSON simple
-            const jsonStart = cleanResponseText.indexOf('{');
-            const jsonEnd = cleanResponseText.lastIndexOf('}');
+            const jsonStart = modelResponseText.indexOf('{');
+            const jsonEnd = modelResponseText.lastIndexOf('}');
             
             if (jsonStart !== -1 && jsonEnd !== -1) {
-                const jsonString = cleanResponseText.substring(jsonStart, jsonEnd + 1);
+                const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
                 const parsedJson = JSON.parse(jsonString);
 
-                // Asume estructura simple de objeto (no manejo de arrays)
-                if (parsedJson.isStructured === true || parsedJson.placeName) {
+                if (parsedJson.isStructured === true) {
                     finalMessage = {
                         role: 'model',
                         isStructured: true, 
@@ -570,7 +569,6 @@
                 }
             }
         } catch (e) {
-            // Si el parseo falla, usa el texto original del modelo
             finalMessage.text = modelResponseText;
         }
 
