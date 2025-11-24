@@ -1,31 +1,39 @@
 import { GoogleGenAI } from '@google/genai';
-// Importamos el cliente de Google Maps Platform
 import { Client as PlacesClient } from '@googlemaps/google-maps-services-js';
 
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
 
-// 1. La Clave de API de Gemini es leída automáticamente.
+// 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
-
-// 2. Inicializamos el cliente de Places API usando la variable de entorno.
-// Esto debe ejecutarse en el entorno del servidor (Vercel).
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
 const placesClient = new PlacesClient({});
 
-// El resto de tu BASE_SYSTEM_INSTRUCTION (Instrucciones para Gemini)
-// La modificamos para pedir el NOMBRE DEL LUGAR en un campo específico.
+// 2. Definimos la Instrucción del Sistema
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 
 REGLAS DE FORMATO:
 1. **Responde exclusivamente en {LANG_PLACEHOLDER}**.
-2. **MODO FICHA (JSON):** Úsalo SOLO si la solicitud es una búsqueda de un lugar o negocio (ej: "mejor dentista", "bares"). Debes incluir la propiedad 'placeToSearch' con el nombre exacto del lugar.
-3. El formato JSON requerido es:
+2. **MODO FICHA DE LUGAR (JSON):** Úsalo SOLO si la solicitud es de un lugar o negocio específico (ej: "mejor dentista", "bares"). Debe incluir la propiedad 'placeToSearch' con el nombre exacto del lugar.
+3. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo SOLO si la solicitud es una categoría general (ej: "Salud y Estética", "Restaurantes").
+4. **MODO CONVERSACIONAL (Texto Plano):** Úsalo para preguntas generales o de seguimiento.
+5. Los formatos JSON requeridos son:
+   
+   // Formato para LUGAR ESPECÍFICO
    {
-     "placeName": "Nombre del Lugar",
-     "placeToSearch": "Nombre Exacto a buscar en Places API, ej: Dr. Miguel Lopez Dental Clinic", // <-- ¡NUEVO CAMPO CRÍTICO!
+     "type": "place", 
+     "placeName": "Nombre del Lugar", 
+     "placeToSearch": "Nombre Exacto a buscar en Places API, ej: Dr. Miguel Lopez Dental Clinic", 
      "description": "Descripción corta de no más de 3 oraciones.",
+     "isStructured": true
+   }
+   
+   // Formato para CATEGORÍA GENERAL
+   {
+     "type": "category", 
+     "categoryName": "Nombre de la Categoría, ej: Salud y Estética",
+     "description": "Resumen de la categoría en Progreso, finaliza con: 'Aquí te muestro todo lo relacionado a esta categoría.'",
      "isStructured": true
    }`;
 
@@ -40,7 +48,7 @@ async function getPlaceDetails(query) {
         return null;
     }
     
-    // Primero, hacemos una búsqueda para obtener el place_id
+    // 1. Buscar el place_id
     try {
         const findPlaceResponse = await placesClient.findPlaceFromText({
             params: {
@@ -58,12 +66,12 @@ async function getPlaceDetails(query) {
             return null;
         }
 
-        // Segundo, obtenemos los detalles del lugar
+        // 2. Obtener los detalles del lugar (teléfono, URL, reseñas)
         const detailsResponse = await placesClient.placeDetails({
             params: {
                 key: placesApiKey,
                 place_id: placeId,
-                fields: ['name', 'formatted_phone_number', 'url'] // name, teléfono, URL de Google Maps
+                fields: ['name', 'formatted_phone_number', 'url', 'reviews'] 
             }
         });
 
@@ -72,7 +80,9 @@ async function getPlaceDetails(query) {
         return {
             name: place.name,
             phone: place.formatted_phone_number || null,
-            mapUrl: place.url || null
+            mapUrl: place.url || null,
+            // reviewUrl usará la URL de Google Maps para las reseñas
+            reviewUrl: place.url || null 
         };
 
     } catch (e) {
@@ -83,22 +93,24 @@ async function getPlaceDetails(query) {
 
 
 export default async function handler(req, res) {
-    // ... (El manejo de POST y error 405 sigue igual) ...
+    if (req.method !== 'POST') {
+        return res.status(405).json({ message: 'Método no permitido' });
+    }
 
     try {
         const { history = [], userPrompt, currentLanguage } = req.body;
         
-        // Configuramos el idioma para la instrucción del sistema
+        // Configuramos el idioma
         const langText = currentLanguage === 'es' ? 'español' : 'inglés';
         const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
 
-        // ... (El código de inicialización de 'chat' sigue igual) ...
+        // Inicializar el chat con el historial y la instrucción de sistema
         const chat = ai.chats.create({
             model: MODEL_NAME, 
             config: {
                 systemInstruction: finalSystemInstruction 
             },
-            history: history
+            history: history 
         });
 
         // Enviamos el nuevo mensaje al modelo
@@ -107,7 +119,7 @@ export default async function handler(req, res) {
         
         let finalResponseData = { responseText: modelResponseText };
 
-        // 🚀 Lógica de ENRIQUECIMIENTO con Places API
+        // Lógica de ENRIQUECIMIENTO con Places API (Solo si es type: "place")
         try {
             const jsonStart = modelResponseText.indexOf('{');
             const jsonEnd = modelResponseText.lastIndexOf('}');
@@ -116,29 +128,34 @@ export default async function handler(req, res) {
                 const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
                 const parsedJson = JSON.parse(jsonString);
 
-                if (parsedJson.isStructured === true && parsedJson.placeToSearch) {
+                if (parsedJson.isStructured === true) {
                     
-                    const placeData = await getPlaceDetails(parsedJson.placeToSearch);
-
-                    if (placeData) {
-                        // Reemplazamos/añadimos los datos reales de Places al JSON
-                        finalResponseData.responseText = JSON.stringify({
-                            ...parsedJson,
-                            placeName: placeData.name, // Nombre de Places (más preciso)
-                            placePhone: placeData.phone, // Teléfono de Places
-                            mapUrl: placeData.mapUrl, // URL de Google Maps
-                        });
+                    if (parsedJson.type === 'place' && parsedJson.placeToSearch) {
                         
-                        console.log("Respuesta enriquecida con Places para:", placeData.name);
-                    } else {
-                        // Si falla Places, enviamos la respuesta original de Gemini
-                        finalResponseData.responseText = modelResponseText;
+                        const placeData = await getPlaceDetails(parsedJson.placeToSearch);
+
+                        if (placeData) {
+                            // Enriquecemos con datos reales de Places
+                            finalResponseData.responseText = JSON.stringify({
+                                ...parsedJson,
+                                placeName: placeData.name,
+                                placePhone: placeData.phone,
+                                mapUrl: placeData.mapUrl,
+                                reviewUrl: placeData.reviewUrl, // Nuevo campo
+                            });
+                        } else {
+                            // Si falla Places, al menos eliminamos placeToSearch para evitar confusiones
+                            delete parsedJson.placeToSearch;
+                            finalResponseData.responseText = JSON.stringify(parsedJson);
+                        }
+                    } else if (parsedJson.type === 'category') {
+                        // Si es una categoría, solo aseguramos que el JSON es válido y lo pasamos.
+                        finalResponseData.responseText = JSON.stringify(parsedJson);
                     }
                 }
             }
         } catch (jsonError) {
             console.error("Fallo en el parseo o enriquecimiento del JSON:", jsonError);
-            // Si el parseo falla, simplemente enviamos el texto plano original de Gemini
             finalResponseData.responseText = modelResponseText;
         }
 
