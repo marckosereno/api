@@ -130,9 +130,9 @@
             
             <div id="category-chips-group" class="chip-group-scroll hidden">
                 <div id="category-chips-list" class="inline-flex space-x-3 pb-3 border-b border-gray-200"> 
-                    <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-green-500 bg-green-50 text-green-700 cursor-pointer transition hover:bg-green-100" data-query-es="Categoría Salud y Estética en Progreso" data-query-en="Health and Beauty Category in Progreso">🏥 Salud & Estética</div>
-                    <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-blue-500 bg-blue-50 text-blue-700 cursor-pointer transition hover:bg-blue-100" data-query-es="Categoría Compras y Tiendas en Progreso" data-query-en="Shopping and Stores Category in Progreso">🛍️ Compras</div>
-                    <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-purple-500 bg-purple-50 text-purple-700 cursor-pointer transition hover:bg-purple-100" data-query-es="Categoría Entretenimiento y Atracciones en Progreso" data-query-en="Entertainment and Attractions Category in Progreso">🎺 Entretenimiento</div>
+                    <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-green-500 bg-green-50 text-green-700 cursor-pointer transition hover:bg-green-100" data-query-es="Dime sobre la Categoría Salud y Estética en Progreso" data-query-en="Tell me about the Health and Beauty Category in Progreso">🏥 Salud & Estética</div>
+                    <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-blue-500 bg-blue-50 text-blue-700 cursor-pointer transition hover:bg-blue-100" data-query-es="Dime sobre la Categoría Compras y Tiendas en Progreso" data-query-en="Tell me about the Shopping and Stores Category in Progreso">🛍️ Compras</div>
+                    <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-purple-500 bg-purple-50 text-purple-700 cursor-pointer transition hover:bg-purple-100" data-query-es="Dime sobre la Categoría Entretenimiento y Atracciones en Progreso" data-query-en="Tell me about the Entertainment and Attractions Category in Progreso">🎺 Entretenimiento</div>
                     <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-yellow-500 bg-yellow-50 text-yellow-700 cursor-pointer transition hover:bg-yellow-100" data-query-es="Top 10 Dentistas en Progreso" data-query-en="Top 10 Dentists in Progreso">🦷 Top 10 Dental</div>
                 </div>
             </div>
@@ -169,8 +169,8 @@
 <script>
     // --- BLOQUE JAVASCRIPT: SETUP Y UTILIDADES ---
     
-    // **NOTA: Cambiará la ruta de llamada para la función serverless**
-    const BACKEND_URL = "/api"; 
+    // **NOTA: Debe coincidir con el endpoint de Vercel/backend**
+    const BACKEND_URL = "/api/chat"; 
     
     let chatHistory = [];
     let currentLanguage = 'es'; 
@@ -199,7 +199,8 @@
             language: "🌐 Lenguaje",
             getThere: "📍 Cómo Llegar",
             info: "ℹ️ Info",
-            alertStructured: (name) => `¡Ficha generada por IA para ${name}!`,
+            alertStructured: (name) => `¡Ficha verificada de ${name}!`,
+            alertCategory: (name) => `Resumen de la categoría ${name}.`, // Nuevo para categorías
             chipHealth: "🏥 Salud & Estética",
             chipShopping: "🛍️ Compras",
             chipEntertainment: "🎺 Entretenimiento",
@@ -213,7 +214,8 @@
             language: "🌐 Language",
             getThere: "📍 How to get there",
             info: "ℹ️ Info",
-            alertStructured: (name) => `AI card generated for ${name}!`,
+            alertStructured: (name) => `Verified card for ${name}!`,
+            alertCategory: (name) => `Summary for ${name} category.`, // Nuevo para categorías
             chipHealth: "🏥 Health & Beauty",
             chipShopping: "🛍️ Shopping",
             chipEntertainment: "🎺 Entertainment",
@@ -383,22 +385,73 @@
             let content = '';
 
             if (m.isStructured) { 
-                const placeName = m.placeName || 'Ubicación'; 
-                // **NOTA: URL del mapa corregida para ser funcional**
-                const nameAndCity = encodeURIComponent(placeName + " Nuevo Progreso Tamps");
-                const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${nameAndCity}`; 
-                const searchUrl = `https://www.google.com/search?q=${nameAndCity}`;
-                const phoneUrl = m.placePhone ? `tel:${m.placePhone}` : `javascript:alert('Número de teléfono no disponible. Intenta buscar en Google.')`;
-                const isGenericPhone = !m.placePhone || m.placePhone === '+52 899 900 0000';
                 
-                content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">¡Claro! Aquí está la información sobre **${placeName}** que tengo como tu guía local:<br><br>${m.text}</div>`;
+                // 🛑 Determinar el Tipo de Contenido 🛑
+                const isPlace = m.type === 'place';
+                const isCategory = m.type === 'category';
+
+                // Usamos el nombre relevante para los enlaces de búsqueda
+                const entityName = isPlace 
+                    ? (m.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
+                    : (m.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
                 
+                // --- Configuración de Enlaces y Botones ---
+                
+                let directionsUrl = '#';
+                let searchUrl = '#';
+                let phoneUrl = null;
+                let reviewUrl = null;
+                
+                // Asume que el backend proporciona mapUrl y reviewUrl si isPlace=true
+                if (isPlace) {
+                    // Lógica para un LUGAR ESPECÍFICO (usa datos de Places)
+                    directionsUrl = m.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(entityName + " Nuevo Progreso Tamps")}`;
+                    searchUrl = `https://www.google.com/search?q=${encodeURIComponent(entityName + " Nuevo Progreso Tamps")}`;
+                    phoneUrl = m.placePhone ? `tel:${m.placePhone}` : `javascript:alert('${currentLanguage === 'es' ? 'Número no disponible.' : 'Number unavailable.'}')`;
+                    reviewUrl = m.reviewUrl || directionsUrl; 
+                    
+                } else if (isCategory) {
+                    // Lógica para una CATEGORÍA GENERAL (solo busca en mapa y google)
+                    directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(entityName + " Nuevo Progreso Tamps")}`;
+                    searchUrl = `https://www.google.com/search?q=${encodeURIComponent(entityName + " Nuevo Progreso Tamps")}`;
+                }
+                
+                
+                // --- Generación de la Burbuja y la Barra de Acciones ---
+                
+                // Muestra una alerta diferenciada
+                const alertText = isPlace 
+                    ? UI_STRINGS[currentLanguage].alertStructured(entityName)
+                    : UI_STRINGS[currentLanguage].alertCategory(entityName);
+
+                if (typeof alertUser === 'function') alertUser(alertText, "i");
+
+
+                content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">${m.text || m.description}</div>`;
+                
+                // 1. Botón VER EN MAPA (Aplica siempre)
+                let actionsHTML = `
+                    <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Ver en Mapa 🗺️' : 'View on Map 🗺️'}</a>
+                `;
+
+                // 2. Botones específicos para LUGAR
+                if (isPlace) {
+                    const isPhoneAvailable = !!m.placePhone;
+                    actionsHTML += `
+                        <a href="${phoneUrl}" class="action-btn ${isPhoneAvailable ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400 cursor-not-allowed' } text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}</a>
+                        <a href="${reviewUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-500 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Reseñas ⭐' : 'Reviews ⭐'}</a>
+                    `;
+                }
+
+                // 3. Botón Buscar en Google (Aplica siempre)
+                actionsHTML += `
+                    <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-700 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Buscar en Google 🔍' : 'Search on Google 🔍'}</a>
+                `;
+
                 const actionsBar = `
                     <div class="action-bar-container">
                         <div class="inline-flex space-x-3 p-1">
-                            <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Ver en Mapa 🗺️' : 'View on Map 🗺️'}</a>
-                            <a href="${phoneUrl}" class="action-btn ${isGenericPhone ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600' } text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}</a>
-                            <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-500 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-600 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Buscar en Google 🔍' : 'Search on Google 🔍'}</a>
+                            ${actionsHTML}
                         </div>
                     </div>
                 `;
@@ -432,15 +485,11 @@
         }
     }
 
-    // --- CÓDIGO A REEMPLAZAR: LÓGICA DE CONEXIÓN CON GEMINI (AJUSTADA AL BACKEND) ---
+    // --- CÓDIGO DE CONEXIÓN AL BACKEND ---
 
     async function getGeminiResponse(userPrompt, chatHistoryForAPI) {
         
-        // 1. Mapeamos el historial de nuestro chatHistory (con campos extras) 
-        // al formato limpio que espera el SDK de Gemini en el backend.
         const historyForAPI = chatHistoryForAPI.map(m => {
-            // Aseguramos que solo enviamos el rol y el texto.
-            // Si es un mensaje del modelo estructurado, usamos el campo 'description' como texto.
             const textContent = m.isStructured && m.description ? m.description : m.text;
             
             return {
@@ -450,14 +499,13 @@
         });
 
         try {
-            // Cambiamos el endpoint de /api a /api/chat
-            const response = await fetch(BACKEND_URL + '/chat', { 
+            const response = await fetch(BACKEND_URL, { // Usa /api/chat
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     history: historyForAPI, 
                     userPrompt: userPrompt, 
-                    currentLanguage: currentLanguage // Enviamos el idioma para que el backend lo configure
+                    currentLanguage: currentLanguage
                 }) 
             });
 
@@ -467,7 +515,6 @@
             }
 
             const data = await response.json();
-            // El backend ahora solo devuelve el texto puro.
             return data.responseText; 
 
         } catch (error) {
@@ -477,14 +524,12 @@
         }
     }
 
-    // --- FIN DEL CÓDIGO A REEMPLAZAR ---
-
     // --- Lógica Principal del Chatbot (handleSend) ---
     async function handleSend(userPromptInput = null) {
         const userPrompt = userPromptInput || inputElement.value.trim();
         if (!userPrompt) return;
         
-        // Oculta los chips si el usuario escribe o usa un botón de acción rápida (Cómo Llegar/Info).
+        // Oculta los chips
         hideChipGroup(categoryChipsGroup, categoryChips);
         categoriesVisible = false;
         hideChipGroup(languageChipsGroup, languageChips);
@@ -492,7 +537,6 @@
 
         if (typeof toggleInput === 'function') toggleInput(true);
         
-        // ⭐ Almacenar el tiempo de envío del usuario
         chatHistory.push({ role: 'user', text: userPrompt, timestamp: new Date() });
         if (typeof renderChat === 'function') renderChat();
         inputElement.value = '';
@@ -500,13 +544,11 @@
         const historyForGemini = [...chatHistory];
         historyForGemini.pop(); 
         
-        // El límite de mensajes ahora es manejado por el historial enviado al backend.
-        const MAX_MESSAGES = 10; // Aumentado ligeramente ya que el backend maneja mejor el contexto.
+        const MAX_MESSAGES = 10; 
         let limitedHistory = historyForGemini.length > MAX_MESSAGES ? historyForGemini.slice(historyForGemini.length - MAX_MESSAGES) : historyForGemini;
         
         let modelResponseText = await getGeminiResponse(userPrompt, limitedHistory);
         
-        // ⭐ Almacenar el tiempo de respuesta del modelo
         let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date() };
 
         // Intenta parsear la respuesta como JSON estructurado
@@ -519,21 +561,35 @@
                 const parsedJson = JSON.parse(jsonString);
 
                 if (parsedJson.isStructured === true) {
-                    finalMessage = {
-                        role: 'model',
-                        isStructured: true, 
-                        // El campo 'text' ahora contendrá la descripción para que se muestre en la burbuja
-                        text: parsedJson.description || modelResponseText, 
-                        placeName: parsedJson.placeName || "Lugar Desconocido", 
-                        placePhone: parsedJson.placePhone || null, 
-                        placeId: true,
-                        timestamp: finalMessage.timestamp // Reutiliza el timestamp
-                    };
-                    if (typeof alertUser === 'function') alertUser(UI_STRINGS[currentLanguage].alertStructured(finalMessage.placeName), "i");
+                    
+                    if (parsedJson.type === 'place') {
+                        // Respuesta de lugar específico (enriquecida por el backend)
+                        finalMessage = {
+                            role: 'model',
+                            isStructured: true,
+                            type: parsedJson.type, 
+                            text: parsedJson.description || modelResponseText, 
+                            placeName: parsedJson.placeName, 
+                            placePhone: parsedJson.placePhone || null, 
+                            mapUrl: parsedJson.mapUrl || null,
+                            reviewUrl: parsedJson.reviewUrl || null,
+                            timestamp: finalMessage.timestamp
+                        };
+                    } else if (parsedJson.type === 'category') {
+                        // Respuesta de categoría general
+                        finalMessage = {
+                            role: 'model',
+                            isStructured: true,
+                            type: parsedJson.type, 
+                            text: parsedJson.description || modelResponseText, 
+                            categoryName: parsedJson.categoryName,
+                            timestamp: finalMessage.timestamp
+                        };
+                    }
                 }
             }
         } catch (e) {
-            // Si falla el parseo, el mensaje sigue siendo el texto plano original.
+            console.error("Error al parsear JSON estructurado:", e);
             finalMessage.text = modelResponseText;
         }
 
