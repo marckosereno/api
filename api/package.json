@@ -10,7 +10,7 @@
   }, 
   
   "dependencies": {
-    "@google/genai": "latest"
+    "@google/genai": "latest",
    "@googlemaps/google-maps-services-js": "latest"
   }
 } 
