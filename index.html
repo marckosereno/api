@@ -9,6 +9,7 @@
     <style>
         /* Estilos base */
         html, body { font-family:Avenir; height: 100%; margin: 0; padding: 0; }
+        /* CRÍTICO: El color de fondo se mantiene en el contenedor principal del chat */
         .chat-window { height: 100%; width: 100vw; display: flex; flex-direction: column; background-color: #f7f7f7; overflow: hidden }
         .user-bubble { border-radius: 18px 18px 0 18px; max-width: 80% }
         .model-bubble { border-radius: 18px 18px 18px 0; max-width: 80%;padding-left:8px; }
@@ -16,7 +17,7 @@
         .action-btn { white-space: nowrap }
         .chip-group-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
         
-        /* Estilo de la barra de chat */
+        /* Estilo de la barra de chat (INPUT) */
         .map-search-bar {
             background-color: white; 
             border-radius: 20px;
@@ -64,10 +65,8 @@
             fill: currentColor;
         }
 
-        /* --- Eliminación de Efecto Celeste/Ring/Highlight en TODOS los botones y chips --- */
-        * {
-            -webkit-tap-highlight-color: transparent !important; 
-        }
+        /* --- Eliminación de Efecto Celeste/Ring/Highlight --- */
+        * { -webkit-tap-highlight-color: transparent !important; }
         .action-chip, .category-chip, .language-chip, .go-button, .map-input {
             outline: none !important;
             box-shadow: none !important;
@@ -78,9 +77,7 @@
             box-shadow: none !important;
             --tw-ring-color: transparent !important;
         }
-        .hover\:bg-gray-300:active {
-            background-color: #d1d5db; 
-        }
+        .hover\:bg-gray-300:active { background-color: #d1d5db; }
         
         /* --- Efecto Ola y Transición para los Chips --- */
         .category-chip, .language-chip {
@@ -97,11 +94,7 @@
         }
 
         /* Estilo para el Timestamp */
-        .timestamp {
-            font-size: 0.7rem; 
-            color: #9ca3af; 
-            margin-top: 2px;
-        }
+        .timestamp { font-size: 0.7rem; color: #9ca3af; margin-top: 2px; }
 
         /* --- CSS CORREGIDO: Header Transparente con Efecto de Desvanecimiento --- */
 
@@ -112,38 +105,38 @@
             left: 0;
             right: 0;
             z-index: 100;
-            /* CRÍTICO: Fondo transparente, sin borde ni sombra */
             background-color: transparent; 
             border-bottom: none !important;
             box-shadow: none !important;
-            padding: 1rem 1rem 0.5rem 1rem; /* Mantiene la distribución de los íconos */
+            padding: 1rem 1rem 0.5rem 1rem; 
         }
         
         /* 2. El contenedor de chat deja espacio para el header fijo */
         #message-container {
             position: relative; 
-            /* Agrega padding superior para desplazar el primer mensaje por debajo del header fijo */
+            /* CRÍTICO: Espacio para el header fijo. Ajusta si los iconos son más grandes. */
             padding-top: 80px; 
+            overflow-y: auto; /* Permite el scroll */
         }
         
-        /* 3. Crea la MÁSCARA DE DIFUMINACIÓN (El efecto de desvanecimiento) */
+        /* 3. Crea la MÁSCARA DE DIFUMINACIÓN */
         #message-container::before {
             content: ''; 
-            position: sticky;
-            top: 0; /* Se pega en la parte superior del área de scroll */
+            position: sticky; /* CLAVE: Usa sticky para que la máscara se pegue al inicio del scroll */
+            top: 0; 
             left: 0;
             right: 0;
-            height: 80px; /* Altura del área de difuminación (debe coincidir con el padding-top) */
-            z-index: 50; /* Por debajo del header, pero por encima de los mensajes */
+            height: 80px; /* Altura de la máscara, igual al padding-top */
+            z-index: 50; 
             
-            /* El gradiente va del color del fondo (blanco/claro) a transparente */
+            /* El degradado usa el color de fondo del chat: #f7f7f7 */
             background: linear-gradient(
                 to bottom, 
-                rgba(255, 255, 255, 1) 0%, 
-                rgba(255, 255, 255, 0) 100% 
+                rgba(247, 247, 247, 1) 0%, 
+                rgba(247, 247, 247, 0) 100% 
             );
             
-            pointer-events: none; /* Deja pasar el scroll */
+            pointer-events: none; /* Permite que los clics pasen a través, pero lo más importante: permite el scroll */
         }
 
     </style>
@@ -200,7 +193,7 @@
                 
                 <button id="go-button" class="go-button transition hover:opacity-90 disabled:opacity-50">
                     <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 122.88 122.88" class="h-5 w-5"><g><path class="st0" d="M62.43,122.88h-1.98c0-16.15-6.04-30.27-18.11-42.34C30.27,68.47,16.16,62.43,0,62.43v-1.98 c16.16,0,30.27-6.04,42.34-18.14C54.41,30.21,60.45,16.1,60.45,0h1.98c0,16.15,6.04,30.27,18.11,42.34 c12.07,12.07,26.18,18.11,42.34,18.11v1.98c-16.15,0-30.27,6.04-42.34,18.11C68.47,92.61,62.43,106.72,62.43,122.88L62.43,122.88z"/></g></svg>
-                    <span id="go-text">Go</span> 
+                    <span id="go-text">Ir</span> 
                 </button>
             </div>
         </div>
@@ -420,47 +413,69 @@
         } 
         else if (m.role === 'model') {
             w.className = 'flex flex-col justify-start w-full mb-2';
-            let content = '';
+            let htmlContent = ''; 
 
-            if (m.isStructured) { 
-                const placeName = m.placeName || 'Ubicación'; 
-                // **NOTA: URL del mapa corregida para ser funcional**
-                const nameAndCity = encodeURIComponent(placeName + " Nuevo Progreso Tamps");
-                // La URL de Google Maps debe ser correcta para direcciones/búsquedas
-                const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${nameAndCity}`; 
-                const searchUrl = `https://www.google.com/search?q=${nameAndCity}`;
-                const phoneUrl = m.placePhone ? `tel:${m.placePhone}` : `javascript:alert('${currentLanguage === 'es' ? 'Número de teléfono no disponible.' : 'Phone number not available.'}')`;
-                const isGenericPhone = !m.placePhone || m.placePhone === '+52 899 900 0000';
+            if (m.isStructured && m.structuredData) { 
+                const items = m.structuredData; // Esto será un array (incluso si es de 1 elemento)
                 
-                content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">¡Claro! Aquí está la información sobre **${placeName}** que tengo como tu guía local:<br><br>${m.text}</div>`;
+                htmlContent = '<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">';
                 
-                const actionsBar = `
-                    <div class="action-bar-container">
-                        <div class="inline-flex space-x-3 p-1">
-                            <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Ver en Mapa 🗺️' : 'View on Map 🗺️'}</a>
-                            <a href="${phoneUrl}" class="action-btn ${isGenericPhone ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600' } text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}</a>
-                            <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-500 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-600 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Buscar en Google 🔍' : 'Search on Google 🔍'}</a>
+                items.forEach((item, index) => {
+                    const placeName = item.placeName || `Elemento ${index + 1}`;
+                    const description = item.description || item.text || 'Sin descripción.';
+                    const placePhone = item.placePhone;
+
+                    // Añade separación si no es el primer elemento
+                    if (index > 0) {
+                        htmlContent += '<hr class="my-2 border-gray-300">';
+                    }
+                    
+                    // Contenido del lugar
+                    let introText;
+                    if (items.length > 1) {
+                         // Si es una lista, solo poner el nombre del lugar
+                        introText = `<span class="font-bold text-base mb-1">${placeName}</span>`;
+                    } else {
+                        // Si es un solo resultado, darle un poco más de contexto
+                        introText = `¡Claro! Aquí está la información sobre **${placeName}** que tengo como tu guía local:`;
+                    }
+                    
+                    htmlContent += `<p class="font-bold text-base mb-1">${introText}</p>`;
+                    // Usar un div si la descripción contiene HTML o saltos de línea complejos, pero p es más seguro para texto
+                    htmlContent += `<p class="text-sm">${description}</p>`; 
+                    
+                    const nameAndCity = encodeURIComponent(placeName + " Nuevo Progreso Tamps");
+                    // URL de Google Maps para búsqueda o dirección
+                    const directionsUrl = `http://googleusercontent.com/maps.google.com/search?q=${nameAndCity}`; 
+                    const phoneUrl = placePhone ? `tel:${placePhone}` : `javascript:alert('${currentLanguage === 'es' ? 'Número no disponible.' : 'Phone not available.'}')`;
+                    const searchUrl = `https://www.google.com/search?q=${nameAndCity}`;
+                    const isGenericPhone = !placePhone || placePhone === '+52 899 900 0000';
+                    
+                    // Barra de Acciones por Elemento
+                    htmlContent += `
+                        <div class="action-bar-container pt-2">
+                            <div class="inline-flex space-x-2">
+                                <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-1 px-2 rounded-lg hover:bg-green-600 transition flex-shrink-0 text-xs">${currentLanguage === 'es' ? 'Mapa 🗺️' : 'Map 🗺️'}</a>
+                                <a href="${phoneUrl}" class="action-btn ${isGenericPhone ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600' } text-white font-semibold py-1 px-2 rounded-lg transition flex-shrink-0 text-xs">${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}</a>
+                                <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-500 text-gray-800 font-semibold py-1 px-2 rounded-lg hover:bg-yellow-600 transition flex-shrink-0 text-xs">${currentLanguage === 'es' ? 'Buscar 🔍' : 'Search 🔍'}</a>
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                });
                 
-                w.innerHTML = `
-                    <div class="flex flex-col items-start">
-                        ${content}
-                        ${actionsBar}
-                        ${timeSpan}
-                    </div>
-                `;
+                htmlContent += '</div>';
 
             } else {
-                content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">${m.text || ''}</div>`;
-                w.innerHTML = `
-                    <div class="flex flex-col items-start">
-                        ${content}
-                        ${timeSpan}
-                    </div>
-                `;
+                // Mensaje de texto plano (sin estructura)
+                htmlContent = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">${m.text || ''}</div>`;
             }
+
+            w.innerHTML = `
+                <div class="flex flex-col items-start">
+                    ${htmlContent}
+                    ${timeSpan}
+                </div>
+            `;
         }
         return w;
     }
@@ -546,29 +561,64 @@
         // Almacenar el tiempo de respuesta del modelo
         let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date() };
 
-        // Intenta parsear la respuesta como JSON estructurado (sin la Places API)
+        // Intenta parsear la respuesta como JSON estructurado (Manejo de arrays JSON)
         try {
-            const jsonStart = modelResponseText.indexOf('{');
-            const jsonEnd = modelResponseText.lastIndexOf('}');
-            
-            if (jsonStart !== -1 && jsonEnd !== -1) {
-                const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
-                const parsedJson = JSON.parse(jsonString);
+            // 1. Limpiar ```json y ```
+            let cleanResponseText = modelResponseText.trim();
+            if (cleanResponseText.startsWith('```json')) {
+                cleanResponseText = cleanResponseText.substring(7, cleanResponseText.lastIndexOf('```')).trim();
+            }
 
-                if (parsedJson.isStructured === true) {
+            // 2. Intentar parsear como Array JSON
+            const arrayJsonStart = cleanResponseText.indexOf('['); 
+            const arrayJsonEnd = cleanResponseText.lastIndexOf(']');
+            
+            if (arrayJsonStart !== -1 && arrayJsonEnd !== -1) {
+                const jsonString = cleanResponseText.substring(arrayJsonStart, arrayJsonEnd + 1);
+                const parsedJsonArray = JSON.parse(jsonString);
+
+                if (Array.isArray(parsedJsonArray) && parsedJsonArray.length > 0) {
+                    // Es un array, guardar todo el array para renderizarlo
                     finalMessage = {
                         role: 'model',
                         isStructured: true, 
-                        text: parsedJson.description || modelResponseText, 
-                        placeName: parsedJson.placeName || "Lugar Desconocido", 
-                        placePhone: parsedJson.placePhone || null, 
-                        placeId: true,
+                        // Usar un texto simple para el historial, la burbuja renderizará la lista.
+                        text: `¡Lista de ${parsedJsonArray.length} lugares encontrados!`, 
+                        structuredData: parsedJsonArray, // <<-- GUARDAR EL ARRAY COMPLETO
                         timestamp: finalMessage.timestamp 
                     };
-                    if (typeof alertUser === 'function') alertUser(UI_STRINGS[currentLanguage].alertStructured(finalMessage.placeName), "i");
+                    if (typeof alertUser === 'function') alertUser(UI_STRINGS[currentLanguage].alertStructured("Lista de Lugares"), "i");
                 }
             }
+            
+            // 3. Si no se detectó array, intenta parsear como Objeto JSON simple
+            if (!finalMessage.isStructured) {
+                const objJsonStart = cleanResponseText.indexOf('{');
+                const objJsonEnd = cleanResponseText.lastIndexOf('}');
+
+                if (objJsonStart !== -1 && objJsonEnd !== -1) {
+                    const objJsonString = cleanResponseText.substring(objJsonStart, objJsonEnd + 1);
+                    const parsedJsonObject = JSON.parse(objJsonString);
+
+                    // Asume estructura simple de objeto
+                    if (parsedJsonObject.isStructured === true || parsedJsonObject.placeName) {
+                        finalMessage = {
+                            role: 'model',
+                            isStructured: true, 
+                            text: parsedJsonObject.description || modelResponseText, 
+                            placeName: parsedJsonObject.placeName || "Lugar Desconocido", 
+                            placePhone: parsedJsonObject.placePhone || null, 
+                            structuredData: [parsedJsonObject], // Guardar como array de 1 elemento para reuso en createMessageBubble
+                            timestamp: finalMessage.timestamp 
+                        };
+                        if (typeof alertUser === 'function') alertUser(UI_STRINGS[currentLanguage].alertStructured(finalMessage.placeName), "i");
+                    }
+                }
+            }
+
         } catch (e) {
+            // Si el parseo falla, simplemente usa el texto original del modelo
+            console.error("Error al intentar parsear JSON estructurado:", e);
             finalMessage.text = modelResponseText;
         }
 
