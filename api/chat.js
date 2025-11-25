@@ -1,46 +1,83 @@
 import { GoogleGenAI } from '@google/genai';
 import { Client as PlacesClient } from '@googlemaps/google-maps-services-js';
 
+// 🛑 PASO CRÍTICO 1: Asegúrate de que este archivo exista en la ruta:
+// project-root/data/progreso_data.json
+import data from '../data/progreso_data.json' assert { type: 'json' };
+
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
 
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
-const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
+// Asegúrate de que esta variable de entorno esté configurada en Vercel
+const placesApiKey = process.env.GOOGLE_PLACES_API_KEY; 
 const placesClient = new PlacesClient({});
 
-// 2. Definimos la Instrucción del Sistema
+// --- FUNCIÓN DE ALEATORIEDAD Y EXTRACCIÓN DE DATOS ---
+/**
+ * Selecciona una lista aleatoria de lugares de una categoría, limitada a un número máximo.
+ * @param {string} categoryKey Clave de la categoría (ej. 'clinicas_dentales').
+ * @param {number} limit Máximo de lugares a extraer.
+ * @returns {Array} Lista de objetos con 'placeName'.
+ */
+function getRandomPlaces(categoryKey, limit = 10) {
+    const categoryList = data[categoryKey];
+    if (!categoryList || categoryList.length === 0) {
+        return [];
+    }
+    
+    // 1. Clonar el array para no modificar el original
+    const listCopy = [...categoryList];
+
+    // 2. Aplicar el algoritmo Fisher-Yates (Shuffle)
+    for (let i = listCopy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [listCopy[i], listCopy[j]] = [listCopy[j], listCopy[i]];
+    }
+
+    // 3. Devolver los primeros 'limit' elementos
+    return listCopy.slice(0, limit);
+}
+
+
+// 2. Definimos la Instrucción del Sistema (Actualizada con todas tus claves)
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 
 REGLAS DE FORMATO:
 1. **Responde exclusivamente en {LANG_PLACEHOLDER}**.
-2. **MODO FICHA DE LUGAR (JSON):** Úsalo SOLO si la solicitud es de un lugar o negocio específico (ej: "mejor dentista", "bares"). Debe incluir la propiedad 'placeToSearch' con el nombre exacto del lugar.
-3. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo SOLO si la solicitud es una categoría general (ej: "Salud y Estética", "Restaurantes").
+2. **MODO FICHA DE LUGAR (JSON):** Úsalo si la solicitud es de **un lugar o negocio específico** que crees que existe, pero que no está asociado a una clave de categoría de la base de datos.
+3. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo si la solicitud es una lista o una categoría general que **coincide con una de las CLAVES DE BÚSQUEDA**.
 4. **MODO CONVERSACIONAL (Texto Plano):** Úsalo para preguntas generales o de seguimiento.
 5. Los formatos JSON requeridos son:
    
-   // Formato para LUGAR ESPECÍFICO
+   // Formato para LUGAR ESPECÍFICO (Para enriquecer con Places API)
    {
      "type": "place", 
      "placeName": "Nombre del Lugar", 
-     "placeToSearch": "Nombre Exacto a buscar en Places API, ej: Dr. Miguel Lopez Dental Clinic", 
-     "description": "Descripción corta de no más de 3 oraciones.",
+     "placeToSearch": "Nombre Exacto a buscar en Places API, ej: Dental Care Molar", 
+     "description": "Descripción corta de no más de 3 oraciones. Usa el nombre REAL y LOCAL del lugar.",
      "isStructured": true
    }
    
-   // Formato para CATEGORÍA GENERAL
+   // Formato para CATEGORÍA GENERAL o LISTAS (La lista se insertará en el Backend)
    {
      "type": "category", 
-     "categoryName": "Nombre de la Categoría, ej: Salud y Estética",
-     "description": "Resumen de la categoría en Progreso, finaliza con: 'Aquí te muestro todo lo relacionado a esta categoría.'",
+     "categoryKey": "CLAVE_DE_BUSQUEDA", 
+     "categoryName": "Nombre de la Categoría, ej: Clínicas Dentales",
+     "description": "Comienza con un resumen breve y general de la categoría. Finaliza diciendo: 'Aquí tienes varias opciones destacadas de nuestra lista personalizada:'",
      "isStructured": true
-   }`;
+   }
+
+REGLAS CRÍTICAS PARA ASIGNAR CLAVES DE CATEGORÍA:
+* Usa las siguientes CLAVES DE BÚSQUEDA para las categorías listadas: 
+  [clinicas_dentales, taquerias_tacos_y_lonches, tacos_barbacoa, restaurantes, salones_belleza, tiendas_artesanias, farmacias, opticas].
+* **SI EL LUGAR SOLICITADO NO ES UNA CLAVE DE CATEGORÍA**, debes usar el formato `type: "place"` y utilizar tu conocimiento para encontrar un nombre de negocio real en Nuevo Progreso y usarlo en el campo `placeToSearch` para que sea enriquecido.
+* Si no puedes encontrar un lugar, responde con un mensaje de texto plano conversacional.`;
 
 /**
  * Función que busca el nombre de un lugar en la API de Google Places.
- * @param {string} query Nombre del lugar a buscar.
- * @returns {object|null} Objeto con detalles del lugar o null si falla.
  */
 async function getPlaceDetails(query) {
     if (!placesApiKey) {
@@ -48,12 +85,13 @@ async function getPlaceDetails(query) {
         return null;
     }
     
-    // 1. Buscar el place_id
+    // 1. Buscar el place_id, forzando la búsqueda a Nuevo Progreso
     try {
         const findPlaceResponse = await placesClient.findPlaceFromText({
             params: {
                 key: placesApiKey,
-                input: query + ", Nuevo Progreso Tamps, México",
+                // Añadimos el contexto al query para forzar la precisión geográfica
+                input: query + ", Nuevo Progreso Tamps, México", 
                 inputtype: 'textquery',
                 fields: ['place_id']
             }
@@ -81,7 +119,6 @@ async function getPlaceDetails(query) {
             name: place.name,
             phone: place.formatted_phone_number || null,
             mapUrl: place.url || null,
-            // reviewUrl usará la URL de Google Maps para las reseñas
             reviewUrl: place.url || null 
         };
 
@@ -119,7 +156,7 @@ export default async function handler(req, res) {
         
         let finalResponseData = { responseText: modelResponseText };
 
-        // Lógica de ENRIQUECIMIENTO con Places API (Solo si es type: "place")
+        // Lógica de ENRIQUECIMIENTO/MANEJO DE DATOS LOCALES
         try {
             const jsonStart = modelResponseText.indexOf('{');
             const jsonEnd = modelResponseText.lastIndexOf('}');
@@ -130,8 +167,39 @@ export default async function handler(req, res) {
 
                 if (parsedJson.isStructured === true) {
                     
-                    if (parsedJson.type === 'place' && parsedJson.placeToSearch) {
+                    if (parsedJson.type === 'category' && parsedJson.categoryKey) {
                         
+                        // 🚀 LÓGICA DE LISTA DE CATEGORÍAS (Su base de datos)
+                        const randomPlaces = getRandomPlaces(parsedJson.categoryKey, 10);
+                        
+                        if (randomPlaces.length > 0) {
+                            
+                            // 1. Crear el texto detallado de la lista de 10 lugares.
+                            let listText = "\n";
+                            randomPlaces.forEach((place, index) => {
+                                // Se crea la lista numerada y en negritas (Markdown)
+                                listText += `${index + 1}. **${place.placeName}**\n`; 
+                            });
+                            
+                            // 2. Concatenar la introducción de Gemini con la lista.
+                            const finalDescription = parsedJson.description + listText;
+
+                            // 3. Crear una respuesta enriquecida (sigue siendo tipo 'category')
+                            finalResponseData.responseText = JSON.stringify({
+                                ...parsedJson,
+                                description: finalDescription, // La descripción final con la lista
+                                // type: 'category' asegura que el frontend solo muestre botones de búsqueda general
+                            });
+                        } else {
+                            // Si la clave existe pero la lista está vacía
+                            parsedJson.description = (currentLanguage === 'es' 
+                                ? "Lo siento, no tengo una lista de lugares para esa categoría. Intenta buscar en el mapa o en Google."
+                                : "I'm sorry, I don't have a list of places for that category. Try searching on the map or Google.");
+                            finalResponseData.responseText = JSON.stringify(parsedJson);
+                        }
+
+                    } else if (parsedJson.type === 'place' && parsedJson.placeToSearch) {
+                        // 🚀 LÓGICA DE LUGAR ESPECÍFICO (Enriquecimiento con Places API)
                         const placeData = await getPlaceDetails(parsedJson.placeToSearch);
 
                         if (placeData) {
@@ -141,16 +209,13 @@ export default async function handler(req, res) {
                                 placeName: placeData.name,
                                 placePhone: placeData.phone,
                                 mapUrl: placeData.mapUrl,
-                                reviewUrl: placeData.reviewUrl, // Nuevo campo
+                                reviewUrl: placeData.reviewUrl,
                             });
                         } else {
-                            // Si falla Places, al menos eliminamos placeToSearch para evitar confusiones
+                            // Si falla Places (no encuentra el lugar real), respondemos sin enriquecer
                             delete parsedJson.placeToSearch;
                             finalResponseData.responseText = JSON.stringify(parsedJson);
                         }
-                    } else if (parsedJson.type === 'category') {
-                        // Si es una categoría, solo aseguramos que el JSON es válido y lo pasamos.
-                        finalResponseData.responseText = JSON.stringify(parsedJson);
                     }
                 }
             }
