@@ -1,9 +1,12 @@
-import { GoogleGenAI } from '@google/genai';
-import { Client as PlacesClient } from '@googlemaps/google-maps-services-js';
+// 🚨 NOTA IMPORTANTE: Para que 'require' funcione, tu proyecto debe estar configurado como CommonJS.
+// Si estás usando Node.js/Vercel, asegúrate de que tu package.json NO tenga "type": "module".
 
-// 🛑 PASO CRÍTICO 1: Asegúrate de que este archivo exista en la ruta:
-// project-root/data/progreso_data.json
-import data from '../data/progreso_data.json' assert { type: 'json' };
+const { GoogleGenAI } = require('@google/genai');
+const { Client: PlacesClient } = require('@googlemaps/google-maps-services-js');
+
+// 🛑 PASO CRÍTICO 1: Carga el JSON usando require (más estable en Node.js)
+// Asegúrate de que el archivo exista en la ruta: project-root/data/progreso_data.json
+const data = require('../data/progreso_data.json'); 
 
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
@@ -42,7 +45,7 @@ function getRandomPlaces(categoryKey, limit = 10) {
 
 
 // 2. Definimos la Instrucción del Sistema (Actualizada con todas tus claves)
-const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
+const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -97.950). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 
 REGLAS DE FORMATO:
@@ -129,7 +132,7 @@ async function getPlaceDetails(query) {
 }
 
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Método no permitido' });
     }
@@ -170,11 +173,12 @@ export default async function handler(req, res) {
                     if (parsedJson.type === 'category' && parsedJson.categoryKey) {
                         
                         // 🚀 LÓGICA DE LISTA DE CATEGORÍAS (Su base de datos)
-                        const randomPlaces = getRandomPlaces(parsedJson.categoryKey, 10);
+                        // Limita a 10 resultados para no saturar
+                        const randomPlaces = getRandomPlaces(parsedJson.categoryKey, 10); 
                         
                         if (randomPlaces.length > 0) {
                             
-                            // 1. Crear el texto detallado de la lista de 10 lugares.
+                            // 1. Crear el texto detallado de la lista
                             let listText = "\n";
                             randomPlaces.forEach((place, index) => {
                                 // Se crea la lista numerada y en negritas (Markdown)
