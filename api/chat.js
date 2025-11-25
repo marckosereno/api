@@ -4,8 +4,7 @@
 const { GoogleGenAI } = require('@google/genai');
 const { Client: PlacesClient } = require('@googlemaps/google-maps-services-js');
 
-// 🛑 PASO CRÍTICO 1: Carga el JSON usando require (más estable en Node.js)
-// Asegúrate de que el archivo exista en la ruta: project-root/data/progreso_data.json
+// 🛑 Carga el JSON usando require (más estable en Node.js)
 const data = require('../data/progreso_data.json'); 
 
 // Usamos el modelo más rápido y económico para chat
@@ -13,7 +12,6 @@ const MODEL_NAME = "gemini-2.5-flash";
 
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
-// Asegúrate de que esta variable de entorno esté configurada en Vercel
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY; 
 const placesClient = new PlacesClient({});
 
@@ -44,14 +42,14 @@ function getRandomPlaces(categoryKey, limit = 10) {
 }
 
 
-// 2. Definimos la Instrucción del Sistema (Actualizada con todas tus claves)
+// 2. Definimos la Instrucción del Sistema (¡CORREGIDA! Sin backticks internos)
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -97.950). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 
 REGLAS DE FORMATO:
 1. **Responde exclusivamente en {LANG_PLACEHOLDER}**.
-2. **MODO FICHA DE LUGAR (JSON):** Úsalo si la solicitud es de **un lugar o negocio específico** que crees que existe, pero que no está asociado a una clave de categoría de la base de datos.
-3. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo si la solicitud es una lista o una categoría general que **coincide con una de las CLAVES DE BÚSQUEDA**.
+2. **MODO FICHA DE LUGAR (JSON):** Úsalo si la solicitud es de UN LUGAR ESPECÍFICO que crees que existe, pero que no está asociado a una clave de categoría.
+3. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo si la solicitud es una lista o una categoría general que COINCIDE con una de las CLAVES DE BÚSQUEDA.
 4. **MODO CONVERSACIONAL (Texto Plano):** Úsalo para preguntas generales o de seguimiento.
 5. Los formatos JSON requeridos son:
    
@@ -76,7 +74,7 @@ REGLAS DE FORMATO:
 REGLAS CRÍTICAS PARA ASIGNAR CLAVES DE CATEGORÍA:
 * Usa las siguientes CLAVES DE BÚSQUEDA para las categorías listadas: 
   [clinicas_dentales, taquerias_tacos_y_lonches, tacos_barbacoa, restaurantes, salones_belleza, tiendas_artesanias, farmacias, opticas].
-* **SI EL LUGAR SOLICITADO NO ES UNA CLAVE DE CATEGORÍA**, debes usar el formato `type: "place"` y utilizar tu conocimiento para encontrar un nombre de negocio real en Nuevo Progreso y usarlo en el campo `placeToSearch` para que sea enriquecido.
+* SI EL LUGAR SOLICITADO NO ES UNA CLAVE DE CATEGORÍA, debes usar el formato type: "place" y utilizar tu conocimiento para encontrar un nombre de negocio real en Nuevo Progreso y usarlo en el campo placeToSearch para que sea enriquecido.
 * Si no puedes encontrar un lugar, responde con un mensaje de texto plano conversacional.`;
 
 /**
@@ -93,7 +91,6 @@ async function getPlaceDetails(query) {
         const findPlaceResponse = await placesClient.findPlaceFromText({
             params: {
                 key: placesApiKey,
-                // Añadimos el contexto al query para forzar la precisión geográfica
                 input: query + ", Nuevo Progreso Tamps, México", 
                 inputtype: 'textquery',
                 fields: ['place_id']
@@ -173,7 +170,6 @@ module.exports = async function handler(req, res) {
                     if (parsedJson.type === 'category' && parsedJson.categoryKey) {
                         
                         // 🚀 LÓGICA DE LISTA DE CATEGORÍAS (Su base de datos)
-                        // Limita a 10 resultados para no saturar
                         const randomPlaces = getRandomPlaces(parsedJson.categoryKey, 10); 
                         
                         if (randomPlaces.length > 0) {
@@ -181,7 +177,6 @@ module.exports = async function handler(req, res) {
                             // 1. Crear el texto detallado de la lista
                             let listText = "\n";
                             randomPlaces.forEach((place, index) => {
-                                // Se crea la lista numerada y en negritas (Markdown)
                                 listText += `${index + 1}. **${place.placeName}**\n`; 
                             });
                             
@@ -191,8 +186,7 @@ module.exports = async function handler(req, res) {
                             // 3. Crear una respuesta enriquecida (sigue siendo tipo 'category')
                             finalResponseData.responseText = JSON.stringify({
                                 ...parsedJson,
-                                description: finalDescription, // La descripción final con la lista
-                                // type: 'category' asegura que el frontend solo muestre botones de búsqueda general
+                                description: finalDescription, 
                             });
                         } else {
                             // Si la clave existe pero la lista está vacía
