@@ -42,14 +42,14 @@ function getRandomPlaces(categoryKey, limit = 10) {
 }
 
 
-// 2. Definimos la Instrucción del Sistema (¡CORREGIDA! Sin backticks internos)
+// 2. Definimos la Instrucción del Sistema (¡CORREGIDA PARA LA LÓGICA DE RECOMENDACIONES!)
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -97.950). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 
 REGLAS DE FORMATO:
 1. **Responde exclusivamente en {LANG_PLACEHOLDER}**.
 2. **MODO FICHA DE LUGAR (JSON):** Úsalo si la solicitud es de UN LUGAR ESPECÍFICO que crees que existe, pero que no está asociado a una clave de categoría.
-3. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo si la solicitud es una lista o una categoría general que COINCIDE con una de las CLAVES DE BÚSQUEDA.
+3. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo si la solicitud es una categoría general.
 4. **MODO CONVERSACIONAL (Texto Plano):** Úsalo para preguntas generales o de seguimiento.
 5. Los formatos JSON requeridos son:
    
@@ -62,12 +62,12 @@ REGLAS DE FORMATO:
      "isStructured": true
    }
    
-   // Formato para CATEGORÍA GENERAL o LISTAS (La lista se insertará en el Backend)
+   // Formato para CATEGORÍA GENERAL (La lista solo se inserta si la descripción lo pide)
    {
      "type": "category", 
      "categoryKey": "CLAVE_DE_BUSQUEDA", 
      "categoryName": "Nombre de la Categoría, ej: Clínicas Dentales",
-     "description": "Comienza con un resumen breve y general de la categoría. Finaliza diciendo: 'Aquí tienes varias opciones destacadas de nuestra lista personalizada:'",
+     "description": "Comienza con un resumen breve y general de la categoría. Esta descripción DEBE terminar con la frase 'Aquí tienes varias opciones destacadas de nuestra lista personalizada:' **SOLO** si el usuario pidió explícitamente una recomendación (ej. 'top 10', 'dame 12', 'recomiéndame'). Si es solo una navegación por categoría (ej. 'clínicas dentales'), termina con un mensaje de bienvenida y explicación de la categoría.",
      "isStructured": true
    }
 
@@ -134,6 +134,9 @@ module.exports = async function handler(req, res) {
         return res.status(405).json({ message: 'Método no permitido' });
     }
 
+    // Frase clave para activar la inserción de la lista en el backend
+    const LIST_TRIGGER_PHRASE = 'Aquí tienes varias opciones destacadas de nuestra lista personalizada:';
+
     try {
         const { history = [], userPrompt, currentLanguage } = req.body;
         
@@ -170,29 +173,35 @@ module.exports = async function handler(req, res) {
                     if (parsedJson.type === 'category' && parsedJson.categoryKey) {
                         
                         // 🚀 LÓGICA DE LISTA DE CATEGORÍAS (Su base de datos)
-                        const randomPlaces = getRandomPlaces(parsedJson.categoryKey, 10); 
-                        
-                        if (randomPlaces.length > 0) {
-                            
-                            // 1. Crear el texto detallado de la lista
-                            let listText = "\n";
-                            randomPlaces.forEach((place, index) => {
-                                listText += `${index + 1}. **${place.placeName}**\n`; 
-                            });
-                            
-                            // 2. Concatenar la introducción de Gemini con la lista.
-                            const finalDescription = parsedJson.description + listText;
+                        // Verificamos si Gemini usó la frase clave para insertar la lista
+                        const shouldInsertList = parsedJson.description.includes(LIST_TRIGGER_PHRASE);
 
-                            // 3. Crear una respuesta enriquecida (sigue siendo tipo 'category')
-                            finalResponseData.responseText = JSON.stringify({
-                                ...parsedJson,
-                                description: finalDescription, 
-                            });
+                        if (shouldInsertList) {
+                            
+                            const randomPlaces = getRandomPlaces(parsedJson.categoryKey, 10); 
+                            
+                            if (randomPlaces.length > 0) {
+                                
+                                // 1. Crear el texto detallado de la lista
+                                let listText = "\n";
+                                randomPlaces.forEach((place, index) => {
+                                    listText += `${index + 1}. **${place.placeName}**\n`; 
+                                });
+                                
+                                // 2. Concatenar la introducción de Gemini con la lista.
+                                const finalDescription = parsedJson.description + listText;
+
+                                // 3. Crear una respuesta enriquecida
+                                finalResponseData.responseText = JSON.stringify({
+                                    ...parsedJson,
+                                    description: finalDescription, 
+                                });
+                            }
+                            // NOTA: Si shouldInsertList es true pero la lista está vacía (length 0), 
+                            // el código caerá en el else implícito y solo mostrará la descripción de Gemini.
                         } else {
-                            // Si la clave existe pero la lista está vacía
-                            parsedJson.description = (currentLanguage === 'es' 
-                                ? "Lo siento, no tengo una lista de lugares para esa categoría. Intenta buscar en el mapa o en Google."
-                                : "I'm sorry, I don't have a list of places for that category. Try searching on the map or Google.");
+                            // Si shouldInsertList es false (solo navegación), no hacemos nada y 
+                            // devolvemos la respuesta de Gemini tal cual (solo la descripción general)
                             finalResponseData.responseText = JSON.stringify(parsedJson);
                         }
 
