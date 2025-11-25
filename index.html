@@ -3,264 +3,636 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PROGRESO TOUR GUIDE - Chatbot</title>
+    <title>Progreso Tour Guide</title>
+<link href="https://fonts.cdnfonts.com/css/avenir" rel="stylesheet">
+                
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .chat-container { width: 100%; max-width: 600px; height: 90vh; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; }
-        .chat-header { background-color: #004d40; color: white; padding: 15px; border-top-left-radius: 8px; border-top-right-radius: 8px; text-align: center; font-size: 1.2em; font-weight: bold; }
-        .chat-messages { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .message { padding: 10px 15px; border-radius: 20px; max-width: 80%; line-height: 1.4; white-space: pre-wrap; }
-        .user-message { background-color: #d1e7dd; align-self: flex-end; border-bottom-right-radius: 5px; }
-        .bot-message { background-color: #f8f9fa; align-self: flex-start; border: 1px solid #dee2e6; border-bottom-left-radius: 5px; }
-        .chat-input { display: flex; padding: 15px; border-top: 1px solid #ccc; }
-        .chat-input input { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 20px 0 0 20px; font-size: 1em; outline: none; }
-        .chat-input button { background-color: #004d40; color: white; border: none; padding: 10px 15px; border-radius: 0 20px 20px 0; cursor: pointer; font-weight: bold; transition: background-color 0.2s; }
-        .chat-input button:hover { background-color: #00332a; }
-        .chat-input button:disabled { background-color: #ccc; cursor: not-allowed; }
+        /* Estilos base */
+        html, body { font-family:Avenir; height: 100%; margin: 0; padding: 0; }
+        .chat-window { height: 100%; width: 100vw; display: flex; flex-direction: column; background-color: #f7f7f7; overflow: hidden }
+        .user-bubble { border-radius: 18px 18px 0 18px; max-width: 80% }
+        .model-bubble { border-radius: 18px 18px 18px 0; max-width: 80%;padding-left:8px; }
+        .action-bar-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 10px; padding-bottom: 5px }
+        .action-btn { white-space: nowrap }
+        .chip-group-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
         
-        /* Estilos para Respuestas Estructuradas */
-        .structured-box { border: 2px solid #004d40; padding: 15px; margin-top: 10px; border-radius: 10px; background-color: #e8f5e9; }
-        .structured-box h4 { margin-top: 0; color: #004d40; border-bottom: 2px solid #b9d7b9; padding-bottom: 5px; }
-        .structured-box p { margin-bottom: 10px; }
-        .structured-box .actions button { margin-right: 10px; background-color: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; }
-        .structured-box .actions button:hover { background-color: #1e7e34; }
+        /* Estilo de la barra de chat */
+        .map-search-bar {
+            background-color: white; 
+            border-radius: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            padding: 4px; 
+            width: 100%; 
+            box-sizing: border-box; 
+        }
+        .map-input {
+            flex-grow: 1;
+            padding: 0.75rem 0.75rem; 
+            color: #9ca3af;
+            font-size: 1.125rem;
+            background: transparent;
+            border: none;
+            min-width: 0; 
+            outline: none !important;
+            box-shadow: none !important;
+        }
+        .go-button {
+            background-color: black;
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 15px;
+            padding: 0.5rem 1rem; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: hover:opacity-90 disabled:opacity-50;
+            flex-shrink: 0;
+            min-width: 60px;
+            height: 44px;
+            box-sizing: border-box;
+            margin-right: 4px;
+            outline: none !important;
+        }
+        .go-button svg {
+            margin-right: 0.25rem;
+            width: 1.25rem; 
+            height: 1.25rem;
+            fill: currentColor;
+        }
 
-        /* Botón de Historial */
-        .clear-history-btn { background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8em; margin-top: 5px; display: block; width: fit-content; margin: 5px auto; }
+        /* --- Eliminación de Efecto Celeste/Ring/Highlight en TODOS los botones y chips --- */
+        
+        /* 1. Para navegadores basados en Webkit (Chrome, Safari, Android) */
+        * {
+            -webkit-tap-highlight-color: transparent !important; /* SOLUCIÓN CLAVE para el toque en móvil */
+        }
+        
+        /* 2. Asegura la eliminación del outline/ring en estados focus/active */
+        .action-chip, .category-chip, .language-chip, .go-button, .map-input {
+            outline: none !important;
+            box-shadow: none !important;
+            --tw-ring-color: transparent !important;
+        }
+        .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active, .go-button:focus, .go-button:active {
+            outline: none !important;
+            box-shadow: none !important;
+            --tw-ring-color: transparent !important;
+        }
+        .hover\:bg-gray-300:active {
+            background-color: #d1d5db; /* mantiene el color del hover al hacer click */
+        }
+        
+        /* --- Efecto Ola y Transición para los Chips --- */
+        .category-chip, .language-chip {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+        }
+        .visible-chip {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Estilo para el Timestamp */
+        .timestamp {
+            font-size: 0.7rem; /* Fuente pequeña */
+            color: #9ca3af; /* Color gris suave */
+            margin-top: 2px;
+        }
     </style>
+    <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
 </head>
 <body>
-
-    <div class="chat-container">
-        <div class="chat-header">
-            PROGRESO TOUR GUIDE
-            <button class="clear-history-btn" onclick="clearChatHistory()">Limpiar Historial</button>
+    <div id="chat-window" class="chat-window h-screen w-full"> 
+        <div class="flex items-center justify-between p-4 bg-white text-gray-800 font-bold border-b border-gray-200 flex-shrink-0 shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+            <span id="header-text" class="text-lg">PROGRESO TOUR GUIDE</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
         </div>
-        <div class="chat-messages" id="chat-messages">
+
+        <div id="message-container" class="flex-grow overflow-y-auto p-4 flex flex-col"></div>
+
+        <div id="loading-indicator" class="flex justify-start hidden p-4 pl-1 flex-shrink-0" style="margin-left:-42px;margin-bottom:-22px;">
+            <dotlottie-wc src="https://lottie.host/65b2d1fc-9840-476c-867e-6236ce234b38/SwsGK4ZVOj.lottie" style="width: 150px; height:" autoplay loop></dotlottie-wc>
+        </div>
+        
+        <div id="app-alert-container" class="fixed top-2 w-full flex justify-center z-50"></div>
+
+        <div id="quick-replies-container" class="quick-replies-container p-2 border-t border-gray-100 bg-white flex-shrink-0 flex flex-col space-y-2">
+            
+            <div id="category-chips-group" class="chip-group-scroll hidden">
+                <div id="category-chips-list" class="inline-flex space-x-3 pb-3 border-b border-gray-200"> 
+                    <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-green-500 bg-green-50 text-green-700 cursor-pointer transition hover:bg-green-100" data-query-es="Dime sobre la Categoría Salud y Estética en Progreso" data-query-en="Tell me about the Health and Beauty Category in Progreso">🏥 Salud & Estética</div>
+                    <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-blue-500 bg-blue-50 text-blue-700 cursor-pointer transition hover:bg-blue-100" data-query-es="Dime sobre la Categoría Compras y Tiendas en Progreso" data-query-en="Tell me about the Shopping and Stores Category in Progreso">🛍️ Compras</div>
+                    <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-purple-500 bg-purple-50 text-purple-700 cursor-pointer transition hover:bg-purple-100" data-query-es="Dime sobre la Categoría Entretenimiento y Atracciones en Progreso" data-query-en="Tell me about the Entertainment and Attractions Category in Progreso">🎺 Entretenimiento</div>
+                    <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-yellow-500 bg-yellow-50 text-yellow-700 cursor-pointer transition hover:bg-yellow-100" data-query-es="Top 10 Dentistas en Progreso" data-query-en="Top 10 Dentists in Progreso">🦷 Top 10 Dental</div>
+                </div>
             </div>
-        <div class="chat-input">
-            <input type="text" id="user-input" placeholder="Escribe tu pregunta..." onkeypress="if(event.key === 'Enter') handleSendMessage()">
-            <button id="send-btn" onclick="handleSendMessage()">Enviar</button>
+
+            <div id="language-chips-group" class="chip-group-scroll hidden">
+                <div class="inline-flex space-x-3 pb-3 border-b border-gray-200"> 
+                    <div class="language-chip flex items-center p-2 rounded-full text-sm font-semibold border border-gray-400 bg-white text-gray-800 cursor-pointer transition hover:bg-gray-100" data-lang="es">🇪🇸 Español</div>
+                    <div class="language-chip flex items-center p-2 rounded-full text-sm font-semibold border border-gray-400 bg-white text-gray-800 cursor-pointer transition hover:bg-gray-100" data-lang="en">🇺🇸 English</div>
+                </div>
+            </div>
+            
+            <div id="menu-actions" class="chip-group-scroll">
+                <div class="inline-flex space-x-3 pt-2">
+                    <div id="btn-categorias" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-gray-200 text-gray-800 cursor-pointer transition hover:bg-gray-300" data-action="CATEGORIES">📂 Categorías</div>
+                    <div id="btn-lenguaje" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-gray-200 text-gray-800 cursor-pointer transition hover:bg-gray-300" data-action="LANGUAGE">🌐 Lenguaje</div>
+                    <div id="btn-comollegar" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-gray-200 text-gray-800 cursor-pointer transition hover:bg-gray-300" data-action="GET_THERE" data-query-es="Dime cómo llegar a Progreso, Tamaulipas." data-query-en="Tell me how to get to Progreso, Tamaulipas.">📍 Cómo Llegar</div>
+                    <div id="btn-info" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-gray-200 text-gray-800 cursor-pointer transition hover:bg-gray-300" data-action="INFO" data-query-es="Información general sobre Nuevo Progreso." data-query-en="General information about Nuevo Progreso.">ℹ️ Info</div>
+                </div>
+            </div>
         </div>
-    </div>
-
-    <script>
-        // --- CONSTANTES DE CONFIGURACIÓN ---
-        const HISTORY_STORAGE_KEY = 'progreso_chat_history';
-        const MAX_HISTORY_TURNS = 10; // 5 preguntas de usuario + 5 respuestas de Gemini
-        const chatMessages = document.getElementById('chat-messages');
-        const userInput = document.getElementById('user-input');
-        const sendBtn = document.getElementById('send-btn');
-
-        // --- GESTIÓN DE HISTORIAL Y TOKENS ---
         
-        /** Carga el historial desde localStorage y lo trunca si es muy largo. */
-        function getAndTruncateHistory() {
-            const storedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
-            let history = storedHistory ? JSON.parse(storedHistory) : [];
-
-            if (history.length > MAX_HISTORY_TURNS) {
-                history = history.slice(-MAX_HISTORY_TURNS);
-            }
-            return history;
-        }
-
-        /** Añade el nuevo turno de conversación al historial y lo guarda. */
-        function updateAndSaveHistory(userPrompt, modelResponse) {
-            let history = getAndTruncateHistory();
-            
-            // Si la respuesta fue JSON estructurado, solo guardamos el texto plano original de Gemini para ahorrar tokens.
-            let modelTextToSave;
-            try {
-                const parsed = JSON.parse(modelResponse);
-                modelTextToSave = parsed.description; 
-            } catch (e) {
-                modelTextToSave = modelResponse;
-            }
-
-            history.push({ role: "user", parts: [{ text: userPrompt }] });
-            history.push({ role: "model", parts: [{ text: modelTextToSave }] });
-
-            localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
-        }
-
-        /** Limpia el historial de localStorage. */
-        function clearChatHistory() {
-            localStorage.removeItem(HISTORY_STORAGE_KEY);
-            chatMessages.innerHTML = '';
-            renderInitialMessage();
-            console.log("Historial de chat limpiado.");
-        }
-
-        // --- GESTIÓN DE UI Y RENDERING ---
-
-        /** Renderiza un mensaje simple en el chat. */
-        function renderMessage(role, content) {
-            const messageEl = document.createElement('div');
-            messageEl.className = `message ${role}-message`;
-            messageEl.innerHTML = content;
-            chatMessages.appendChild(messageEl);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-            return messageEl;
-        }
-
-        /** Renderiza la ficha estructurada de JSON (place o category). */
-        function renderStructuredResponse(data) {
-            const box = document.createElement('div');
-            box.className = 'structured-box';
-            
-            // Título de la ficha
-            const title = document.createElement('h4');
-            title.textContent = data.type === 'place' ? `FICHA: ${data.placeName}` : `CATEGORÍA: ${data.categoryName}`;
-            box.appendChild(title);
-            
-            // Descripción (puede contener la lista si es recomendación)
-            const description = document.createElement('p');
-            description.style.whiteSpace = 'pre-wrap';
-            description.textContent = data.description;
-            box.appendChild(description);
-
-            // Acciones/Botones
-            const actions = document.createElement('div');
-            actions.className = 'actions';
-
-            if (data.type === 'place' && data.mapUrl) {
-                // Botones para lugar específico (enriquecido)
-                const mapBtn = createActionButton('Ver en el Mapa', data.mapUrl);
-                actions.appendChild(mapBtn);
-                if (data.placePhone) {
-                    const phoneBtn = createActionButton('Llamar', `tel:${data.placePhone}`);
-                    actions.appendChild(phoneBtn);
-                }
-            } else if (data.type === 'category' && data.categoryName) {
-                // Botones para categoría (no tiene mapa/url directo, busca en Google)
-                const searchName = data.categoryName.replace(/ /g, '+') + "+Nuevo+Progreso+Tamaulipas";
-                const mapBtn = createActionButton('Ver Lugares en el Mapa', `https://www.google.com/maps/search/?api=1&query=${searchName}`);
-                actions.appendChild(mapBtn);
+        <div class="p-4 bg-white shadow-xl flex-shrink-0">
+            <div class="map-search-bar w-full">
+                <input type="text" id="user-input" class="map-input focus:outline-none focus:ring-0" placeholder="Ask the map">
                 
-                const googleBtn = createActionButton('Buscar en Google', `https://www.google.com/search?q=${searchName}`);
-                actions.appendChild(googleBtn);
-                
-                // Botón de recomendación (simulación de 'Top 10')
-                if (!data.description.includes("nuestra lista personalizada")) {
-                    const recommendBtn = createRecommendationButton(data.categoryName);
-                    actions.appendChild(recommendBtn);
-                }
+                <button id="go-button" class="go-button transition hover:opacity-90 disabled:opacity-50">
+                    <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 122.88 122.88" class="h-5 w-5"><g><path class="st0" d="M62.43,122.88h-1.98c0-16.15-6.04-30.27-18.11-42.34C30.27,68.47,16.16,62.43,0,62.43v-1.98 c16.16,0,30.27-6.04,42.34-18.14C54.41,30.21,60.45,16.1,60.45,0h1.98c0,16.15,6.04,30.27,18.11,42.34 c12.07,12.07,26.18,18.11,42.34,18.11v1.98c-16.15,0-30.27,6.04-42.34,18.11C68.47,92.61,62.43,106.72,62.43,122.88L62.43,122.88z"/></g></svg>
+                    <span id="go-text">Go</span> 
+                </button>
+            </div>
+        </div>
+        </div>
 
-            }
+<script>
+    // --- BLOQUE JAVASCRIPT: SETUP Y UTILIDADES ---
+    
+    // **NOTA: Debe coincidir con el endpoint de Vercel/backend**
+    const BACKEND_URL = "/api/chat"; 
+    
+    let chatHistory = [];
+    let currentLanguage = 'es'; 
+    let categoriesVisible = false; 
+    let languageMenuVisible = false; 
 
-            box.appendChild(actions);
-            return box;
+    // Referencias a Elementos del DOM
+    const inputElement = document.getElementById('user-input');
+    const sendButton = document.getElementById('go-button'); 
+    const messageContainer = document.getElementById('message-container');
+    const loadingIndicator = document.getElementById('loading-indicator');
+    const appAlertContainer = document.getElementById('app-alert-container');
+    const categoryChipsGroup = document.getElementById('category-chips-group');
+    const languageChipsGroup = document.getElementById('language-chips-group');
+    const categoryChips = document.querySelectorAll('#category-chips-group .category-chip');
+    const languageChips = document.querySelectorAll('#language-chips-group .language-chip');
+    const menuActionChips = document.querySelectorAll('#menu-actions .menu-action-chip');
+    
+    // Objeto de Traducción y textos de chips
+    const UI_STRINGS = {
+        es: {
+            header: "PROGRESO TOUR GUIDE",
+            placeholder: "Pregúntale al mapa",
+            goButton: "Ir",
+            categories: "📂 Categorías",
+            language: "🌐 Lenguaje",
+            getThere: "📍 Cómo Llegar",
+            info: "ℹ️ Info",
+            alertStructured: (name) => `¡Ficha verificada de ${name}!`,
+            alertCategory: (name) => `Resumen de la categoría ${name}.`, // Nuevo para categorías
+            chipHealth: "🏥 Salud & Estética",
+            chipShopping: "🛍️ Compras",
+            chipEntertainment: "🎺 Entretenimiento",
+            chipDental: "🦷 Top 10 Dental",
+        },
+        en: {
+            header: "PROGRESO TOUR GUIDE",
+            placeholder: "Ask the map",
+            goButton: "Go",
+            categories: "📂 Categories",
+            language: "🌐 Language",
+            getThere: "📍 How to get there",
+            info: "ℹ️ Info",
+            alertStructured: (name) => `Verified card for ${name}!`,
+            alertCategory: (name) => `Summary for ${name} category.`, // Nuevo para categorías
+            chipHealth: "🏥 Health & Beauty",
+            chipShopping: "🛍️ Shopping",
+            chipEntertainment: "🎺 Entertainment",
+            chipDental: "🦷 Top 10 Dental",
         }
+    };
 
-        function createActionButton(text, url) {
-            const btn = document.createElement('button');
-            btn.textContent = text;
-            btn.onclick = () => window.open(url, '_blank');
-            return btn;
+    // Inicialización del estado
+    if (inputElement) inputElement.disabled = false;
+    if (sendButton) sendButton.disabled = false;
+
+    // --- Funciones de utilidad de tiempo ---
+    function formatTime(date) {
+        if (!date) return '';
+        let hours = date.getHours();
+        const minutes = date.getMinutes();
+        const ampm = hours >= 12 ? 'pm' : 'am';
+        hours = hours % 12;
+        hours = hours ? hours : 12; // the hour '0' should be '12'
+        const minutesStr = minutes < 10 ? '0'+minutes : minutes;
+        return hours + ':' + minutesStr + ' ' + ampm;
+    }
+
+    function alertUser(m, t='i') {
+        if (appAlertContainer && appAlertContainer.querySelector('.app-alert')) appAlertContainer.querySelector('.app-alert').remove();
+        const a = document.createElement('div');
+        const bg = (t === 'error') ? 'bg-red-500' : 'bg-blue-500';
+        a.className = `app-alert p-3 rounded-lg text-white font-semibold shadow-lg transition-opacity duration-300 z-50 ${bg} mb-2`;
+        a.textContent = m;
+        if (appAlertContainer) appAlertContainer.appendChild(a);
+        setTimeout(() => { a.style.opacity = '0'; setTimeout(() => a.remove(), 300); }, 4000);
+    }
+    
+    function scrollToBottom() { 
+        if (messageContainer) messageContainer.scrollTop = messageContainer.scrollHeight; 
+    }
+    
+    function toggleInput(d) {
+        if (inputElement) inputElement.disabled = d;
+        if (sendButton) sendButton.disabled = d;
+        if (loadingIndicator) loadingIndicator.classList.toggle('hidden', !d);
+        if (inputElement) inputElement.placeholder = d ? "" : UI_STRINGS[currentLanguage].placeholder;
+    }
+
+    // --- FUNCIONES DE INTERACCIÓN ---
+
+    function vibrateDevice() {
+        if ("vibrate" in navigator) {
+            navigator.vibrate(100); 
         }
+    }
+    
+    function hideChipGroup(groupElement, chipElements) {
+        groupElement.classList.add('hidden');
+        chipElements.forEach(chip => {
+            chip.classList.remove('visible-chip');
+        });
+    }
+
+    function showChipGroupWithWave(groupElement, chipElements) {
+        groupElement.classList.remove('hidden');
+        chipElements.forEach((chip, index) => {
+            chip.style.transition = 'none';
+            chip.classList.remove('visible-chip');
+
+            void chip.offsetWidth; 
+
+            setTimeout(() => {
+                chip.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+                chip.classList.add('visible-chip');
+            }, index * 100); 
+        });
+    }
+
+    function setInterfaceLanguage(lang) {
+        currentLanguage = lang;
+        const strings = UI_STRINGS[lang];
         
-        function createRecommendationButton(categoryName) {
-            const btn = document.createElement('button');
-            btn.textContent = 'Dame 10 Recomendaciones';
-            btn.style.backgroundColor = '#ffc107';
-            btn.style.color = '#343a40';
-            btn.style.fontWeight = 'bold';
-            btn.onclick = () => {
-                const prompt = `Recomiéndame 10 ${categoryName} en Nuevo Progreso.`;
-                userInput.value = prompt;
-                handleSendMessage();
-            };
-            return btn;
+        // Ocultar menú de lenguaje
+        hideChipGroup(languageChipsGroup, languageChips);
+        languageMenuVisible = false;
+
+        // Actualizar textos de la interfaz
+        document.getElementById('header-text').textContent = strings.header;
+        inputElement.placeholder = strings.placeholder;
+        document.getElementById('go-text').textContent = strings.goButton; 
+
+        document.getElementById('btn-categorias').textContent = strings.categories;
+        document.getElementById('btn-lenguaje').textContent = strings.language;
+        document.getElementById('btn-comollegar').textContent = strings.getThere;
+        document.getElementById('btn-info').textContent = strings.info;
+
+        // Actualizar textos de los chips de categoría
+        const categoryChipTexts = [strings.chipHealth, strings.chipShopping, strings.chipEntertainment, strings.chipDental];
+        categoryChips.forEach((chip, index) => {
+            chip.textContent = categoryChipTexts[index];
+        });
+
+        alertUser(`Interfaz y conversación cambiadas a ${lang === 'es' ? 'Español' : 'English'}`, 'i');
+    }
+
+    // LÓGICA DE OCULTAMIENTO REVISADA: Solo los botones del menú principal (action chips) controlan la visibilidad.
+    function handleMenuAction(actionChip) {
+        const action = actionChip.getAttribute('data-action');
+        const lang = currentLanguage;
+        const query = actionChip.getAttribute(`data-query-${lang}`);
+
+        vibrateDevice(); 
+
+        // Lógica para ocultar otros menús y resetear estados
+        if (action !== 'CATEGORIES' && categoriesVisible) {
+            hideChipGroup(categoryChipsGroup, categoryChips);
+            categoriesVisible = false;
+        }
+        if (action !== 'LANGUAGE' && languageMenuVisible) {
+            hideChipGroup(languageChipsGroup, languageChips);
+            languageMenuVisible = false;
         }
 
-        /** Renderiza el mensaje de inicio y carga el historial al cargar. */
-        function renderInitialMessage() {
-            const initialHistory = getAndTruncateHistory();
-            if (initialHistory.length === 0) {
-                renderMessage('bot', '¡Hola! Soy tu guía de PROGRESO TOUR GUIDE. Pregúntame sobre **dentistas, farmacias, restaurantes, estéticas** o cualquier lugar de Nuevo Progreso.');
+
+        if (action === 'CATEGORIES') {
+            if (categoriesVisible) {
+                hideChipGroup(categoryChipsGroup, categoryChips);
+                categoriesVisible = false;
             } else {
-                // Reconstruir la conversación
-                initialHistory.forEach(item => {
-                    renderMessage(item.role, item.parts[0].text);
-                });
-                renderMessage('bot', '¡Bienvenido de vuelta! ¿En qué más puedo ayudarte hoy?');
+                showChipGroupWithWave(categoryChipsGroup, categoryChips);
+                categoriesVisible = true;
+            }
+        } else if (action === 'LANGUAGE') {
+            if (languageMenuVisible) {
+                hideChipGroup(languageChipsGroup, languageChips);
+                languageMenuVisible = false;
+            } else {
+                showChipGroupWithWave(languageChipsGroup, languageChips);
+                languageMenuVisible = true;
+            }
+        } else {
+            // Acciones directas (Cómo Llegar, Info)
+            if (query) {
+                // Si la acción es Cómo Llegar o Info, envía la consulta Y oculta los menús activos.
+                handleSend(query); 
+                if (categoriesVisible) { hideChipGroup(categoryChipsGroup, categoryChips); categoriesVisible = false; }
+                if (languageMenuVisible) { hideChipGroup(languageChipsGroup, languageChips); languageMenuVisible = false; }
             }
         }
-
-        // --- LÓGICA DE ENVÍO Y COMUNICACIÓN API ---
-
-        async function handleSendMessage() {
-            const userPrompt = userInput.value.trim();
-            if (!userPrompt) return;
-
-            renderMessage('user', userPrompt);
-            userInput.value = '';
-            sendBtn.disabled = true;
-
-            const history = getAndTruncateHistory();
-            const currentLanguage = 'es'; 
-            
-            // Mostrar un indicador de carga
-            const loadingMsg = renderMessage('bot', '✍️ Pensando...');
-
-            try {
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        userPrompt: userPrompt,
-                        history: history, 
-                        currentLanguage: currentLanguage
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error('Error en la API. Revisa tus logs de Vercel o la clave de Places.');
-                }
-
-                const data = await response.json();
-                const modelResponseText = data.responseText.trim();
-                
-                // 1. Intentar parsear el JSON
-                let parsedJson;
-                try {
-                    parsedJson = JSON.parse(modelResponseText);
-                } catch (e) {
-                    // No es JSON estructurado, es texto plano
-                    parsedJson = null;
-                }
-
-                // 2. Reemplazar el mensaje de carga
-                chatMessages.removeChild(loadingMsg);
-                let contentToSave;
-
-                if (parsedJson && parsedJson.isStructured) {
-                    // Es un mensaje estructurado (Ficha o Categoría)
-                    const structuredBox = renderStructuredResponse(parsedJson);
-                    renderMessage('bot', structuredBox.outerHTML);
-                    contentToSave = parsedJson.description; // Guardar solo la descripción en el historial
-
-                } else {
-                    // Es un mensaje de texto plano
-                    renderMessage('bot', modelResponseText);
-                    contentToSave = modelResponseText; // Guardar todo el texto
-                }
-                
-                // 3. Guardar la nueva interacción en el historial para la próxima vez
-                updateAndSaveHistory(userPrompt, contentToSave);
-
-            } catch (error) {
-                chatMessages.removeChild(loadingMsg);
-                console.error('Fallo en la solicitud:', error);
-                renderMessage('bot', `❌ **Error de conexión:** No se pudo contactar al servidor. Esto puede ser un error de red o que la función API falló. ${error.message}`);
-            } finally {
-                sendBtn.disabled = false;
-            }
-        }
+    }
+    
+    // Función para crear las burbujas de mensaje (User/Model)
+    function createMessageBubble(m) {
+        const w = document.createElement('div');
         
-        // Inicializar el chat al cargar la página
-        document.addEventListener('DOMContentLoaded', renderInitialMessage);
-    </script>
+        // Formatear el tiempo
+        const timeStr = m.timestamp ? formatTime(m.timestamp) : '';
+        const timeSpan = timeStr ? `<span class="timestamp">${timeStr}</span>` : '';
+
+        if (m.role === 'user') { 
+            w.className = 'flex justify-end mb-2'; 
+            w.innerHTML = `
+                <div class="flex flex-col items-end">
+                    <div class="user-bubble bg-blue-500 text-white p-3 shadow-md">${m.text}</div>
+                    ${timeSpan}
+                </div>
+            `; 
+        } 
+        else if (m.role === 'model') {
+            w.className = 'flex flex-col justify-start w-full mb-2';
+            let content = '';
+
+            if (m.isStructured) { 
+                
+                // 🛑 Determinar el Tipo de Contenido 🛑
+                const isPlace = m.type === 'place';
+                const isCategory = m.type === 'category';
+
+                // Usamos el nombre relevante para los enlaces de búsqueda
+                const entityName = isPlace 
+                    ? (m.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
+                    : (m.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
+                
+                // --- Configuración de Enlaces y Botones ---
+                
+                let directionsUrl = '#';
+                let searchUrl = '#';
+                let phoneUrl = null;
+                let reviewUrl = null;
+                
+                // Asume que el backend proporciona mapUrl y reviewUrl si isPlace=true
+                if (isPlace) {
+                    // Lógica para un LUGAR ESPECÍFICO (usa datos de Places)
+                    directionsUrl = m.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(entityName + " Nuevo Progreso Tamps")}`;
+                    searchUrl = `https://www.google.com/search?q=${encodeURIComponent(entityName + " Nuevo Progreso Tamps")}`;
+                    phoneUrl = m.placePhone ? `tel:${m.placePhone}` : `javascript:alert('${currentLanguage === 'es' ? 'Número no disponible.' : 'Number unavailable.'}')`;
+                    reviewUrl = m.reviewUrl || directionsUrl; 
+                    
+                } else if (isCategory) {
+                    // Lógica para una CATEGORÍA GENERAL (solo busca en mapa y google)
+                    directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(entityName + " Nuevo Progreso Tamps")}`;
+                    searchUrl = `https://www.google.com/search?q=${encodeURIComponent(entityName + " Nuevo Progreso Tamps")}`;
+                }
+                
+                
+                // --- Generación de la Burbuja y la Barra de Acciones ---
+                
+                // Muestra una alerta diferenciada
+                const alertText = isPlace 
+                    ? UI_STRINGS[currentLanguage].alertStructured(entityName)
+                    : UI_STRINGS[currentLanguage].alertCategory(entityName);
+
+                if (typeof alertUser === 'function') alertUser(alertText, "i");
+
+
+                content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">${m.text || m.description}</div>`;
+                
+                // 1. Botón VER EN MAPA (Aplica siempre)
+                let actionsHTML = `
+                    <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Ver en Mapa 🗺️' : 'View on Map 🗺️'}</a>
+                `;
+
+                // 2. Botones específicos para LUGAR
+                if (isPlace) {
+                    const isPhoneAvailable = !!m.placePhone;
+                    actionsHTML += `
+                        <a href="${phoneUrl}" class="action-btn ${isPhoneAvailable ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400 cursor-not-allowed' } text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}</a>
+                        <a href="${reviewUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-500 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Reseñas ⭐' : 'Reviews ⭐'}</a>
+                    `;
+                }
+
+                // 3. Botón Buscar en Google (Aplica siempre)
+                actionsHTML += `
+                    <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-700 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Buscar en Google 🔍' : 'Search on Google 🔍'}</a>
+                `;
+
+                const actionsBar = `
+                    <div class="action-bar-container">
+                        <div class="inline-flex space-x-3 p-1">
+                            ${actionsHTML}
+                        </div>
+                    </div>
+                `;
+                
+                w.innerHTML = `
+                    <div class="flex flex-col items-start">
+                        ${content}
+                        ${actionsBar}
+                        ${timeSpan}
+                    </div>
+                `;
+
+            } else {
+                content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">${m.text || ''}</div>`;
+                w.innerHTML = `
+                    <div class="flex flex-col items-start">
+                        ${content}
+                        ${timeSpan}
+                    </div>
+                `;
+            }
+        }
+        return w;
+    }
+
+    function renderChat() {
+        if (messageContainer) {
+            messageContainer.innerHTML = '';
+            chatHistory.forEach((m) => { messageContainer.appendChild(createMessageBubble(m)); });
+            scrollToBottom();
+        }
+    }
+
+    // --- CÓDIGO DE CONEXIÓN AL BACKEND ---
+
+    async function getGeminiResponse(userPrompt, chatHistoryForAPI) {
+        
+        const historyForAPI = chatHistoryForAPI.map(m => {
+            const textContent = m.isStructured && m.description ? m.description : m.text;
+            
+            return {
+                role: m.role,
+                parts: [{ text: textContent }]
+            };
+        });
+
+        try {
+            const response = await fetch(BACKEND_URL, { // Usa /api/chat
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    history: historyForAPI, 
+                    userPrompt: userPrompt, 
+                    currentLanguage: currentLanguage
+                }) 
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Error HTTP: ${response.status}. Mensaje: ${errorData.message || 'El servicio de chat falló.'}`);
+            }
+
+            const data = await response.json();
+            return data.responseText; 
+
+        } catch (error) {
+            console.error("Fallo del Proxy o API de Gemini:", error);
+            alertUser(`Error de conexión: ${error.message}.`, 'error');
+            return null;
+        }
+    }
+
+    // --- Lógica Principal del Chatbot (handleSend) ---
+    async function handleSend(userPromptInput = null) {
+        const userPrompt = userPromptInput || inputElement.value.trim();
+        if (!userPrompt) return;
+        
+        // Oculta los chips
+        hideChipGroup(categoryChipsGroup, categoryChips);
+        categoriesVisible = false;
+        hideChipGroup(languageChipsGroup, languageChips);
+        languageMenuVisible = false;
+
+        if (typeof toggleInput === 'function') toggleInput(true);
+        
+        chatHistory.push({ role: 'user', text: userPrompt, timestamp: new Date() });
+        if (typeof renderChat === 'function') renderChat();
+        inputElement.value = '';
+
+        const historyForGemini = [...chatHistory];
+        historyForGemini.pop(); 
+        
+        const MAX_MESSAGES = 10; 
+        let limitedHistory = historyForGemini.length > MAX_MESSAGES ? historyForGemini.slice(historyForGemini.length - MAX_MESSAGES) : historyForGemini;
+        
+        let modelResponseText = await getGeminiResponse(userPrompt, limitedHistory);
+        
+        let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date() };
+
+        // Intenta parsear la respuesta como JSON estructurado
+        try {
+            const jsonStart = modelResponseText.indexOf('{');
+            const jsonEnd = modelResponseText.lastIndexOf('}');
+            
+            if (jsonStart !== -1 && jsonEnd !== -1) {
+                const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
+                const parsedJson = JSON.parse(jsonString);
+
+                if (parsedJson.isStructured === true) {
+                    
+                    if (parsedJson.type === 'place') {
+                        // Respuesta de lugar específico (enriquecida por el backend)
+                        finalMessage = {
+                            role: 'model',
+                            isStructured: true,
+                            type: parsedJson.type, 
+                            text: parsedJson.description || modelResponseText, 
+                            placeName: parsedJson.placeName, 
+                            placePhone: parsedJson.placePhone || null, 
+                            mapUrl: parsedJson.mapUrl || null,
+                            reviewUrl: parsedJson.reviewUrl || null,
+                            timestamp: finalMessage.timestamp
+                        };
+                    } else if (parsedJson.type === 'category') {
+                        // Respuesta de categoría general
+                        finalMessage = {
+                            role: 'model',
+                            isStructured: true,
+                            type: parsedJson.type, 
+                            text: parsedJson.description || modelResponseText, 
+                            categoryName: parsedJson.categoryName,
+                            timestamp: finalMessage.timestamp
+                        };
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Error al parsear JSON estructurado:", e);
+            finalMessage.text = modelResponseText;
+        }
+
+        chatHistory.push(finalMessage);
+        
+        if (typeof renderChat === 'function') renderChat();
+        if (typeof toggleInput === 'function') toggleInput(false);
+    }
+    
+    // --- Event Listeners e Inicio ---
+    if (sendButton) sendButton.addEventListener('click', () => handleSend());
+    if (inputElement) inputElement.addEventListener('keypress', function(e) { if (e.key === 'Enter') { handleSend(); } });
+    
+    // Listeners para botones del menú principal (Categorías, Lenguaje, etc.)
+    menuActionChips.forEach(chip => {
+        chip.addEventListener('click', function() {
+            handleMenuAction(this);
+        });
+    });
+
+    // Oculta chips de categoría después de usarlos.
+    categoryChips.forEach(chip => {
+        chip.addEventListener('click', function() {
+            const lang = currentLanguage;
+            const query = this.getAttribute(`data-query-${lang}`);
+            handleSend(query); 
+            // Ocultamiento
+            hideChipGroup(categoryChipsGroup, categoryChips);
+            categoriesVisible = false;
+        });
+    });
+
+    // Oculta chips de idioma después de usarlos (la función setInterfaceLanguage ya lo hace).
+    languageChips.forEach(chip => {
+        chip.addEventListener('click', function() {
+            const lang = this.getAttribute('data-lang');
+            setInterfaceLanguage(lang);
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        setInterfaceLanguage('es'); 
+    });
+</script>
 </body>
 </html>
