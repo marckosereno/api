@@ -5,7 +5,7 @@
   "main": "api/index.cjs", 
   "type": "commonjs",
   "scripts": {
-    "start": "node api/chat.cjs"  
+    "start": "node api/index.cjs"  
   }, 
   
   "dependencies": {
