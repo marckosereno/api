@@ -1,4 +1,4 @@
-{
+[
   "clinicas_dentales": [
     { "placeName": "JM Dental Clinic" },
     { "placeName": "JC Dental Clinic" },
@@ -96,4 +96,4 @@
     { "placeName": "Laboratorio de Lentes Progreso" },
     { "placeName": "Óptica La Plaza" }
   ]
-}
+]
