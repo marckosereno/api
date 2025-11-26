@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Chatbot para Progreso, Tamps.",
   "main": "api/chat.js",
-"type": "module",
+"type": "commonjs",
   "scripts": {
     "start": "node api/chat.js"
   
