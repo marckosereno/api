@@ -1,40 +1,49 @@
-// api/chat.js
+// --- 1. IMPORTS Y CONFIGURACIÓN INICIAL ---
 const { GoogleGenAI } = require('@google/genai');
-const { Client: PlacesClient } = require('@googlemaps/google-maps-services-js');
 const rateLimit = require('express-rate-limit');
 const fs = require('fs');
-
-// 1. CONFIGURACIÓN DE APIS Y DATOS
-// Asegúrate de que estas variables de entorno existan en Vercel
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const PLACES_API_KEY = process.env.PLACES_API_KEY;
-
-// Carga de datos de directorio local (asume que existe en la ruta relativa)
-// Esto debe coincidir con la ubicación de tu archivo progreso_data.json
 const path = require('path');
+
+// Inicializa el cliente Gemini y Places
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const PLACES_API_KEY = process.env.PLACES_API_KEY; // Nota: No se usa directamente en este código, pero es útil si añades la funcionalidad.
+
+// --- 2. CARGA DE DATOS DE LUGARES ---
 let places = [];
 try {
+    // 🟢 RUTA CORREGIDA: Usa process.cwd() para la detección automática en Vercel
     const dataPath = path.join(process.cwd(), 'data', 'progreso_data.json'); 
     
-    const rawData = fs.readFileSync(dataPath);
+    const rawData = fs.readFileSync(dataPath, 'utf-8');
     places = JSON.parse(rawData);
 } catch (error) {
-    console.error("Error al cargar progreso_data.json:", error.message);
+    console.error("CRITICAL ERROR: Failed to load progreso_data.json or parse JSON:", error.message);
+    // En un entorno de producción, esto debería lanzar un error que detenga la ejecución.
+    throw new Error("Initialization failed: Missing or invalid data file.");
 }
 
-const ai = new GoogleGenAI(GEMINI_API_KEY);
-const placesClient = new PlacesClient({});
 
-// --- LISTA DE CATEGORÍAS SENSIBLES (APLICAR RESTRICCIONES AQUÍ) ---
-// Si una ficha tiene una de estas secciones, se eliminan teléfono y reseñas.
-const SENSITIVE_CATEGORIES = ['Dentist', 'Pharmacy', 'Health', 'Health and Beauty', 'Doctor', 'Clinic', 'Optometrist', 'Salud & Estética'];
-
-// --- 2. MIDDLEWARE DE RATE LIMITER (Protección contra 429) ---
+// --- 3. MIDDLEWARE DE RATE LIMITER (Protección contra 429) ---
 const limiter = rateLimit({
     windowMs: 60 * 1000, // 1 minuto
     max: 10, // Máximo 10 peticiones por IP en 1 minuto
-    standardHeaders: true,
+    
+    // 🛑 CORRECCIÓN CLAVE: Desactivar encabezados estándar para evitar el crash en Vercel.
+    standardHeaders: false, 
     legacyHeaders: false,
+
+    keyGenerator: (req, res) => {
+        // Esta es la forma más estable de obtener la IP real del usuario en Vercel.
+        const ipHeader = req.headers['x-forwarded-for'];
+        
+        if (ipHeader) {
+            // Devuelve la primera IP de la lista.
+            return ipHeader.split(',')[0].trim();
+        }
+        
+        return req.socket.remoteAddress || 'unknown';
+    },
+
     handler: (req, res, next, options) => {
         // Devuelve un error 429 cuando el límite se excede
         res.status(options.statusCode).json({
@@ -44,168 +53,139 @@ const limiter = rateLimit({
     }
 });
 
-// --- 3. FUNCIONES DE SEGURIDAD Y CONTEXTO ---
+
+// --- 4. LÓGICA DE FILTRADO Y PROMPT ---
+
+// Categorías sensibles que requieren una respuesta de advertencia
+const SENSITIVE_CATEGORIES = [
+    'clinicas_dentales', 
+    'farmacias',
+    'opticas' 
+];
 
 /**
- * Filtra placePhone y reviewUrl si la categoría es sensible, y añade un disclaimer.
- * @param {object} place La ficha del directorio local.
- * @param {object} responseJson El JSON estructurado generado por Gemini.
+ * Genera la instrucción del sistema para Gemini, filtrando datos sensibles.
+ * @param {Array} allPlaces - El array completo de lugares cargados.
+ * @param {string} currentLanguage - Idioma del usuario (e.g., 'es').
+ * @returns {string} Instrucción del sistema.
  */
-function filterSensitiveData(place, responseJson, currentLanguage) {
-    if (SENSITIVE_CATEGORIES.includes(place.Section)) {
-        console.log(`[SEGURIDAD] Filtrando datos sensibles para: ${place.Section}`);
+function generateSystemInstruction(allPlaces, currentLanguage) {
+    // Mapea y formatea la lista de lugares
+    const placeList = allPlaces.map(p => {
+        const isSensitive = SENSITIVE_CATEGORIES.includes(p.Section);
         
-        // 🛑 ACCIÓN CLAVE: ANULAR DATOS SENSIBLES 🛑
-        responseJson.placePhone = null;
-        responseJson.reviewUrl = null;
+        let details = [];
+        details.push(`Título: ${p.Title}`);
+        details.push(`Categoría: ${p.Section}`);
+        details.push(`Dirección: ${p.Address}`);
         
-        // Añadir el descargo de responsabilidad a la descripción
-        const disclaimer = currentLanguage === 'es' 
-            ? "\n\n⚠️ DESCARGO DE RESPONSABILIDAD: Esta información se proporciona únicamente con fines de directorio. No constituye consejo médico o legal. Consulte directamente al profesional para obtener información detallada y citas."
-            : "\n\n⚠️ DISCLAIMER: This information is provided for directory purposes only. It does not constitute medical or legal advice. Please contact the professional directly for detailed information and appointments.";
-
-        // Asegurar que el disclaimer se añade a la descripción generada por el modelo
-        const originalText = responseJson.description || responseJson.text || '';
-        responseJson.description = originalText + disclaimer;
-        responseJson.text = responseJson.description; 
-    }
-    return responseJson;
-}
-
-/**
- * Genera la instrucción de sistema con reglas de seguridad estrictas.
- */
-function generateSystemInstruction(places, currentLanguage) {
-    const langInstructions = currentLanguage === 'es' 
-        ? "Responde siempre en español. Si el usuario pide recomendaciones, utiliza la información de la lista de lugares."
-        : "Always respond in English. If the user asks for recommendations, use the information from the list of places.";
-
-    const placeSchema = {
-        type: 'object',
-        properties: {
-            isStructured: { type: 'boolean', description: 'Siempre debe ser true para esta estructura.' },
-            type: { type: 'string', enum: ['place', 'category'], description: 'El tipo de consulta resuelta.' },
-            placeName: { type: 'string', description: 'Nombre exacto del lugar encontrado, solo si type es "place".' },
-            categoryName: { type: 'string', description: 'Nombre de la categoría resumida, solo si type es "category".' },
-            description: { type: 'string', description: 'Una descripción detallada y amable sobre el lugar o la categoría. Debe incluir la dirección y horario si está disponible.' },
-            placePhone: { type: 'string', nullable: true, description: 'Número de teléfono extraído del directorio, si es un lugar específico y no es una categoría sensible (Dentist, Pharmacy). Debe ser nulo para categorías sensibles.' },
-            mapUrl: { type: 'string', nullable: true, description: 'URL de Google Maps para el lugar o para la búsqueda de la categoría.' },
-            reviewUrl: { type: 'string', nullable: true, description: 'URL directa a las reseñas de Google del lugar, si está disponible y no es una categoría sensible.' },
-        },
-        required: ['isStructured', 'type', 'description'],
-    };
-
-    const placeList = places.map(p => 
-        `[${p.Title}] | Categoría: ${p.Section} | Dirección: ${p.Address} | Detalles: ${p.Description || 'No disponible'}`
-    ).join('\n');
-
-    return `
-        Eres PROGRESO TOUR GUIDE, un asistente virtual experto en la ciudad de Nuevo Progreso, Tamaulipas.
-        Tu principal fuente de conocimiento es el DIRECTORIO DE LUGARES que se te proporciona a continuación.
+        if (p.Description) {
+            details.push(`Descripción: ${p.Description}`);
+        }
         
-        DIRECTORIO DE LUGARES:
-        ---
+        // Aplica el filtro de seguridad para categorías sensibles
+        if (isSensitive) {
+            details.push(`NOTA IMPORTANTE: No dar números de teléfono, enlaces, o información sobre precios o calidad para ${p.Title}.`);
+        } else {
+             // Si el lugar no es sensible, podrías añadir más información aquí si estuviera disponible.
+        }
+        
+        return details.join(' | '); // Une los detalles de un solo lugar
+    }).join('\n'); // Separa cada lugar con un salto de línea
+
+    const instruction = `
+        Eres un guía turístico e informador útil y amigable para el poblado de Nuevo Progreso, Tamaulipas, México. 
+        Tu objetivo es ayudar a los visitantes a encontrar información sobre negocios locales basándote exclusivamente en la lista de lugares proporcionada a continuación.
+        
+        --- REGLAS ESTRICTAS ---
+        1. Responde siempre en ${currentLanguage === 'es' ? 'español' : 'inglés'}.
+        2. **Solo** utiliza la información de la lista de lugares proporcionada. Si la información no está en la lista, debes decir amablemente que no tienes esa información, sin inventar nada.
+        3. Si la pregunta incluye una categoría sensible (farmacias, ópticas, o clínicas dentales), **NUNCA** proporciones información médica, números de teléfono, precios, o enlaces externos. En su lugar, usa el texto de "NOTA IMPORTANTE" de la lista para recordarte esa regla en tu respuesta.
+        4. Sé conciso y responde directamente a lo que el usuario pide, usando los datos exactos del campo 'Título' y 'Categoría'.
+        
+        --- LISTA DE LUGARES DE NUEVO PROGRESO ---
         ${placeList}
-        ---
-
-        1.  **PRIORIDAD**: Usa la información de este directorio y de tu conocimiento general sobre Progreso.
-        2.  **FORMATO DE RESPUESTA**: Para consultas específicas sobre un lugar o una categoría, responde en el siguiente formato JSON estructurado, asegurando que sea un JSON válido y completo sin texto adicional antes o después. Usa el 'description' para tu texto conversacional.
-        3.  **REGLA DE SEGURIDAD (ALTO RIESGO)**:
-            * **NUNCA** proporciones consejos médicos, legales o financieros.
-            * **Para categorías sensibles (como Dentistas, Farmacias, Salud)**: Tu respuesta debe ser estrictamente informativa y **DEBE incluir un descargo de responsabilidad (disclaimer)** en la propiedad 'description', indicando que la información es solo para directorio y no constituye consejo médico.
-            * **Para categorías sensibles**: Los campos 'placePhone' y 'reviewUrl' en el JSON deben ser **NULL** por política de seguridad, a menos que el usuario esté preguntando por una categoría no sensible (ej. Restaurantes).
-        4.  **RECOMENDACIONES**: Evita frases como "el mejor" o "el más seguro". Usa frases como "una opción popular" o "conoce las valoraciones en línea".
-
-        ${langInstructions}
     `;
+
+    return instruction;
 }
 
-// --- 4. FUNCIÓN HANDLER PRINCIPAL ---
-module.exports = async function handler(req, res) {
-    // 4.1. Aplicar Rate Limiter
-    const result = await new Promise(resolve => {
-        limiter(req, res, () => resolve('ok'));
+
+// --- 5. FUNCIÓN HANDLER PRINCIPAL DE VERCEL ---
+
+/**
+ * Función principal para manejar las peticiones HTTP.
+ * @param {import('http').IncomingMessage} req - El objeto de la petición HTTP.
+ * @param {import('http').ServerResponse} res - El objeto de la respuesta HTTP.
+ */
+module.exports = async (req, res) => {
+    // Aplica el Rate Limiter (si el límite se excede, el handler dentro de limiter se encarga de la respuesta)
+    await new Promise(resolve => {
+        limiter(req, res, () => {
+            resolve();
+        });
     });
-    
-    if (result !== 'ok') {
-        // La respuesta de error 429 ya fue enviada por el Rate Limiter
-        return; 
-    }
 
+    // Si el Rate Limiter ya respondió (429), salimos de la función
+    if (res.finished) {
+        return;
+    }
+    
+    // Solo permitimos peticiones POST
     if (req.method !== 'POST') {
-        return res.status(405).json({ message: 'Método no permitido' });
+        res.status(405).json({ message: 'Solo se permiten peticiones POST' });
+        return;
     }
 
-    const { history, userPrompt, currentLanguage } = req.body;
-    
-    if (!GEMINI_API_KEY) {
-        return res.status(500).json({ message: 'GEMINI_API_KEY no está configurada.' });
-    }
-    
     try {
-        const systemInstruction = generateSystemInstruction(places, currentLanguage);
-        
-        // El historial incluye la instrucción del sistema al inicio
-        const contents = [
-            {
-                role: "system",
-                parts: [{ text: systemInstruction }]
-            },
-            ...history,
-            {
-                role: "user",
-                parts: [{ text: userPrompt }]
-            }
-        ];
+        let body = '';
+        // Lee el cuerpo de la petición (JSON)
+        await new Promise((resolve, reject) => {
+            req.on('data', chunk => {
+                body += chunk.toString();
+            });
+            req.on('end', resolve);
+            req.on('error', reject);
+        });
 
+        const { prompt, language } = JSON.parse(body);
+
+        if (!prompt) {
+            res.status(400).json({ error: true, message: "Falta el 'prompt' en el cuerpo de la petición." });
+            return;
+        }
+
+        const systemInstruction = generateSystemInstruction(places, language);
+
+        // Llama a la API de Gemini
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: contents,
+            contents: prompt,
             config: {
-                // Configuración para usar JSON de forma más consistente
-                responseMimeType: "application/json",
+                systemInstruction: systemInstruction,
+                temperature: 0.1 // Temperatura baja para respuestas factuales
             }
         });
 
-        let responseText = response.text.trim();
+        const textResponse = response.text.trim();
 
-        // 4.2. Post-procesamiento: Aplicar filtro de seguridad en el backend
-        try {
-            const jsonStart = responseText.indexOf('{');
-            const jsonEnd = responseText.lastIndexOf('}');
-            
-            if (jsonStart !== -1 && jsonEnd !== -1) {
-                const jsonString = responseText.substring(jsonStart, jsonEnd + 1);
-                let parsedJson = JSON.parse(jsonString);
-
-                if (parsedJson.isStructured === true && parsedJson.type === 'place') {
-                    // Encontrar la ficha local para verificar su categoría (Section)
-                    const matchingPlace = places.find(p => p.Title === parsedJson.placeName);
-                    
-                    if (matchingPlace) {
-                        // 🛑 APLICAR FILTRO DE SEGURIDAD 🛑
-                        parsedJson = filterSensitiveData(matchingPlace, parsedJson, currentLanguage);
-                        // Reemplazar la respuesta de texto con el JSON modificado
-                        responseText = JSON.stringify(parsedJson); 
-                    }
-                }
-            }
-        } catch (e) {
-            console.error("Error al parsear o filtrar JSON:", e);
-            // Si falla el parseo o la limpieza, devolvemos el texto original para no interrumpir el chat
-            // (el frontend intentará mostrar el texto plano)
-        }
-
-
-        res.status(200).json({ responseText });
+        res.setHeader('Content-Type', 'application/json');
+        res.status(200).json({
+            response: textResponse
+        });
 
     } catch (error) {
-        console.error('Error al llamar a la API de Gemini:', error.message);
-        const errorMessage = currentLanguage === 'es' 
-            ? 'Lo siento, ocurrió un error en el servidor. Inténtalo de nuevo más tarde.'
-            : 'Sorry, an error occurred on the server. Please try again later.';
-            
-        res.status(500).json({ message: errorMessage, errorDetails: error.message });
+        // En caso de error (e.g., cuota de Gemini, error de parsing JSON, etc.)
+        console.error("Error al llamar a la API de Gemini:", error.message);
+        
+        // Si el error es una cuota excedida de Google, mostramos un error más específico en el log.
+        if (error.message.includes('Quota exceeded')) {
+             console.error("Gemini API Quota Exceeded. The service is temporarily blocked by Google.");
+        }
+        
+        res.status(500).json({ 
+            error: true,
+            message: 'Lo siento, ocurrió un error en el servidor. Inténtalo de nuevo más tarde.'
+        });
     }
 };
-
