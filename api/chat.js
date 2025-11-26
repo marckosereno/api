@@ -1,244 +1,209 @@
-// 🚨 NOTA IMPORTANTE: Para que 'require' funcione, tu proyecto debe estar configurado como CommonJS.
-// Si estás usando Node.js/Vercel, asegúrate de que tu package.json NO tenga "type": "module".
-
+// api/chat.js
 const { GoogleGenAI } = require('@google/genai');
 const { Client: PlacesClient } = require('@googlemaps/google-maps-services-js');
+const rateLimit = require('express-rate-limit');
+const fs = require('fs');
 
-// 🛑 Carga el JSON usando require (más estable en Node.js)
-const data = require('../data/progreso_data.json'); 
+// 1. CONFIGURACIÓN DE APIS Y DATOS
+// Asegúrate de que estas variables de entorno existan en Vercel
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const PLACES_API_KEY = process.env.PLACES_API_KEY;
 
-// Usamos el modelo más rápido y económico para chat
-const MODEL_NAME = "gemini-2.5-flash"; 
+// Carga de datos de directorio local (asume que existe en la ruta relativa)
+// Esto debe coincidir con la ubicación de tu archivo progreso_data.json
+let places = [];
+try {
+    const dataPath = './data/progreso_data.json';
+    const rawData = fs.readFileSync(dataPath);
+    places = JSON.parse(rawData);
+} catch (error) {
+    console.error("Error al cargar progreso_data.json:", error.message);
+}
 
-// 1. Inicializamos los clientes
-const ai = new GoogleGenAI({});
-const placesApiKey = process.env.GOOGLE_PLACES_API_KEY; 
+const ai = new GoogleGenAI(GEMINI_API_KEY);
 const placesClient = new PlacesClient({});
 
-// --- FUNCIÓN DE ALEATORIEDAD Y EXTRACCIÓN DE DATOS ---
-/**
- * Selecciona una lista aleatoria de lugares de una categoría, limitada a un número máximo.
- * @param {string} categoryKey Clave de la categoría (ej. 'clinicas_dentales').
- * @param {number} limit Máximo de lugares a extraer.
- * @returns {Array} Lista de objetos con 'placeName'.
- */
-function getRandomPlaces(categoryKey, limit = 10) {
-    const categoryList = data[categoryKey];
-    if (!categoryList || categoryList.length === 0) {
-        return [];
+// --- LISTA DE CATEGORÍAS SENSIBLES (APLICAR RESTRICCIONES AQUÍ) ---
+// Si una ficha tiene una de estas secciones, se eliminan teléfono y reseñas.
+const SENSITIVE_CATEGORIES = ['Dentist', 'Pharmacy', 'Health', 'Health and Beauty', 'Doctor', 'Clinic', 'Optometrist', 'Salud & Estética'];
+
+// --- 2. MIDDLEWARE DE RATE LIMITER (Protección contra 429) ---
+const limiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minuto
+    max: 10, // Máximo 10 peticiones por IP en 1 minuto
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res, next, options) => {
+        // Devuelve un error 429 cuando el límite se excede
+        res.status(options.statusCode).json({
+            error: true,
+            message: "Demasiadas peticiones. Por favor, espera un minuto antes de volver a preguntar. 🐌"
+        });
     }
-    
-    // 1. Clonar el array para no modificar el original
-    const listCopy = [...categoryList];
+});
 
-    // 2. Aplicar el algoritmo Fisher-Yates (Shuffle)
-    for (let i = listCopy.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [listCopy[i], listCopy[j]] = [listCopy[j], listCopy[i]];
-    }
-
-    // 3. Devolver los primeros 'limit' elementos
-    return listCopy.slice(0, limit);
-}
-
-
-// 2. Definimos la Instrucción del Sistema (¡CORREGIDA PARA LA LÓGICA DE RECOMENDACIONES!)
-const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -97.950). 
-Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
-
-REGLAS DE FORMATO:
-1. **Responde exclusivamente en {LANG_PLACEHOLDER}**.
-2. **MODO FICHA DE LUGAR (JSON):** Úsalo si la solicitud es de UN LUGAR ESPECÍFICO que crees que existe, pero que no está asociado a una clave de categoría.
-3. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo si la solicitud es una categoría general.
-4. **MODO CONVERSACIONAL (Texto Plano):** Úsalo para preguntas generales o de seguimiento.
-5. Los formatos JSON requeridos son:
-   
-   // Formato para LUGAR ESPECÍFICO (Para enriquecer con Places API)
-   {
-     "type": "place", 
-     "placeName": "Nombre del Lugar", 
-     "placeToSearch": "Nombre Exacto a buscar en Places API, ej: Dental Care Molar", 
-     "description": "Descripción corta de no más de 3 oraciones. Usa el nombre REAL y LOCAL del lugar.",
-     "isStructured": true
-   }
-   
-   // Formato para CATEGORÍA GENERAL (La lista solo se inserta si la descripción lo pide)
-   {
-     "type": "category", 
-     "categoryKey": "CLAVE_DE_BUSQUEDA", 
-     "categoryName": "Nombre de la Categoría, ej: Clínicas Dentales",
-     "description": "Comienza con un resumen breve y general de la categoría. Esta descripción DEBE terminar con la frase 'Aquí tienes varias opciones destacadas de nuestra lista personalizada:' **SOLO** si el usuario pidió explícitamente una recomendación (ej. 'top 10', 'dame 12', 'recomiéndame'). Si es solo una navegación por categoría (ej. 'clínicas dentales'), termina con un mensaje de bienvenida y explicación de la categoría.",
-     "isStructured": true
-   }
-
-REGLAS CRÍTICAS PARA ASIGNAR CLAVES DE CATEGORÍA:
-* Usa las siguientes CLAVES DE BÚSQUEDA para las categorías listadas: 
-  [clinicas_dentales, taquerias_tacos_y_lonches, tacos_barbacoa, restaurantes, salones_belleza, tiendas_artesanias, farmacias, opticas].
-* SI EL LUGAR SOLICITADO NO ES UNA CLAVE DE CATEGORÍA, debes usar el formato type: "place" y utilizar tu conocimiento para encontrar un nombre de negocio real en Nuevo Progreso y usarlo en el campo placeToSearch para que sea enriquecido.
-* Si no puedes encontrar un lugar, responde con un mensaje de texto plano conversacional.`;
+// --- 3. FUNCIONES DE SEGURIDAD Y CONTEXTO ---
 
 /**
- * Función que busca el nombre de un lugar en la API de Google Places.
+ * Filtra placePhone y reviewUrl si la categoría es sensible, y añade un disclaimer.
+ * @param {object} place La ficha del directorio local.
+ * @param {object} responseJson El JSON estructurado generado por Gemini.
  */
-async function getPlaceDetails(query) {
-    if (!placesApiKey) {
-        console.error("GOOGLE_PLACES_API_KEY no definida.");
-        return null;
-    }
-    
-    // 1. Buscar el place_id, forzando la búsqueda a Nuevo Progreso
-    try {
-        const findPlaceResponse = await placesClient.findPlaceFromText({
-            params: {
-                key: placesApiKey,
-                input: query + ", Nuevo Progreso Tamps, México", 
-                inputtype: 'textquery',
-                fields: ['place_id']
-            }
-        });
-
-        const placeId = findPlaceResponse.data.candidates?.[0]?.place_id;
+function filterSensitiveData(place, responseJson, currentLanguage) {
+    if (SENSITIVE_CATEGORIES.includes(place.Section)) {
+        console.log(`[SEGURIDAD] Filtrando datos sensibles para: ${place.Section}`);
         
-        if (!placeId) {
-            console.log("No se encontró un place_id para la consulta:", query);
-            return null;
-        }
-
-        // 2. Obtener los detalles del lugar (teléfono, URL, reseñas)
-        const detailsResponse = await placesClient.placeDetails({
-            params: {
-                key: placesApiKey,
-                place_id: placeId,
-                fields: ['name', 'formatted_phone_number', 'url', 'reviews'] 
-            }
-        });
-
-        const place = detailsResponse.data.result;
+        // 🛑 ACCIÓN CLAVE: ANULAR DATOS SENSIBLES 🛑
+        responseJson.placePhone = null;
+        responseJson.reviewUrl = null;
         
-        return {
-            name: place.name,
-            phone: place.formatted_phone_number || null,
-            mapUrl: place.url || null,
-            reviewUrl: place.url || null 
-        };
+        // Añadir el descargo de responsabilidad a la descripción
+        const disclaimer = currentLanguage === 'es' 
+            ? "\n\n⚠️ DESCARGO DE RESPONSABILIDAD: Esta información se proporciona únicamente con fines de directorio. No constituye consejo médico o legal. Consulte directamente al profesional para obtener información detallada y citas."
+            : "\n\n⚠️ DISCLAIMER: This information is provided for directory purposes only. It does not constitute medical or legal advice. Please contact the professional directly for detailed information and appointments.";
 
-    } catch (e) {
-        console.error("Error al llamar a Google Places API:", e.response ? e.response.data : e.message);
-        return null;
+        // Asegurar que el disclaimer se añade a la descripción generada por el modelo
+        const originalText = responseJson.description || responseJson.text || '';
+        responseJson.description = originalText + disclaimer;
+        responseJson.text = responseJson.description; 
     }
+    return responseJson;
 }
 
+/**
+ * Genera la instrucción de sistema con reglas de seguridad estrictas.
+ */
+function generateSystemInstruction(places, currentLanguage) {
+    const langInstructions = currentLanguage === 'es' 
+        ? "Responde siempre en español. Si el usuario pide recomendaciones, utiliza la información de la lista de lugares."
+        : "Always respond in English. If the user asks for recommendations, use the information from the list of places.";
 
+    const placeSchema = {
+        type: 'object',
+        properties: {
+            isStructured: { type: 'boolean', description: 'Siempre debe ser true para esta estructura.' },
+            type: { type: 'string', enum: ['place', 'category'], description: 'El tipo de consulta resuelta.' },
+            placeName: { type: 'string', description: 'Nombre exacto del lugar encontrado, solo si type es "place".' },
+            categoryName: { type: 'string', description: 'Nombre de la categoría resumida, solo si type es "category".' },
+            description: { type: 'string', description: 'Una descripción detallada y amable sobre el lugar o la categoría. Debe incluir la dirección y horario si está disponible.' },
+            placePhone: { type: 'string', nullable: true, description: 'Número de teléfono extraído del directorio, si es un lugar específico y no es una categoría sensible (Dentist, Pharmacy). Debe ser nulo para categorías sensibles.' },
+            mapUrl: { type: 'string', nullable: true, description: 'URL de Google Maps para el lugar o para la búsqueda de la categoría.' },
+            reviewUrl: { type: 'string', nullable: true, description: 'URL directa a las reseñas de Google del lugar, si está disponible y no es una categoría sensible.' },
+        },
+        required: ['isStructured', 'type', 'description'],
+    };
+
+    const placeList = places.map(p => 
+        `[${p.Title}] | Categoría: ${p.Section} | Dirección: ${p.Address} | Detalles: ${p.Description || 'No disponible'}`
+    ).join('\n');
+
+    return `
+        Eres PROGRESO TOUR GUIDE, un asistente virtual experto en la ciudad de Nuevo Progreso, Tamaulipas.
+        Tu principal fuente de conocimiento es el DIRECTORIO DE LUGARES que se te proporciona a continuación.
+        
+        DIRECTORIO DE LUGARES:
+        ---
+        ${placeList}
+        ---
+
+        1.  **PRIORIDAD**: Usa la información de este directorio y de tu conocimiento general sobre Progreso.
+        2.  **FORMATO DE RESPUESTA**: Para consultas específicas sobre un lugar o una categoría, responde en el siguiente formato JSON estructurado, asegurando que sea un JSON válido y completo sin texto adicional antes o después. Usa el 'description' para tu texto conversacional.
+        3.  **REGLA DE SEGURIDAD (ALTO RIESGO)**:
+            * **NUNCA** proporciones consejos médicos, legales o financieros.
+            * **Para categorías sensibles (como Dentistas, Farmacias, Salud)**: Tu respuesta debe ser estrictamente informativa y **DEBE incluir un descargo de responsabilidad (disclaimer)** en la propiedad 'description', indicando que la información es solo para directorio y no constituye consejo médico.
+            * **Para categorías sensibles**: Los campos 'placePhone' y 'reviewUrl' en el JSON deben ser **NULL** por política de seguridad, a menos que el usuario esté preguntando por una categoría no sensible (ej. Restaurantes).
+        4.  **RECOMENDACIONES**: Evita frases como "el mejor" o "el más seguro". Usa frases como "una opción popular" o "conoce las valoraciones en línea".
+
+        ${langInstructions}
+    `;
+}
+
+// --- 4. FUNCIÓN HANDLER PRINCIPAL ---
 module.exports = async function handler(req, res) {
+    // 4.1. Aplicar Rate Limiter
+    const result = await new Promise(resolve => {
+        limiter(req, res, () => resolve('ok'));
+    });
+    
+    if (result !== 'ok') {
+        // La respuesta de error 429 ya fue enviada por el Rate Limiter
+        return; 
+    }
+
     if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Método no permitido' });
     }
 
-    // Frase clave para activar la inserción de la lista en el backend
-    const LIST_TRIGGER_PHRASE = 'Aquí tienes varias opciones destacadas de nuestra lista personalizada:';
-
+    const { history, userPrompt, currentLanguage } = req.body;
+    
+    if (!GEMINI_API_KEY) {
+        return res.status(500).json({ message: 'GEMINI_API_KEY no está configurada.' });
+    }
+    
     try {
-        const { history = [], userPrompt, currentLanguage } = req.body;
+        const systemInstruction = generateSystemInstruction(places, currentLanguage);
         
-        // Configuramos el idioma
-        const langText = currentLanguage === 'es' ? 'español' : 'inglés';
-        const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
-
-        // Inicializar el chat con el historial y la instrucción de sistema
-        const chat = ai.chats.create({
-            model: MODEL_NAME, 
-            config: {
-                systemInstruction: finalSystemInstruction 
+        // El historial incluye la instrucción del sistema al inicio
+        const contents = [
+            {
+                role: "system",
+                parts: [{ text: systemInstruction }]
             },
-            history: history 
+            ...history,
+            {
+                role: "user",
+                parts: [{ text: userPrompt }]
+            }
+        ];
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: contents,
+            config: {
+                // Configuración para usar JSON de forma más consistente
+                responseMimeType: "application/json",
+            }
         });
 
-        // Enviamos el nuevo mensaje al modelo
-        const result = await chat.sendMessage({ message: userPrompt });
-        let modelResponseText = result.text.trim();
-        
-        let finalResponseData = { responseText: modelResponseText };
+        let responseText = response.text.trim();
 
-        // Lógica de ENRIQUECIMIENTO/MANEJO DE DATOS LOCALES
+        // 4.2. Post-procesamiento: Aplicar filtro de seguridad en el backend
         try {
-            const jsonStart = modelResponseText.indexOf('{');
-            const jsonEnd = modelResponseText.lastIndexOf('}');
+            const jsonStart = responseText.indexOf('{');
+            const jsonEnd = responseText.lastIndexOf('}');
             
             if (jsonStart !== -1 && jsonEnd !== -1) {
-                const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
-                const parsedJson = JSON.parse(jsonString);
+                const jsonString = responseText.substring(jsonStart, jsonEnd + 1);
+                let parsedJson = JSON.parse(jsonString);
 
-                if (parsedJson.isStructured === true) {
+                if (parsedJson.isStructured === true && parsedJson.type === 'place') {
+                    // Encontrar la ficha local para verificar su categoría (Section)
+                    const matchingPlace = places.find(p => p.Title === parsedJson.placeName);
                     
-                    if (parsedJson.type === 'category' && parsedJson.categoryKey) {
-                        
-                        // 🚀 LÓGICA DE LISTA DE CATEGORÍAS (Su base de datos)
-                        // Verificamos si Gemini usó la frase clave para insertar la lista
-                        const shouldInsertList = parsedJson.description.includes(LIST_TRIGGER_PHRASE);
-
-                        if (shouldInsertList) {
-                            
-                            const randomPlaces = getRandomPlaces(parsedJson.categoryKey, 10); 
-                            
-                            if (randomPlaces.length > 0) {
-                                
-                                // 1. Crear el texto detallado de la lista
-                                let listText = "\n";
-                                randomPlaces.forEach((place, index) => {
-                                    listText += `${index + 1}. **${place.placeName}**\n`; 
-                                });
-                                
-                                // 2. Concatenar la introducción de Gemini con la lista.
-                                const finalDescription = parsedJson.description + listText;
-
-                                // 3. Crear una respuesta enriquecida
-                                finalResponseData.responseText = JSON.stringify({
-                                    ...parsedJson,
-                                    description: finalDescription, 
-                                });
-                            }
-                            // NOTA: Si shouldInsertList es true pero la lista está vacía (length 0), 
-                            // el código caerá en el else implícito y solo mostrará la descripción de Gemini.
-                        } else {
-                            // Si shouldInsertList es false (solo navegación), no hacemos nada y 
-                            // devolvemos la respuesta de Gemini tal cual (solo la descripción general)
-                            finalResponseData.responseText = JSON.stringify(parsedJson);
-                        }
-
-                    } else if (parsedJson.type === 'place' && parsedJson.placeToSearch) {
-                        // 🚀 LÓGICA DE LUGAR ESPECÍFICO (Enriquecimiento con Places API)
-                        const placeData = await getPlaceDetails(parsedJson.placeToSearch);
-
-                        if (placeData) {
-                            // Enriquecemos con datos reales de Places
-                            finalResponseData.responseText = JSON.stringify({
-                                ...parsedJson,
-                                placeName: placeData.name,
-                                placePhone: placeData.phone,
-                                mapUrl: placeData.mapUrl,
-                                reviewUrl: placeData.reviewUrl,
-                            });
-                        } else {
-                            // Si falla Places (no encuentra el lugar real), respondemos sin enriquecer
-                            delete parsedJson.placeToSearch;
-                            finalResponseData.responseText = JSON.stringify(parsedJson);
-                        }
+                    if (matchingPlace) {
+                        // 🛑 APLICAR FILTRO DE SEGURIDAD 🛑
+                        parsedJson = filterSensitiveData(matchingPlace, parsedJson, currentLanguage);
+                        // Reemplazar la respuesta de texto con el JSON modificado
+                        responseText = JSON.stringify(parsedJson); 
                     }
                 }
             }
-        } catch (jsonError) {
-            console.error("Fallo en el parseo o enriquecimiento del JSON:", jsonError);
-            finalResponseData.responseText = modelResponseText;
+        } catch (e) {
+            console.error("Error al parsear o filtrar JSON:", e);
+            // Si falla el parseo o la limpieza, devolvemos el texto original para no interrumpir el chat
+            // (el frontend intentará mostrar el texto plano)
         }
 
-        // Retornamos la respuesta (enriquecida o original) al frontend
-        res.status(200).json(finalResponseData);
+
+        res.status(200).json({ responseText });
 
     } catch (error) {
-        console.error("Error en la API de Gemini:", error);
-        res.status(500).json({ 
-            error: true, 
-            message: "Fallo al obtener respuesta de Gemini: " + error.message
-        });
+        console.error('Error al llamar a la API de Gemini:', error.message);
+        const errorMessage = currentLanguage === 'es' 
+            ? 'Lo siento, ocurrió un error en el servidor. Inténtalo de nuevo más tarde.'
+            : 'Sorry, an error occurred on the server. Please try again later.';
+            
+        res.status(500).json({ message: errorMessage, errorDetails: error.message });
     }
-}
+};
+
