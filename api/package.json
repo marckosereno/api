@@ -11,6 +11,6 @@
   "dependencies": {
     "@google/genai": "latest",
     "@googlemaps/google-maps-services-js": "latest",
-    "express-rate-limit": "^7.2.0" 
+    "express-rate-limit": "latest" 
   }
 }
