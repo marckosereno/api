@@ -1,0 +1,22 @@
+{
+  "build": {
+    "env": {
+      "NODE_OPTIONS": "--max-old-space-size=4096"
+    }
+  },
+  "functions": {
+    "api/chat.cjs": {
+      "runtime": "nodejs20.x",
+      "memory": 256,
+      "includeFiles": [
+        "data/progreso_data.json" 
+      ]
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/chat",
+      "destination": "/api/chat.cjs"
+    }
+  ]
+}
