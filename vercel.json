@@ -4,5 +4,10 @@
       "source": "/api/chat",
       "destination": "/api/index.js"
     }
-  ]
+  ],
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "data/progreso_data.json"
+    }
+  }
 }
