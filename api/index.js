@@ -11,6 +11,7 @@ const PLACES_API_KEY = process.env.PLACES_API_KEY;
 
 // Carga de datos de directorio local (asume que existe en la ruta relativa)
 // Esto debe coincidir con la ubicación de tu archivo progreso_data.json
+const path = require('path');
 let places = [];
 try {
     const dataPath = path.join(process.cwd(), 'data', 'progreso_data.json'); 
