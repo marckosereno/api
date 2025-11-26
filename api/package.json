@@ -5,7 +5,7 @@
   "main": "api/chat.js",
 "type": "commonJS",
   "scripts": {
-    "start": "node api/chat.js"
+    "start": "node api/chat.cjs"
   
   }, 
   
