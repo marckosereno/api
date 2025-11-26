@@ -636,7 +636,7 @@
         toggleInput(false);
     }
     
-    // --- Lógica de Llamada a la API (Ligeramente simplificada) ---
+    // --- Lógica de Llamada a la API (CORREGIDA) ---
     async function getGeminiResponse(userPrompt, limitedHistory) {
         
         const historyForAPI = limitedHistory.map(m => {
@@ -646,13 +646,17 @@
             };
         });
 
+        // 🟢 CORRECCIÓN CLAVE 1: Prepara el array 'contents' para la API de Gemini
+        // Añadimos el prompt del usuario al final del historial como el último turno.
+        const contents = [...historyForAPI, { role: 'user', parts: [{ text: userPrompt }] }]; 
+
         try {
             const response = await fetch(BACKEND_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    history: historyForAPI, 
-                    userPrompt: userPrompt, 
+                    // 🟢 CORRECCIÓN CLAVE 2: Enviamos 'contents' y 'currentLanguage'
+                    contents: contents, 
                     currentLanguage: currentLanguage
                 }) 
             });
@@ -663,6 +667,7 @@
             }
 
             const data = await response.json();
+            // El backend ahora devuelve 'responseText'
             return data.responseText; 
 
         } catch (error) {
