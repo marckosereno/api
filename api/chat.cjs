@@ -13,7 +13,7 @@ const PLACES_API_KEY = process.env.PLACES_API_KEY;
 // Esto debe coincidir con la ubicación de tu archivo progreso_data.json
 let places = [];
 try {
-    const dataPath = './data/progreso_data.json';
+    const dataPath = '../data/progreso_data.json';
     const rawData = fs.readFileSync(dataPath);
     places = JSON.parse(rawData);
 } catch (error) {
