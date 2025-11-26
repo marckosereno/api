@@ -8,9 +8,8 @@
     "api/chat.cjs": {
       "runtime": "nodejs20.x",
       "memory": 256,
-      "includeFiles": [
-        "data/progreso_data.json" 
-      ]
+      "includeFiles":"data/progreso_data.json" 
+      
     }
   },
   "rewrites": [
