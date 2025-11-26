@@ -2,15 +2,15 @@
   "name": "progreso-tour-guide",
   "version": "1.0.0",
   "description": "Chatbot para Progreso, Tamps.",
-  "main": "api/chat.cjs",  <-- ✅ CORRECCIÓN
+  "main": "api/chat.cjs", 
   "type": "commonjs",
   "scripts": {
-    "start": "node api/chat.cjs"  <-- ✅ CORRECCIÓN ADICIONAL (Aunque no es crítica para Vercel)
+    "start": "node api/chat.cjs"  
   }, 
   
   "dependencies": {
     "@google/genai": "latest",
     "@googlemaps/google-maps-services-js": "latest",
-    "express-rate-limit": "^7.2.0"
+    "express-rate-limit": "^7.2.0" 
   }
 }
