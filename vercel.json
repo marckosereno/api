@@ -1,6 +1,5 @@
 {
   "functions": {
-    // 🛑 ESPECIFICAMOS UNA VERSIÓN ESTABLE DE NODEJS
     "api/index.cjs": {
       "runtime": "nodejs18.x", 
       "includeFiles": "data/**" 
