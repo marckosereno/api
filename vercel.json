@@ -1,14 +1,9 @@
 {
-  "build": {
-    "env": {
-      "NODE_OPTIONS": "--max-old-space-size=4096"
-    }
-  },
   "functions": {
+    // 🛑 ESPECIFICAMOS UNA VERSIÓN ESTABLE DE NODEJS
     "api/index.cjs": {
-      "memory": 256,
-      "includeFiles":"data/progreso_data.json" 
-      
+      "runtime": "nodejs18.x", 
+      "includeFiles": "data/**" 
     }
   },
   "rewrites": [
