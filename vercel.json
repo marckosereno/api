@@ -5,7 +5,7 @@
     }
   },
   "functions": {
-    "api/chat.cjs": {
+    "api/index.cjs": {
       "memory": 256,
       "includeFiles":"data/progreso_data.json" 
       
@@ -14,7 +14,7 @@
   "rewrites": [
     {
       "source": "/api/chat",
-      "destination": "/api/chat.cjs"
+      "destination": "/api/index.cjs"
     }
   ]
 }
