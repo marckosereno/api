@@ -7,7 +7,7 @@ const MODEL_NAME = "gemini-2.5-flash";
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
-const placesClient = new PlacesClient({});
+const placesClient = new Client({});
 
 
 // 2. Definimos la Instrucción del Sistema MODIFICADA
@@ -16,26 +16,27 @@ Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 
 REGLAS DE FORMATO:
 1. **Responde exclusivamente en {LANG_PLACEHOLDER}**.
-2. **REGLA CRÍTICA DE SALUD Y PRIVACIDAD:** Para preguntas relacionadas con **clínicas dentales**, **farmacias**, **ópticas** o cualquier otro servicio médico/de salud, debes responder **OBLIGATORIAMENTE** utilizando el **MODO FICHA DE CATEGORÍA (JSON)**. El campo 'description' debe ser una descripción general de la categoría, y **NUNCA** debe mencionar lugares específicos, contactos, precios, o dar recomendaciones.
+2. **REGLA CRÍTICA DE SALUD Y PRIVACIDAD:** Para preguntas relacionadas con **clínicas dentales**, **farmacias**, **ópticas** o cualquier otro servicio médico/de salud, debes responder **OBLIGATORIAMENTE** utilizando el **MODO FICHA DE LUGAR (JSON)** o **MODO FICHA DE CATEGORÍA (JSON)**. **NUNCA** debes mencionar precios, dar recomendaciones, o incluir datos de contacto en la descripción, ya que el servidor se encargará de limitar los botones de acción solo a "Ver en Mapa" y "Buscar en Google" para estos casos.
 
-3. **MODO FICHA DE LUGAR (JSON):** Úsalo SOLO si la solicitud es de un lugar o negocio específico **NO relacionado con la salud** (ej: "Arturo's Restaurant", "Tienda de Artesanías Shaddai"). Debe incluir la propiedad 'placeToSearch' con el nombre exacto del lugar.
+3. **MODO FICHA DE LUGAR (JSON):** Úsalo si la solicitud es de un lugar o negocio específico (Salud o No Salud). Debe incluir la propiedad 'placeToSearch' con el nombre exacto del lugar.
 
-4. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo para solicitudes de categorías generales **incluyendo Salud** (cumpliendo la REGLA CRÍTICA).
+4. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo para solicitudes de categorías generales (Salud o No Salud).
 
 5. **MODO CONVERSACIONAL (Texto Plano):** Úsalo para preguntas generales o de seguimiento.
 
 6. Los formatos JSON requeridos son:
    
-   // Formato para LUGAR ESPECÍFICO (SOLO NO-SALUD)
+   // Formato para LUGAR ESPECÍFICO (Salud o No Salud) <--- FORMATO ACTUALIZADO
    {
      "type": "place", 
      "placeName": "Nombre del Lugar", 
      "placeToSearch": "Nombre Exacto a buscar en Places API, ej: Arturo's Restaurant", 
+     "placeCategory": "Clasificación general del lugar, ej: Restaurante, Clínica Dental, Farmacia", // <--- ¡NUEVO CAMPO!
      "description": "Descripción corta de no más de 3 oraciones.",
      "isStructured": true
    }
    
-   // Formato para CATEGORÍA GENERAL (OBLIGATORIO para Salud)
+   // Formato para CATEGORÍA GENERAL
    {
      "type": "category", 
      "categoryName": "Nombre de la Categoría, ej: Farmacias en Progreso",
@@ -99,6 +100,12 @@ async function getPlaceDetails(query) {
     }
 }
 
+// DEFINIMOS LAS PALABRAS CLAVE DE SALUD PARA LA LÓGICA DEL HANDLER
+const HEALTH_KEYWORDS = [
+    "dental", "clínica", "farmacia", "óptica", 
+    "consultorio", "médico", "salud", "doctor", "odontólogo", "laboratorio"
+];
+
 
 export default async function handler(req, res) {
 // ... El resto del handler permanece IGUAL, confiando en la instrucción de sistema.
@@ -128,7 +135,7 @@ export default async function handler(req, res) {
         
         let finalResponseData = { responseText: modelResponseText };
 
-        // Lógica de ENRIQUECIMIENTO con Places API (Solo si es type: "place" - el modelo debe haberlo filtrado)
+        // Lógica de ENRIQUECIMIENTO con Places API (Ahora con chequeo de Salud Dinámico)
         try {
             const jsonStart = modelResponseText.indexOf('{');
             const jsonEnd = modelResponseText.lastIndexOf('}');
@@ -141,22 +148,52 @@ export default async function handler(req, res) {
                     
                     if (parsedJson.type === 'place' && parsedJson.placeToSearch) {
                         
-                        const placeData = await getPlaceDetails(parsedJson.placeToSearch);
+                        const placeNameSearch = parsedJson.placeToSearch.trim();
+                        // Obtiene la categoría clasificada por Gemini
+                        const category = parsedJson.placeCategory ? parsedJson.placeCategory.toLowerCase() : '';
 
-                        if (placeData) {
-                            // Enriquecemos con datos reales de Places
+                        // Determina si es un lugar de salud analizando la categoría
+                        const isHealthPlace = HEALTH_KEYWORDS.some(keyword => category.includes(keyword));
+
+                        // **** REGLA DE SALUD DINÁMICA: Bloqueo de Enriquecimiento ****
+                        if (isHealthPlace) {
+                            // SI ES SALUD: Bloqueamos el enriquecimiento de Places API (teléfono, reseñas)
+                            console.log(`Regla de Salud Dinámica Aplicada: Bloqueando enriquecimiento Places para ${placeNameSearch} (${category})`);
+                            
+                            // Aseguramos que los campos sensibles estén nulos para que el frontend los ignore
+                            // Pero incluimos una URL base para que Mapa/Google Search funcione.
+                            
+                            // Esta URL se usará para el botón "Ver en Mapa" si no hay placeData.mapUrl
+                            const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
+
                             finalResponseData.responseText = JSON.stringify({
                                 ...parsedJson,
-                                placeName: placeData.name,
-                                placePhone: placeData.phone,
-                                mapUrl: placeData.mapUrl,
-                                reviewUrl: placeData.reviewUrl, // Nuevo campo
+                                placePhone: null, // Bloqueado
+                                reviewUrl: null,   // Bloqueado
+                                mapUrl: baseMapUrl // URL de búsqueda básica
                             });
+
                         } else {
-                            // Si falla Places, al menos eliminamos placeToSearch para evitar confusiones
-                            delete parsedJson.placeToSearch;
-                            finalResponseData.responseText = JSON.stringify(parsedJson);
+                            // SI NO ES SALUD: Procedemos con el enriquecimiento normal (todos los botones).
+                            const placeData = await getPlaceDetails(placeNameSearch);
+
+                            if (placeData) {
+                                // Enriquecemos con datos reales de Places
+                                finalResponseData.responseText = JSON.stringify({
+                                    ...parsedJson,
+                                    placeName: placeData.name,
+                                    placePhone: placeData.phone,
+                                    mapUrl: placeData.mapUrl,
+                                    reviewUrl: placeData.reviewUrl, 
+                                });
+                            } else {
+                                // Si falla Places, retornamos el JSON original
+                                delete parsedJson.placeToSearch; 
+                                finalResponseData.responseText = JSON.stringify(parsedJson);
+                            }
                         }
+                        // **** FIN DE REGLA DE SALUD DINÁMICA ****
+                        
                     } else if (parsedJson.type === 'category') {
                         // Si es una categoría, solo aseguramos que el JSON es válido y lo pasamos.
                         finalResponseData.responseText = JSON.stringify(parsedJson);
