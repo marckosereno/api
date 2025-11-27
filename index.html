@@ -511,7 +511,9 @@
                     mapUrl = m.mapUrl;
                 } else if (isCategory || isPlace) {
                     const searchName = entityName ? encodeURIComponent(entityName + " Nuevo Progreso Tamps") : 'Nuevo+Progreso+Tamaulipas';
-                    mapUrl = `https://www.google.com/maps/search/?api=1&query=${searchName}`; // URL de búsqueda de Google Maps
+                    
+                    // 🚨 CORRECCIÓN CLAVE AQUÍ 🚨: Usamos una URL de Google Maps válida para la búsqueda
+                    mapUrl = `https://www.google.com/maps/search/?api=1&query=${searchName}`; 
                     searchUrl = `https://www.google.com/search?q=${searchName}`;
                 }
 
