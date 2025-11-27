@@ -457,125 +457,162 @@
     }
     
     // Función para crear las burbujas de mensaje (User/Model)
-    function createMessageBubble(m) {
-        const w = document.createElement('div');
-        
-        const timeStr = formatTime(m.timestamp);
-        const timeSpan = timeStr ? `<span class="timestamp">${timeStr}</span>` : '';
+    // Función para crear las burbujas de mensaje (User/Model)
+function createMessageBubble(m) {
+    const w = document.createElement('div');
+    
+    const timeStr = formatTime(m.timestamp);
+    const timeSpan = timeStr ? `<span class="timestamp">${timeStr}</span>` : '';
 
-        if (m.role === 'user') { 
-            w.className = 'flex justify-end mb-2'; 
-            w.innerHTML = `
-                <div class="flex flex-col items-end">
-                    <div class="user-bubble bg-blue-500 text-white p-3 shadow-md">${m.text}</div>
-                    ${timeSpan}
-                </div>
-            `; 
-        } 
-        else if (m.role === 'model') {
-            w.className = 'flex flex-col justify-start w-full mb-2';
-            let content = '';
-            const strings = UI_STRINGS[currentLanguage];
+    if (m.role === 'user') { 
+        w.className = 'flex justify-end mb-2'; 
+        w.innerHTML = `
+            <div class="flex flex-col items-end">
+                <div class="user-bubble bg-blue-500 text-white p-3 shadow-md">${m.text}</div>
+                ${timeSpan}
+            </div>
+        `; 
+    } 
+    else if (m.role === 'model') {
+        w.className = 'flex flex-col justify-start w-full mb-2';
+        let content = '';
+        const strings = UI_STRINGS[currentLanguage];
 
-            if (m.isStructured) { 
+        if (m.isStructured) { 
+            
+            // 🛑 Lógica de Contenido Estructurado (isStructured: true) 🛑
+            const isPlace = m.type === 'place';
+            const isCategory = m.type === 'category';
+
+            const entityName = isPlace ? m.placeName : m.categoryName;
+            
+            // Verificamos si es una categoría sensible para el descargo de responsabilidad
+            const isSensitive = SENSITIVE_CATEGORIES.some(cat => 
+                (m.text && m.text.toLowerCase().includes(cat.toLowerCase().replace(/_/g, ' '))) || 
+                (m.categoryName && m.categoryName.toLowerCase().includes(cat.toLowerCase().replace(/_/g, ' ')))
+            );
+            
+            // Alerta de respuesta estructurada
+            const alertText = isPlace 
+                ? strings.alertStructured(entityName)
+                : strings.alertCategory(entityName);
+
+            if (typeof alertUser === 'function') alertUser(alertText, "i");
+
+            // Contenido es el texto de Gemini, que ahora es conciso
+            content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">${m.text || m.description}</div>`;
+            
+            // --- Generación de la Barra de Acciones (Específicas) ---
+            let actionsHTML = '';
+            let mapUrl = '#';
+            let searchUrl = '#';
+
+            // 1. URLs base para búsqueda/mapa
+            if (isPlace && m.mapUrl) {
+                mapUrl = m.mapUrl;
+            } else if (isCategory || isPlace) {
+                // Si la ficha es de categoría o lugar, usamos el nombre de la entidad para la búsqueda
+                const searchName = entityName ? encodeURIComponent(entityName + " Nuevo Progreso Tamps") : 'Nuevo+Progreso+Tamaulipas';
                 
-                // 🛑 Lógica de Contenido Estructurado 🛑
-                const isPlace = m.type === 'place';
-                const isCategory = m.type === 'category';
+                // La URL de Maps para búsqueda (corregida)
+                mapUrl = `https://www.google.com/maps/search/?api=1&query=${searchName}`; 
+                searchUrl = `https://www.google.com/search?q=${searchName}`;
+            }
 
-                const entityName = isPlace ? m.placeName : m.categoryName;
-                
-                // Verificamos si es una categoría sensible/de salud
-                const isSensitive = SENSITIVE_CATEGORIES.some(cat => 
-                    (m.text && m.text.toLowerCase().includes(cat.toLowerCase().replace(/_/g, ' '))) || 
-                    (m.categoryName && m.categoryName.toLowerCase().includes(cat.toLowerCase().replace(/_/g, ' ')))
-                );
-                
-                // Alerta de respuesta estructurada
-                const alertText = isPlace 
-                    ? strings.alertStructured(entityName)
-                    : strings.alertCategory(entityName);
+            // 2. Botón VER EN MAPA (SIEMPRE VISIBLE para isStructured: true)
+            actionsHTML += `
+                <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white hover:bg-green-600 transition flex-shrink-0">${strings.map}</a>
+            `;
 
-                if (typeof alertUser === 'function') alertUser(alertText, "i");
-
-                // Contenido es el texto de Gemini, que ahora es conciso
-                content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">${m.text || m.description}</div>`;
-                
-                // --- Generación de la Barra de Acciones ---
-                let actionsHTML = '';
-                let mapUrl = '#';
-                let searchUrl = '#';
-
-                // 1. URLs base para búsqueda/mapa
-                if (isPlace && m.mapUrl) {
-                    mapUrl = m.mapUrl;
-                } else if (isCategory || isPlace) {
-                    const searchName = entityName ? encodeURIComponent(entityName + " Nuevo Progreso Tamps") : 'Nuevo+Progreso+Tamaulipas';
-                    
-                    // ✅ CORRECCIÓN FINAL: Usamos una URL de Google Maps válida
-                    mapUrl = `https://www.google.com/maps/search/?api=1&query=${searchName}`; 
-                    searchUrl = `https://www.google.com/search?q=${searchName}`;
-                }
-
-                // 2. Botón VER EN MAPA (SIEMPRE VISIBLE)
+            // 3. Botones específicos para LUGAR (Teléfono y Reseñas)
+            if (isPlace && !isSensitive) {
+                const isPhoneAvailable = !!m.placePhone;
                 actionsHTML += `
-                    <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white hover:bg-green-600 transition flex-shrink-0">${strings.map}</a>
-                `;
-
-                // 3. Botones específicos para LUGAR (Teléfono y Reseñas)
-                // SOLO se muestran si NO es una categoría sensible
-                if (isPlace && !isSensitive) {
-                    const isPhoneAvailable = !!m.placePhone;
-                    actionsHTML += `
-                        <a href="${m.placePhone ? `tel:${m.placePhone}` : 'javascript:void(0)'}" onclick="${m.placePhone ? '' : `alert('${strings.unavailable}')`}" class="action-btn ${isPhoneAvailable ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400 cursor-not-allowed' } text-white transition flex-shrink-0">${strings.call}</a>
-                        <a href="${m.reviewUrl || mapUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 hover:bg-yellow-500 transition flex-shrink-0">${strings.reviews}</a>
-                    `;
-                }
-
-                // 4. Botón Buscar en Google (SIEMPRE VISIBLE)
-                actionsHTML += `
-                    <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-gray-600 text-white hover:bg-gray-700 transition flex-shrink-0">${strings.search}</a>
-                `;
-                
-                // 5. Botón de Recomendación (Solo si es CATEGORÍA)
-                if (isCategory) {
-                    // Usamos el nombre de la categoría o el primer elemento del texto si no hay nombre
-                    const catName = m.categoryName || m.text.split('**')[1] || 'lugares'; 
-                    const recommendPrompt = `${strings.recommend} ${catName} en Nuevo Progreso.`;
-                    actionsHTML += `
-                        <button onclick="handleSend('${recommendPrompt.replace(/'/g, "\\'")}')" class="action-btn bg-yellow-400 text-gray-800 hover:bg-yellow-500 transition flex-shrink-0">${strings.recommend}</button>
-                    `;
-                }
-
-                const actionsBar = `
-                    <div class="action-bar-container">
-                        <div class="inline-flex space-x-3 p-1">
-                            ${actionsHTML}
-                        </div>
-                    </div>
-                `;
-                
-                w.innerHTML = `
-                    <div class="flex flex-col items-start">
-                        ${content}
-                        ${actionsBar}
-                        ${timeSpan}
-                    </div>
-                `;
-
-            } else {
-                // Mensaje de texto plano conversacional
-                content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">${m.text || ''}</div>`;
-                w.innerHTML = `
-                    <div class="flex flex-col items-start">
-                        ${content}
-                        ${timeSpan}
-                    </div>
+                    <a href="${m.placePhone ? `tel:${m.placePhone}` : 'javascript:void(0)'}" onclick="${m.placePhone ? '' : `alert('${strings.unavailable}')`}" class="action-btn ${isPhoneAvailable ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400 cursor-not-allowed' } text-white transition flex-shrink-0">${strings.call}</a>
+                    <a href="${m.reviewUrl || mapUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 hover:bg-yellow-500 transition flex-shrink-0">${strings.reviews}</a>
                 `;
             }
+
+            // 4. Botón Buscar en Google (SIEMPRE VISIBLE para isStructured: true)
+            actionsHTML += `
+                <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-gray-600 text-white hover:bg-gray-700 transition flex-shrink-0">${strings.search}</a>
+            `;
+            
+            // 5. Botón de Recomendación (Solo si es CATEGORÍA)
+            if (isCategory) {
+                const catName = m.categoryName || m.text.split('**')[1] || 'lugares'; 
+                const recommendPrompt = `${strings.recommend} ${catName} en Nuevo Progreso.`;
+                actionsHTML += `
+                    <button onclick="handleSend('${recommendPrompt.replace(/'/g, "\\'")}')" class="action-btn bg-yellow-400 text-gray-800 hover:bg-yellow-500 transition flex-shrink-0">${strings.recommend}</button>
+                `;
+            }
+
+            const actionsBar = `
+                <div class="action-bar-container">
+                    <div class="inline-flex space-x-3 p-1">
+                        ${actionsHTML}
+                    </div>
+                </div>
+            `;
+            
+            w.innerHTML = `
+                <div class="flex flex-col items-start">
+                    ${content}
+                    ${actionsBar}
+                    ${timeSpan}
+                </div>
+            `;
+
+        } else {
+            // ✅ CORRECCIÓN APLICADA: Muestra botones GENERALES incluso si isStructured es false (ej. listas o respuestas conversacionales)
+            
+            // 1. Mensaje de texto plano conversacional/lista
+            content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">${m.text || ''}</div>`;
+
+            // 2. Generación de URLs genéricas
+            // Usamos un query general, pero podríamos intentar parsear la categoría de la última pregunta del usuario (más complejo)
+            const defaultSearchName = 'Negocios en Nuevo Progreso Tamps'; 
+            
+            // Intentamos obtener el nombre de la categoría del texto si es una respuesta de lista (ej. de "10 clínicas dentales")
+            let listCategory = 'Nuevo Progreso';
+            if (m.description && m.description.length > 10) {
+                 // Intenta extraer "clínicas dentales" o similar del inicio de la descripción
+                 const matches = m.description.match(/Aquí tienes.*?(\w+\s\w+)/i);
+                 if (matches && matches[1]) {
+                    listCategory = matches[1];
+                 }
+            }
+            const finalSearchName = encodeURIComponent(listCategory + " Nuevo Progreso Tamps");
+
+            const mapUrl = `https://www.google.com/maps/search/?api=1&query=${finalSearchName}`; 
+            const searchUrl = `https://www.google.com/search?q=${finalSearchName}`;
+
+            // 3. HTML de acciones GENERALES
+            const actionsHTML = `
+                <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white hover:bg-green-600 transition flex-shrink-0">${strings.map}</a>
+                <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-gray-600 text-white hover:bg-gray-700 transition flex-shrink-0">${strings.search}</a>
+            `;
+
+            const actionsBar = `
+                <div class="action-bar-container">
+                    <div class="inline-flex space-x-3 p-1">
+                        ${actionsHTML}
+                    </div>
+                </div>
+            `;
+            
+            w.innerHTML = `
+                <div class="flex flex-col items-start">
+                    ${content}
+                    ${actionsBar}
+                    ${timeSpan}
+                </div>
+            `;
         }
-        return w;
     }
+    return w;
+}
+
 
     function renderChat() {
         if (messageContainer) {
