@@ -436,11 +436,32 @@
 
                 // 2. Botones específicos para LUGAR
                 if (isPlace) {
-                    const isPhoneAvailable = !!m.placePhone;
-                    actionsHTML += `
-                        <a href="${phoneUrl}" class="action-btn ${isPhoneAvailable ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400 cursor-not-allowed' } text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}</a>
-                        <a href="${reviewUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-500 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Reseñas ⭐' : 'Reviews ⭐'}</a>
-                    `;
+                    // **INICIO DE MODIFICACIÓN CRÍTICA**
+                    
+                    // Comprobamos si los datos sensibles están presentes
+                    const phoneAvailable = !!m.placePhone;
+                    const reviewsAvailable = !!m.reviewUrl;
+
+                    // Botón LLAMAR 📞: SOLO se genera si phoneAvailable es TRUE
+                    if (phoneAvailable) {
+                        actionsHTML += `
+                            <a href="${phoneUrl}" class="action-btn bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">
+                                ${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}
+                            </a>
+                        `;
+                    }
+                    
+                    // Botón RESEÑAS ⭐: SOLO se genera si reviewsAvailable es TRUE
+                    if (reviewsAvailable) {
+                        actionsHTML += `
+                            <a href="${reviewUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-500 transition flex-shrink-0 text-sm">
+                                ${currentLanguage === 'es' ? 'Reseñas ⭐' : 'Reviews ⭐'}
+                            </a>
+                        `;
+                    }
+                    
+                    // **FIN DE MODIFICACIÓN CRÍTICA**
+
                 }
 
                 // 3. Botón Buscar en Google (Aplica siempre)
