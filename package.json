@@ -2,8 +2,7 @@
   "name": "progreso-tour-guide",
   "version": "1.0.0",
   "description": "Chatbot para Progreso, Tamps.",
-  "main": "api/index.js", 
-  "type": "commonjs",
+  "main": "api/index.js",
   "scripts": {
     "start": "node api/index.js"  
   }, 
