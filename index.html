@@ -14,7 +14,22 @@
         .user-bubble { border-radius: 18px 18px 0 18px; max-width: 80% }
         .model-bubble { border-radius: 18px 18px 18px 0; max-width: 80%;padding-left:8px; white-space: pre-wrap; /* Necesario para listas de Gemini */ }
         .action-bar-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 10px; padding-bottom: 5px }
-        .action-btn { white-space: nowrap }
+        
+        /* 1. ESTILOS DE BOTÓN DE ACCIÓN (Corregido con mejor diseño) */
+        .action-btn { 
+            white-space: nowrap; 
+            font-size: 0.8rem; /* Un poco más pequeño */
+            font-weight: 600;
+            padding: 8px 12px;
+            border-radius: 10px;
+            transition: background-color 0.2s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .action-btn.bg-green-500 { background-color: #10B981; } /* Ver en Mapa */
+        .action-btn.bg-blue-500 { background-color: #3B82F6; } /* Llamar */
+        .action-btn.bg-yellow-400 { background-color: #FBBF24; color: #1F2937; } /* Reseñas/Recomendar */
+        .action-btn.bg-gray-600 { background-color: #4B5563; } /* Buscar en Google */
+
         .chip-group-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
         
         /* Estilo de la barra de chat */
@@ -32,7 +47,7 @@
         .map-input {
             flex-grow: 1;
             padding: 0.75rem 0.75rem; 
-            color: #9ca3af;
+            color: #1F2937; /* Color de texto más oscuro */
             font-size: 1.125rem;
             background: transparent;
             border: none;
@@ -73,12 +88,12 @@
         }
         
         /* 2. Asegura la eliminación del outline/ring en estados focus/active */
-        .action-chip, .category-chip, .language-chip, .go-button, .map-input {
+        .action-chip, .category-chip, .language-chip, .go-button, .map-input, .action-btn {
             outline: none !important;
             box-shadow: none !important;
             --tw-ring-color: transparent !important;
         }
-        .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active, .go-button:focus, .go-button:active {
+        .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active, .go-button:focus, .go-button:active, .action-btn:focus, .action-btn:active {
             outline: none !important;
             box-shadow: none !important;
             --tw-ring-color: transparent !important;
@@ -186,7 +201,7 @@
         'farmacias',
         'opticas',
         'esteticas',
-        'salud' // Añadir si la categoría general "Salud y Estética" también debe ser sensible
+        'salud' 
     ];
 
 
@@ -207,13 +222,14 @@
         es: {
             header: "PROGRESO TOUR GUIDE",
             placeholder: "Pregúntale al mapa",
+            placeholderThinking: "Buscando tu solicitud... espera un segundo. ⏳", // 6. NUEVO PLACEHOLDER
             goButton: "Ir",
             categories: "📂 Categorías",
             language: "🌐 Lenguaje",
             getThere: "📍 Cómo Llegar",
             info: "ℹ️ Info",
-            alertStructured: (name) => `¡Ficha verificada de ${name}!`,
-            alertCategory: (name) => `Resumen de la categoría ${name}.`,
+            alertStructured: (name) => `Ficha de ${name} generada.`, // Texto más conciso
+            alertCategory: (name) => `Resumen de la categoría ${name}.`, // Texto más conciso
             chipHealth: "🏥 Salud & Estética",
             chipShopping: "🛍️ Compras",
             chipEntertainment: "🎺 Entretenimiento",
@@ -222,19 +238,20 @@
             reviews: "Reseñas ⭐",
             map: "Ver en Mapa 🗺️",
             search: "Buscar en Google 🔍",
-            recommend: "Dame Recomendaciones", // Modificado para un texto más genérico
+            recommend: "Dame Recomendaciones", 
             unavailable: "No disponible."
         },
         en: {
             header: "PROGRESO TOUR GUIDE",
             placeholder: "Ask the map",
+            placeholderThinking: "Searching your request... wait a second. ⏳", // 6. NUEVO PLACEHOLDER
             goButton: "Go",
             categories: "📂 Categories",
             language: "🌐 Language",
             getThere: "📍 How to get there",
             info: "ℹ️ Info",
-            alertStructured: (name) => `Verified card for ${name}!`,
-            alertCategory: (name) => `Summary for ${name} category.`,
+            alertStructured: (name) => `Card for ${name} generated.`, // Texto más conciso
+            alertCategory: (name) => `Summary for ${name} category.`, // Texto más conciso
             chipHealth: "🏥 Health & Beauty",
             chipShopping: "🛍️ Shopping",
             chipEntertainment: "🎺 Entertainment",
@@ -243,7 +260,7 @@
             reviews: "Reviews ⭐",
             map: "View on Map 🗺️",
             search: "Search on Google 🔍",
-            recommend: "Give me Recommendations", // Modificado para un texto más genérico
+            recommend: "Give me Recommendations", 
             unavailable: "Unavailable."
         }
     };
@@ -317,11 +334,25 @@
         if (messageContainer) messageContainer.scrollTop = messageContainer.scrollHeight; 
     }
     
+    // 5. y 6. CORRECCIÓN: Manejo del input y el loading
     function toggleInput(d) {
         if (inputElement) inputElement.disabled = d;
         if (sendButton) sendButton.disabled = d;
-        if (loadingIndicator) loadingIndicator.classList.toggle('hidden', d);
-        if (inputElement) inputElement.placeholder = d ? (currentLanguage === 'es' ? "Pensando..." : "Thinking...") : UI_STRINGS[currentLanguage].placeholder;
+        
+        // Muestra/Oculta el indicador de loading Lottie
+        if (loadingIndicator) loadingIndicator.classList.toggle('hidden', !d);
+
+        // Cambia el placeholder
+        if (inputElement) {
+            inputElement.placeholder = d 
+                ? UI_STRINGS[currentLanguage].placeholderThinking 
+                : UI_STRINGS[currentLanguage].placeholder;
+        }
+        
+        // Asegura que el scroll baje para ver el loading
+        if (d) {
+            scrollToBottom();
+        }
     }
 
     // --- FUNCIONES DE INTERACCIÓN Y UI ---
@@ -467,8 +498,7 @@
 
                 if (typeof alertUser === 'function') alertUser(alertText, "i");
 
-                // Contenido de la burbuja (Descripción de Gemini/Backend)
-                // Usamos innerHTML para respetar el formato Markdown/lista del backend
+                // 2. y 3. CORRECCIÓN: El contenido es el texto de Gemini, que ahora es conciso
                 content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">${m.text || m.description}</div>`;
                 
                 // --- Generación de la Barra de Acciones ---
@@ -481,13 +511,13 @@
                     mapUrl = m.mapUrl;
                 } else if (isCategory || isPlace) {
                     const searchName = entityName ? encodeURIComponent(entityName + " Nuevo Progreso Tamps") : 'Nuevo+Progreso+Tamaulipas';
-                    mapUrl = `https://www.google.com/maps/search/?api=1&query=${searchName}`; // Corregido el formato de URL de Google Maps
+                    mapUrl = `https://www.google.com/maps/search/?api=1&query=${searchName}`; // URL de búsqueda de Google Maps
                     searchUrl = `https://www.google.com/search?q=${searchName}`;
                 }
 
                 // 2. Botón VER EN MAPA (SIEMPRE VISIBLE)
                 actionsHTML += `
-                    <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition flex-shrink-0 text-sm">${strings.map}</a>
+                    <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white hover:bg-green-600 transition flex-shrink-0">${strings.map}</a>
                 `;
 
                 // 3. Botones específicos para LUGAR (Teléfono y Reseñas)
@@ -495,22 +525,23 @@
                 if (isPlace && !isSensitive) {
                     const isPhoneAvailable = !!m.placePhone;
                     actionsHTML += `
-                        <a href="${m.placePhone ? `tel:${m.placePhone}` : 'javascript:void(0)'}" onclick="${m.placePhone ? '' : `alert('${strings.unavailable}')`}" class="action-btn ${isPhoneAvailable ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400 cursor-not-allowed' } text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">${strings.call}</a>
-                        <a href="${m.reviewUrl || mapUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-500 transition flex-shrink-0 text-sm">${strings.reviews}</a>
+                        <a href="${m.placePhone ? `tel:${m.placePhone}` : 'javascript:void(0)'}" onclick="${m.placePhone ? '' : `alert('${strings.unavailable}')`}" class="action-btn ${isPhoneAvailable ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400 cursor-not-allowed' } text-white transition flex-shrink-0">${strings.call}</a>
+                        <a href="${m.reviewUrl || mapUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 hover:bg-yellow-500 transition flex-shrink-0">${strings.reviews}</a>
                     `;
                 }
 
                 // 4. Botón Buscar en Google (SIEMPRE VISIBLE)
                 actionsHTML += `
-                    <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-700 transition flex-shrink-0 text-sm">${strings.search}</a>
+                    <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-gray-600 text-white hover:bg-gray-700 transition flex-shrink-0">${strings.search}</a>
                 `;
                 
                 // 5. Botón de Recomendación (Solo si es CATEGORÍA)
-                // Dispara el prompt para obtener la lista interna
                 if (isCategory) {
-                    const recommendPrompt = `${strings.recommend} ${entityName} en Nuevo Progreso.`;
+                    // Usamos el nombre de la categoría o el primer elemento del texto si no hay nombre
+                    const catName = m.categoryName || m.text.split('**')[1] || 'lugares'; 
+                    const recommendPrompt = `${strings.recommend} ${catName} en Nuevo Progreso.`;
                     actionsHTML += `
-                        <button onclick="handleSend('${recommendPrompt.replace(/'/g, "\\'")}')" class="action-btn bg-yellow-400 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-500 transition flex-shrink-0 text-sm">${strings.recommend}</button>
+                        <button onclick="handleSend('${recommendPrompt.replace(/'/g, "\\'")}')" class="action-btn bg-yellow-400 text-gray-800 hover:bg-yellow-500 transition flex-shrink-0">${strings.recommend}</button>
                     `;
                 }
 
@@ -590,6 +621,7 @@
         hideChipGroup(languageChipsGroup, languageChips);
         languageMenuVisible = false;
 
+        // 5. y 6. CORRECCIÓN: Activar el loading y cambiar el placeholder
         toggleInput(true);
         
         const timestamp = new Date();
@@ -609,7 +641,7 @@
 
         if (!modelResponseText) {
             // Si hay un error, el mensaje de error ya se mostró en alertUser dentro de getGeminiResponse
-            // Solo necesitamos devolver el control al usuario.
+            // Desactivamos el loading y volvemos.
             toggleInput(false);
             return;
         }
@@ -629,6 +661,7 @@
                         role: 'model',
                         isStructured: true,
                         type: parsedJson.type, 
+                        // El texto de la ficha ahora es la descripción, sin repeticiones de título (punto 2 y 3)
                         text: parsedJson.description || modelResponseText, 
                         // Campos específicos para 'place'
                         placeName: parsedJson.placeName, 
@@ -651,7 +684,8 @@
         chatHistory = getChatHistory(); // Recarga el historial actualizado
         
         renderChat();
-        toggleInput(false);
+        // Desactivar el loading y restaurar el placeholder
+        toggleInput(false); 
     }
     
     // --- Lógica de Llamada a la API (CORREGIDA) ---
