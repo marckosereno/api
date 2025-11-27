@@ -7,14 +7,14 @@ const MODEL_NAME = "gemini-2.5-flash";
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
-const placesClient = new PlacesClient({}); // <-- CORRECCIÓN: Usando PlacesClient
+const placesClient = new PlacesClient({}); 
 
 // 2. Definimos la Instrucción del Sistema MODIFICADA
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 
 REGLAS DE FORMATO:
-1. **Responde exclusivamente en {LANG_PLACEHOLDER}**.
+1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 📍, ☀️) al inicio o final de tus respuestas o descripciones para hacerlas más amigables y atractivas.
 2. **REGLA CRÍTICA DE SALUD Y PRIVACIDAD:** Para cualquier lugar o categoría relacionado con la salud (clínicas, farmacias, ópticas, etc.), DEBES establecer el campo "isHealthPlace" en "true". NUNCA debes incluir precios, dar recomendaciones directas, o proporcionar detalles de contacto en la descripción. El servidor se encargará de limitar los botones de acción solo a "Ver en Mapa" y "Buscar en Google" para garantizar el cumplimiento.
 
 3. **MODO FICHA DE LUGAR (JSON):** Úsalo si la solicitud es de un lugar o negocio específico (Salud o No Salud). Debe incluir la propiedad 'placeToSearch' con el nombre exacto del lugar.
@@ -25,13 +25,13 @@ REGLAS DE FORMATO:
 
 6. Los formatos JSON requeridos son:
    
-   // Formato para LUGAR ESPECÍFICO (Salud o No Salud) - ¡NUEVO FORMATO DE SEGURIDAD!
+   // Formato para LUGAR ESPECÍFICO (Salud o No Salud)
    {
      "type": "place", 
      "placeName": "Nombre del Lugar", 
      "placeToSearch": "Nombre Exacto a buscar en Places API, ej: JM Dental Clinic", 
      "placeCategory": "Clasificación general del lugar, ej: Clínica Dental, Restaurante",
-     "isHealthPlace": true/false, // <--- ESTE FLAG ES CRÍTICO: Debe ser 'true' para salud.
+     "isHealthPlace": true/false, 
      "description": "Descripción corta de no más de 3 oraciones.",
      "isStructured": true
    }
@@ -126,7 +126,7 @@ export default async function handler(req, res) {
         
         let finalResponseData = { responseText: modelResponseText };
 
-        // Lógica de ENRIQUECIMIENTO con Places API
+        // Lógica de ENRIQUECIMIENTO con Places API (sin cambios)
         try {
             const jsonStart = modelResponseText.indexOf('{');
             const jsonEnd = modelResponseText.lastIndexOf('}');
