@@ -146,7 +146,7 @@
             font-weight: 500;
             display: flex;
             align-items: center;
-line-height:16px;
+            line-height:16px;
         }
 
         .notification-card .close-btn {
@@ -165,18 +165,156 @@ line-height:16px;
         .notification-card .close-btn:active {
             color: #4b5563; /* Gris más oscuro al presionar */
         }
+
+        /* NUEVOS ESTILOS PARA EL BOTÓN DE NOTIFICACIONES Y EL PANEL */
+
+        /* Botón de Notificaciones */
+        #btn-notifications {
+            background-color: white;
+            color: #4b5563; /* Gris oscuro para el icono */
+            border: 1px solid #d1d5db; /* Borde gris suave */
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+            outline: none !important;
+            padding: 8px 12px; /* Ajuste de padding para que sea más pequeño y redondo */
+            border-radius: 9999px; /* Completamente redondo */
+            font-size: 1.1rem; /* Tamaño del icono */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+        }
+        #btn-notifications:hover {
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        #btn-notifications:active {
+            background-color: #e5e7eb;
+            color: #000;
+        }
+
+        /* Contenedor del Modal */
+        .notification-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); /* Fondo semitransparente */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100; /* Asegura que esté por encima de todo */
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+        }
+
+        .notification-modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Panel de Preferencias */
+        .notification-panel {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2), 0 5px 10px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 400px; /* Ancho máximo del panel */
+            transform: translateY(20px); /* Para la animación de entrada */
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+            opacity: 0;
+            padding: 20px;
+            pointer-events: auto; /* Permite interacción */
+        }
+
+        .notification-modal-overlay.show .notification-panel {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Toggles (Switch) - Usando Tailwind para la base y CSS para el estilo personalizado */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 40px; /* Ancho del toggle */
+            height: 20px; /* Alto del toggle */
+            flex-shrink: 0;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc; /* Fondo cuando está OFF */
+            transition: .4s;
+            border-radius: 20px; /* Bordes redondeados */
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px; /* Alto del "botón" del toggle */
+            width: 16px; /* Ancho del "botón" del toggle */
+            left: 2px; /* Posición inicial */
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%; /* Redondo */
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2); /* Sombra para el botón */
+        }
+
+        input:checked + .slider {
+            background-color: #2563eb; /* Fondo cuando está ON (azul de Tailwind blue-600) */
+        }
+
+        input:focus + .slider {
+            box-shadow: 0 0 1px #2563eb;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px); /* Mover a la derecha cuando está ON */
+        }
+
+        /* Info card dentro del panel */
+        .info-card-panel {
+            background-color: #eff6ff; /* blue-50 de Tailwind */
+            color: #1e40af; /* blue-800 de Tailwind */
+            border-left: 4px solid #3b82f6; /* blue-500 de Tailwind */
+            border-radius: 4px;
+            padding: 12px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: flex-start;
+            margin-top: 20px;
+        }
+        .info-card-panel span {
+            margin-right: 8px;
+            font-size: 1.1rem;
+        }
     </style>
     <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
 </head>
 <body>
     <div id="chat-window" class="chat-window h-screen w-full"> 
         
-        <div class="fixed top-0 left-0 w-full z-50 p-4 pt-6 flex justify-center bg-transparent">
-            <div id="top-action-bar" class="flex items-center space-x-3">
+        <div class="fixed top-0 left-0 w-full z-50 p-4 pt-6 flex justify-between bg-transparent">
+            <div id="top-action-bar-left" class="flex items-center space-x-3">
                 <div id="btn-clear-top" class="action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-white text-red-700 cursor-pointer transition hover:bg-gray-100 shadow-md border border-red-300" data-action="CLEAR_HISTORY">❌ Borrar Chat</div>
             </div>
+            <div id="top-action-bar-right" class="flex items-center space-x-3">
+                <button id="btn-notifications" class="action-chip flex items-center text-sm font-semibold cursor-pointer">🔔</button>
+            </div>
         </div>
-
         <div id="app-alert-container" class="fixed top-0 w-full flex justify-center z-50 pointer-events-none"></div>
 
         <div id="message-container" class="flex-grow overflow-y-auto p-4 flex flex-col"></div>
@@ -223,9 +361,60 @@ line-height:16px;
                 </button>
             </div>
         </div>
-        </div>
+    </div>
+    
+    <div id="notification-preferences-modal" class="notification-modal-overlay">
+        <div class="notification-panel">
+            <h3 class="text-xl font-bold mb-2 text-gray-900">Preferencias de Notificaciones</h3>
+            <p class="text-sm text-gray-600 mb-6">Elige qué notificaciones quieres recibir.</p>
 
-<script>
+            <div class="space-y-4">
+                
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="font-semibold text-gray-800">Noticias de Interfaz</p>
+                        <p class="text-sm text-gray-500">Alertas de cambios de idioma, historial y otros eventos de la aplicación. (Recomendado)</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-news" checked data-pref="news">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="font-semibold text-gray-800">Alertas de Ficha</p>
+                        <p class="text-sm text-gray-500">Notificaciones de confirmación cuando se muestra información de una ficha de lugar o categoría.</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-reminders" checked data-pref="reminders">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-between opacity-50 cursor-not-allowed">
+                    <div>
+                        <p class="font-semibold text-gray-800">Promociones y Ofertas</p>
+                        <p class="text-sm text-gray-500">Recibe notificaciones sobre promociones especiales. (Próximamente)</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-promotions" disabled data-pref="promotions">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="info-card-panel">
+                <span>ℹ️</span> Recuerda que las **alertas de error** (❌) siempre se mostrarán, independientemente de tus preferencias, para garantizar la usabilidad.
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-8">
+                <button id="btn-discard-changes" class="py-2 px-4 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition">Descartar</button>
+                <button id="btn-apply-changes" class="py-2 px-4 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition">Aplicar Cambios</button>
+            </div>
+        </div>
+    </div>
+    <script>
     // --- BLOQUE JAVASCRIPT: SETUP Y UTILIDADES ---
     
     // **NOTA: Debe coincidir con el endpoint de Vercel/backend**
@@ -248,8 +437,18 @@ line-height:16px;
     const languageChips = document.querySelectorAll('#language-chips-group .language-chip');
     const menuActionChips = document.querySelectorAll('#menu-actions .menu-action-chip');
     const btnClearTop = document.getElementById('btn-clear-top'); 
+    
+    // NUEVAS REFERENCIAS A ELEMENTOS DEL DOM para el panel de notificaciones
+    const btnNotifications = document.getElementById('btn-notifications');
+    const notificationModal = document.getElementById('notification-preferences-modal');
+    const notificationPanel = document.querySelector('#notification-preferences-modal .notification-panel');
+    const toggleNews = document.getElementById('toggle-news');
+    const toggleReminders = document.getElementById('toggle-reminders');
+    const togglePromotions = document.getElementById('toggle-promotions'); 
+    const btnDiscardChanges = document.getElementById('btn-discard-changes');
+    const btnApplyChanges = document.getElementById('btn-apply-changes');
 
-    // Objeto de Traducción y textos de chips
+    // Objeto de Traducción y textos de chips (SIN CAMBIOS)
     const UI_STRINGS = {
         es: {
             header: "PROGRESO TOUR GUIDE",
@@ -283,6 +482,14 @@ line-height:16px;
         }
     };
 
+    // Estado inicial de las preferencias de notificación
+    let notificationPreferences = {
+        news: true,      // Alertas de interfaz, historial, etc.
+        reminders: true, // Alertas estructuradas (fichas de lugar/categoría)
+        promotions: false
+    };
+
+
     // Inicialización del estado
     if (inputElement) inputElement.disabled = false;
     if (sendButton) sendButton.disabled = false;
@@ -291,7 +498,6 @@ line-height:16px;
     
     function saveHistory() {
         try {
-            // Se guarda el historial completo, excluyendo solo el mensaje de bienvenida temporal.
             localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
         } catch (e) {
             console.error("Error al guardar el historial en localStorage", e);
@@ -300,12 +506,12 @@ line-height:16px;
 
     function clearChatHistory() {
         vibrateDevice();
-        chatHistory = []; // Borrar en memoria
-        localStorage.removeItem('chatHistory'); // Borrar en almacenamiento local
+        chatHistory = []; 
+        localStorage.removeItem('chatHistory'); 
         
-        // Limpiamos la visualización y mostramos alerta
         if (messageContainer) messageContainer.innerHTML = ''; 
-        alertUser(currentLanguage === 'es' ? '¡Conversación eliminada! Empecemos de cero. 👋' : 'Conversation cleared! Let\'s start fresh. 👋', 'i');
+        // ALERTA DE CLEAR HISTORY USA 'news'
+        alertUser(currentLanguage === 'es' ? '¡Conversación eliminada! Empecemos de cero. 👋' : 'Conversation cleared! Let\'s start fresh. 👋', 'i', 'news');
         
         scrollToBottom();
     }
@@ -318,15 +524,12 @@ line-height:16px;
                 if (loadedHistory.length > 0) {
                     chatHistory = loadedHistory; 
                     
-                    // Crea el mensaje de bienvenida de vuelta
                     const welcomeBackText = currentLanguage === 'es' 
                         ? '¡Bienvenido/a de vuelta! Aquí está tu conversación anterior. ¿En qué más puedo ayudarte hoy? 👋' 
                         : 'Welcome back! Here is your previous conversation. What else can I help you with today? 👋';
                     
-                    // Renderiza la conversación existente
                     renderChat(); 
                     
-                    // AÑADIMOS Y RENDERIZAMOS EL MENSAJE DE BIENVENIDA DIRECTAMENTE AL DOM (no al chatHistory)
                     const welcomeMessage = { role: 'model', text: welcomeBackText, timestamp: new Date() };
                     messageContainer.appendChild(createMessageBubble(welcomeMessage));
                     scrollToBottom();
@@ -340,8 +543,32 @@ line-height:16px;
         return false;
     }
 
+    // NUEVAS FUNCIONES PARA LA PERSISTENCIA DE NOTIFICACIONES
+    function saveNotificationPreferences() {
+        try {
+            localStorage.setItem('notificationPreferences', JSON.stringify(notificationPreferences));
+            alertUser('Preferencias de notificaciones guardadas. ✅', 'i', 'news');
+        } catch (e) {
+            console.error("Error al guardar las preferencias de notificación:", e);
+        }
+    }
 
-    // --- Funciones de utilidad de tiempo ---
+    function loadNotificationPreferences() {
+        try {
+            const savedPrefs = localStorage.getItem('notificationPreferences');
+            if (savedPrefs) {
+                notificationPreferences = JSON.parse(savedPrefs);
+            }
+            // Aplicar el estado guardado a los toggles del modal
+            if (toggleNews) toggleNews.checked = notificationPreferences.news;
+            if (toggleReminders) toggleReminders.checked = notificationPreferences.reminders;
+            // No aplicamos 'promotions' ya que está deshabilitado
+        } catch (e) {
+            console.error("Error al cargar las preferencias de notificación:", e);
+        }
+    }
+
+    // --- Funciones de utilidad de tiempo (SIN CAMBIOS) ---
     function formatTime(date) {
         if (!date) return '';
         let hours = date.getHours();
@@ -353,18 +580,23 @@ line-height:16px;
         return hours + ':' + minutesStr + ' ' + ampm;
     }
 
-    // FUNCIÓN DE ALERTA MEJORADA CON UI ESTÉTICA Y BOTÓN DE CIERRE (X)
-    function alertUser(m, t='i') {
-        // Función auxiliar para esconder la alerta
+    // FUNCIÓN DE ALERTA MEJORADA CON CONTROL DE PREFERENCIAS
+    function alertUser(m, t='i', preferenceType = 'news') {
+        
+        // 🛑 NUEVO: Si no es un error y la preferencia está desactivada, salir.
+        // Los errores (t === 'error') siempre se muestran.
+        if (t !== 'error' && !notificationPreferences[preferenceType]) {
+            console.log(`Notificación de tipo "${preferenceType}" deshabilitada por el usuario. Mensaje: ${m}`);
+            return; 
+        }
+
         const hideAlert = (alertElement) => {
             if (!alertElement) return;
             alertElement.classList.remove('show');
             alertElement.style.opacity = '0';
-            // Usa pointer-events-none en el contenedor principal para que no bloquee el chat
             setTimeout(() => alertElement.remove(), 400); 
         };
 
-        // 1. Limpia alertas anteriores
         if (appAlertContainer && appAlertContainer.querySelector('.notification-card')) {
             hideAlert(appAlertContainer.querySelector('.notification-card'));
         }
@@ -374,8 +606,7 @@ line-height:16px;
             ? '❌' 
             : (t === 'i' ? 'ℹ️' : '✅'); 
 
-        // Estructura de la nueva tarjeta
-        a.className = 'notification-card opacity-0 pointer-events-auto'; // Habilitar interacción solo en la tarjeta
+        a.className = 'notification-card opacity-0 pointer-events-auto';
         a.innerHTML = `
             <div class="message-content">
                 <span class="mr-2">${icon}</span> 
@@ -386,19 +617,16 @@ line-height:16px;
 
         if (appAlertContainer) appAlertContainer.appendChild(a);
 
-        // 2. Animación de entrada
         setTimeout(() => {
             a.classList.add('show');
             a.style.opacity = '1';
         }, 10); 
 
-        // 3. Manejo del botón de cierre
         const closeButton = a.querySelector('.close-btn');
         closeButton.addEventListener('click', () => {
             hideAlert(a);
         });
         
-        // 4. Temporizador de cierre automático
         setTimeout(() => {
             hideAlert(a);
         }, 4000);
@@ -449,11 +677,9 @@ line-height:16px;
         currentLanguage = lang;
         const strings = UI_STRINGS[lang];
         
-        // Ocultar menú de lenguaje
         hideChipGroup(languageChipsGroup, languageChips);
         languageMenuVisible = false;
 
-        // Actualizar textos de la interfaz
         inputElement.placeholder = strings.placeholder;
         document.getElementById('go-text').textContent = strings.goButton; 
 
@@ -462,13 +688,13 @@ line-height:16px;
         document.getElementById('btn-comollegar').textContent = strings.getThere;
         document.getElementById('btn-info').textContent = strings.info;
 
-        // Actualizar textos de los chips de categoría
         const categoryChipTexts = [strings.chipHealth, strings.chipShopping, strings.chipEntertainment, strings.chipDental];
         categoryChips.forEach((chip, index) => {
             chip.textContent = categoryChipTexts[index];
         });
 
-        alertUser(`Interfaz y conversación cambiadas a ${lang === 'es' ? 'Español' : 'English'}`, 'i');
+        // ALERTA DE CAMBIO DE IDIOMA USA 'news'
+        alertUser(`Interfaz y conversación cambiadas a ${lang === 'es' ? 'Español' : 'English'}`, 'i', 'news');
     }
 
     function handleMenuAction(actionChip) {
@@ -478,7 +704,6 @@ line-height:16px;
 
         vibrateDevice(); 
 
-        // Lógica para ocultar otros menús y resetear estados
         if (action !== 'CATEGORIES' && categoriesVisible) {
             hideChipGroup(categoryChipsGroup, categoryChips);
             categoriesVisible = false;
@@ -486,6 +711,11 @@ line-height:16px;
         if (action !== 'LANGUAGE' && languageMenuVisible) {
             hideChipGroup(languageChipsGroup, languageChips);
             languageMenuVisible = false;
+        }
+        
+        // CERRAR EL MODAL DE NOTIFICACIONES SI ESTÁ ABIERTO
+        if (notificationModal.classList.contains('show')) {
+            notificationModal.classList.remove('show');
         }
 
 
@@ -509,7 +739,6 @@ line-height:16px;
             clearChatHistory();
             return;
         } else {
-            // Acciones directas (Cómo Llegar, Info)
             if (query) {
                 handleSend(query); 
                 if (categoriesVisible) { hideChipGroup(categoryChipsGroup, categoryChips); categoriesVisible = false; }
@@ -540,16 +769,12 @@ line-height:16px;
 
             if (m.isStructured) { 
                 
-                // 🛑 Determinar el Tipo de Contenido 🛑
                 const isPlace = m.type === 'place';
                 const isCategory = m.type === 'category';
 
-                // Usamos el nombre relevante para los enlaces de búsqueda
                 const entityName = isPlace 
                     ? (m.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
                     : (m.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
-                
-                // --- Configuración de Enlaces y Botones ---
                 
                 let directionsUrl = '#';
                 let searchUrl = '#';
@@ -557,7 +782,6 @@ line-height:16px;
                 let reviewUrl = null;
                 
                 if (isPlace) {
-                    // CORRECCIÓN DE URL A GOOGLE MAPS ESTÁNDAR
                     const query = encodeURIComponent(entityName + " Nuevo Progreso Tamps");
                     directionsUrl = m.mapUrl || `https://www.google.com/maps/search/?api=1&query=${query}`;
                     
@@ -566,20 +790,17 @@ line-height:16px;
                     reviewUrl = m.reviewUrl || directionsUrl; 
                     
                 } else if (isCategory) {
-                    // CORRECCIÓN DE URL A GOOGLE MAPS ESTÁNDAR
                     const query = encodeURIComponent(entityName + " Nuevo Progreso Tamps");
                     directionsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
                     searchUrl = `https://www.google.com/search?q=${query}`;
                 }
                 
-                
-                // --- Generación de la Burbuja y la Barra de Acciones ---
-                
                 const alertText = isPlace 
                     ? UI_STRINGS[currentLanguage].alertStructured(entityName)
                     : UI_STRINGS[currentLanguage].alertCategory(entityName);
 
-                if (typeof alertUser === 'function') alertUser(alertText, "i");
+                // ALERTA ESTRUCTURADA USA 'reminders'
+                if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
 
 
                 content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">${m.text || m.description}</div>`;
@@ -650,7 +871,7 @@ line-height:16px;
         }
     }
 
-    // --- CÓDIGO DE CONEXIÓN AL BACKEND ---
+    // --- CÓDIGO DE CONEXIÓN AL BACKEND (SIN CAMBIOS) ---
 
     async function getGeminiResponse(userPrompt, chatHistoryForAPI) {
         
@@ -684,12 +905,13 @@ line-height:16px;
 
         } catch (error) {
             console.error("Fallo del Proxy o API de Gemini:", error);
+            // ALERTA DE ERROR USA 'error' (SIEMPRE SE MUESTRA)
             alertUser(`Error de conexión: ${error.message}.`, 'error');
             return null;
         }
     }
 
-    // --- Lógica Principal del Chatbot (handleSend) ---
+    // --- Lógica Principal del Chatbot (handleSend) (SIN CAMBIOS) ---
     async function handleSend(userPromptInput = null) {
         const userPrompt = userPromptInput || inputElement.value.trim();
         if (!userPrompt) return;
@@ -705,18 +927,15 @@ line-height:16px;
         if (typeof renderChat === 'function') renderChat();
         inputElement.value = '';
 
-        // **Optimización del Historial**
         const MAX_HISTORY_TO_SEND = 10; 
         const previousHistory = chatHistory.slice(0, -1); 
         const startIndex = Math.max(0, previousHistory.length - MAX_HISTORY_TO_SEND);
         const limitedHistory = previousHistory.slice(startIndex);
-        // **Fin de Optimización**
         
         let modelResponseText = await getGeminiResponse(userPrompt, limitedHistory);
         
         let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date() };
 
-        // Intenta parsear la respuesta como JSON estructurado
         try {
             const jsonStart = modelResponseText.indexOf('{');
             const jsonEnd = modelResponseText.lastIndexOf('}');
@@ -763,7 +982,7 @@ line-height:16px;
         if (typeof toggleInput === 'function') toggleInput(false);
     }
     
-    // --- Event Listeners e Inicio ---
+    // --- Event Listeners e Inicio (ACTUALIZADO) ---
     if (sendButton) sendButton.addEventListener('click', () => handleSend());
     if (inputElement) inputElement.addEventListener('keypress', function(e) { if (e.key === 'Enter') { handleSend(); } });
     
@@ -800,9 +1019,58 @@ line-height:16px;
         });
     });
 
+    // NUEVOS LISTENERS PARA EL PANEL DE NOTIFICACIONES
+    if (btnNotifications) {
+        btnNotifications.addEventListener('click', () => {
+            vibrateDevice();
+            loadNotificationPreferences(); // Cargar preferencias al abrir el modal
+            notificationModal.classList.add('show');
+        });
+    }
+
+    // Cerrar el modal al hacer clic fuera del panel (overlay)
+    if (notificationModal) {
+        notificationModal.addEventListener('click', (e) => {
+            if (e.target === notificationModal) { 
+                notificationModal.classList.remove('show');
+            }
+        });
+    }
+
+    // Botones dentro del modal
+    if (btnDiscardChanges) {
+        btnDiscardChanges.addEventListener('click', () => {
+            vibrateDevice();
+            notificationModal.classList.remove('show');
+            // No guarda, simplemente cierra
+        });
+    }
+
+    if (btnApplyChanges) {
+        btnApplyChanges.addEventListener('click', () => {
+            vibrateDevice();
+            // Actualizar el objeto `notificationPreferences` con el estado actual de los toggles
+            notificationPreferences.news = toggleNews.checked;
+            notificationPreferences.reminders = toggleReminders.checked;
+            // promotions se mantiene en false ya que está deshabilitado
+
+            saveNotificationPreferences(); 
+            notificationModal.classList.remove('show');
+        });
+    }
+
+    // Evita que el clic dentro del panel cierre el modal
+    if (notificationPanel) {
+        notificationPanel.addEventListener('click', (e) => {
+            e.stopPropagation(); 
+        });
+    }
+
+
     document.addEventListener('DOMContentLoaded', () => {
         setInterfaceLanguage('es'); 
         loadHistory(); 
+        loadNotificationPreferences(); // Cargar preferencias de notificación al inicio
     });
 </script>
 </body>
