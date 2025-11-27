@@ -69,7 +69,6 @@ function generateSystemInstruction(allPlaces, currentLanguage) {
 
     const lang = currentLanguage === 'es' ? 'español' : 'inglés';
     
-    // ** SOLO SE MODIFICÓ EL FORMATO DE ESTE STRING MULTILINEA PARA EVITAR EL SYNTAX ERROR **
     const instruction = `
         Eres un guía turístico e informador útil, amigable y **conciso** para el poblado de Nuevo Progreso, Tamaulipas.
         Tu misión es ser un asistente de conversación experto.
@@ -77,18 +76,30 @@ function generateSystemInstruction(allPlaces, currentLanguage) {
         --- REGLA CRÍTICA DE RESPUESTA (PRIORIDAD AL JSON ESTRUCTURADO) ---
         1. Responde SIEMPRE en ${lang}.
         2. SIEMPRE DEBES UTILIZAR EL FORMATO JSON.
-        3. FORMATO DE FICHA (Prioridad Máxima): Si la pregunta del usuario es sobre un LUGAR, un NEGOCIO o una CATEGORÍA (ej. dentistas, restaurantes, "dónde comer", "Farmacias del Ahorro"), DEBES responder con un JSON donde "isStructured" sea true.
-        4. FORMATO CONVERSACIONAL (Último Recurso): Si la pregunta es conversacional o general y NO se ajusta a una ficha (ej. "hola", "¿cómo llegar?", "borrar historial"), utiliza un JSON donde "isStructured" sea false y coloca la respuesta en "description".
+        3. **FORMATO DE FICHA (Prioridad Máxima):** Si la pregunta del usuario es sobre un LUGAR o una CATEGORÍA (ej. dentistas, restaurantes, "dónde comer"), **DEBES** responder con un JSON donde "isStructured" sea true y type sea 'place' o 'category'.
+        4. **FORMATO CONVERSACIONAL (Último Recurso):** Si la pregunta es conversacional o general y NO se ajusta a una ficha o lista, utiliza un JSON donde "isStructured" sea false y type sea 'text'.
 
-        --- REGLAS PARA "isStructured": true (FICHAS) ---
-        5. **FORMATO CONCISO:** La "description" de la ficha debe ser el resumen conciso. Nunca incluyas las etiquetas \`[Botón: ...]\` o descripciones largas sobre lo que es un lugar.
-        6. **RESPUESTA DE CATEGORÍA:** Si es una pregunta de categoría (ej. "compras"):
+        --- REGLAS PARA "isSTRUCTURED": true (FICHAS y LISTAS) ---
+        
+        // 🛑 PUNTO 3 CORREGIDO: DESCRIPCIÓN MÁS ÚTIL (REGLA 5)
+        5. **DESCRIPCIÓN ÚTIL:** La "description" debe ser un resumen amigable, útil y claro sobre el lugar o categoría. Debe ser más informativo que una sola palabra. Nunca incluyas las etiquetas \`[Botón: ...]\` o descripciones largas sobre lo que es un lugar.
+        
+        // 🛑 PUNTO 2A IMPLEMENTADO: ESTRUCTURA DE LISTAS (REGLA 6)
+        6. **RECOMENDACIÓN EXPLÍCITA (Lista Estructurada):** Si el usuario pide explícitamente una lista o recomendación (ej. "dame 10 dentistas", "top 5 restaurantes"):
+           a. Usa un JSON con **"isStructured": true** y **"type": "list"**.
+           b. Usa la **Lista Interna** para llenar el *array* \`placeList\` con 5 a 12 elementos.
+           c. En el campo "description", proporciona un **mensaje introductorio** y el **DESCARGO DE RESPONSABILIDAD**.
+           d. Las URLs para 'mapUrl' y 'searchUrl' deben ser para la búsqueda general de la CATEGORÍA solicitada (ej. "Dentistas en Nuevo Progreso").
+
+        // REGLAS ANTERIORES RE-NUMERADAS
+        7. **RESPUESTA DE CATEGORÍA:** Si es una pregunta de categoría (ej. "compras"):
            a. Usa "type": "category".
            b. En "description", añade el DESCARGO DE RESPONSABILIDAD y dirige a usar los botones de búsqueda y mapa.
-        7. **RESPUESTA DE LUGAR:** Si es un lugar específico (ej. "JM Dental Clinic"):
+        8. **RESPUESTA DE LUGAR:** Si es un lugar específico (ej. "JM Dental Clinic"):
            a. Usa "type": "place".
            b. Rellena los campos "placeName", "mapUrl", "placePhone", "reviewUrl" con la información general de Google o usa la Lista Interna si la información es específica y no quieres buscar en Google.
            c. Si es de salud (${SENSITIVE_CATEGORIES.join(', ')}), omite "placePhone" y "reviewUrl".
+
 
         --- DESCARGO DE RESPONSABILIDAD (Para añadir en Fichas de Categoría y Listas de Recomendación) ---
         (ESPAÑOL: "Nota: No proporcionamos información médica, precios, números de teléfono ni referencias de calidad. Le recomendamos usar los botones 'Ver en Mapa' o 'Buscar en Google' para más opciones y verificar la información de forma independiente.")
@@ -102,21 +113,34 @@ function generateSystemInstruction(allPlaces, currentLanguage) {
     return instruction;
 }
 
-// --- 5. ESQUEMA DE RESPUESTA JSON ---
+// --- 5. ESQUEMA DE RESPUESTA JSON (PUNTO 2A IMPLEMENTADO) ---
 const responseSchema = {
     type: Type.OBJECT,
     properties: {
         isStructured: {
             type: Type.BOOLEAN,
-            description: "Debe ser 'true' si es una ficha de lugar o categoría, 'false' si es una respuesta conversacional simple o una lista."
+            description: "Debe ser 'true' si es una ficha de lugar, categoría o lista, 'false' si es una respuesta conversacional simple."
         },
         type: {
             type: Type.STRING,
-            description: "Tipo de ficha: 'place', 'category', o 'text' (si isStructured es false)."
+            description: "Tipo de ficha: 'place', 'category', 'list', o 'text' (si isStructured es false)."
         },
         description: {
             type: Type.STRING,
-            description: "El contenido principal de la respuesta. Si es una ficha, es la descripción concisa. Si es 'text', es la respuesta conversacional o la lista formateada."
+            description: "El contenido principal de la respuesta. Si es una ficha/lista, es la descripción introductoria y/o el descargo de responsabilidad. Si es 'text', es la respuesta conversacional."
+        },
+        // NUEVA PROPIEDAD PARA LISTAS:
+        placeList: {
+            type: Type.ARRAY,
+            description: "Lista de lugares para la categoría solicitada, si el type es 'list'.",
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    title: { type: Type.STRING, description: "Título del lugar/negocio." },
+                    category: { type: Type.STRING, description: "Categoría del lugar." },
+                    address: { type: Type.STRING, description: "Dirección concisa." }
+                }
+            }
         },
         // Propiedades opcionales, solo para type: 'place' o 'category'
         placeName: {
@@ -125,11 +149,11 @@ const responseSchema = {
         },
         categoryName: {
             type: Type.STRING,
-            description: "Nombre de la categoría (solo si type='category')."
+            description: "Nombre de la categoría (solo si type='category' o 'list')."
         },
         mapUrl: {
             type: Type.STRING,
-            description: "URL de Google Maps para el lugar o una búsqueda general (solo si type='place' o 'category')."
+            description: "URL de Google Maps para el lugar o una búsqueda general (solo si type='place', 'category' o 'list')."
         },
         placePhone: {
             type: Type.STRING,
