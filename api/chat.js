@@ -7,8 +7,7 @@ const MODEL_NAME = "gemini-2.5-flash";
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
-const placesClient = new PlacesClient({});
-
+const placesClient = new PlacesClient({}); // <-- CORRECCIÓN: Usando PlacesClient
 
 // 2. Definimos la Instrucción del Sistema MODIFICADA
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
@@ -16,7 +15,7 @@ Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 
 REGLAS DE FORMATO:
 1. **Responde exclusivamente en {LANG_PLACEHOLDER}**.
-2. **REGLA CRÍTICA DE SALUD Y PRIVACIDAD:** Para preguntas relacionadas con **clínicas dentales**, **farmacias**, **ópticas** o cualquier otro servicio médico/de salud, debes responder **OBLIGATORIAMENTE** utilizando el **MODO FICHA DE LUGAR (JSON)** o **MODO FICHA DE CATEGORÍA (JSON)**. **NUNCA** debes mencionar precios, dar recomendaciones, o incluir datos de contacto en la descripción, ya que el servidor se encargará de limitar los botones de acción solo a "Ver en Mapa" y "Buscar en Google" para estos casos.
+2. **REGLA CRÍTICA DE SALUD Y PRIVACIDAD:** Para cualquier lugar o categoría relacionado con la salud (clínicas, farmacias, ópticas, etc.), DEBES establecer el campo "isHealthPlace" en "true". NUNCA debes incluir precios, dar recomendaciones directas, o proporcionar detalles de contacto en la descripción. El servidor se encargará de limitar los botones de acción solo a "Ver en Mapa" y "Buscar en Google" para garantizar el cumplimiento.
 
 3. **MODO FICHA DE LUGAR (JSON):** Úsalo si la solicitud es de un lugar o negocio específico (Salud o No Salud). Debe incluir la propiedad 'placeToSearch' con el nombre exacto del lugar.
 
@@ -26,12 +25,13 @@ REGLAS DE FORMATO:
 
 6. Los formatos JSON requeridos son:
    
-   // Formato para LUGAR ESPECÍFICO (Salud o No Salud) <--- FORMATO ACTUALIZADO
+   // Formato para LUGAR ESPECÍFICO (Salud o No Salud) - ¡NUEVO FORMATO DE SEGURIDAD!
    {
      "type": "place", 
      "placeName": "Nombre del Lugar", 
-     "placeToSearch": "Nombre Exacto a buscar en Places API, ej: Arturo's Restaurant", 
-     "placeCategory": "Clasificación general del lugar, ej: Restaurante, Clínica Dental, Farmacia", // <--- ¡NUEVO CAMPO!
+     "placeToSearch": "Nombre Exacto a buscar en Places API, ej: JM Dental Clinic", 
+     "placeCategory": "Clasificación general del lugar, ej: Clínica Dental, Restaurante",
+     "isHealthPlace": true/false, // <--- ESTE FLAG ES CRÍTICO: Debe ser 'true' para salud.
      "description": "Descripción corta de no más de 3 oraciones.",
      "isStructured": true
    }
@@ -51,7 +51,6 @@ REGLAS DE FORMATO:
  * @returns {object|null} Objeto con detalles del lugar o null si falla.
  */
 async function getPlaceDetails(query) {
-// ... El resto de la función getPlaceDetails permanece IGUAL, ya que el modelo ahora es quien filtra.
     if (!placesApiKey) {
         console.error("GOOGLE_PLACES_API_KEY no definida.");
         return null;
@@ -90,7 +89,6 @@ async function getPlaceDetails(query) {
             name: place.name,
             phone: place.formatted_phone_number || null,
             mapUrl: place.url || null,
-            // reviewUrl usará la URL de Google Maps para las reseñas
             reviewUrl: place.url || null 
         };
 
@@ -100,15 +98,8 @@ async function getPlaceDetails(query) {
     }
 }
 
-// DEFINIMOS LAS PALABRAS CLAVE DE SALUD PARA LA LÓGICA DEL HANDLER
-const HEALTH_KEYWORDS = [
-    "dental", "clínica", "farmacia", "óptica", 
-    "consultorio", "médico", "salud", "doctor", "odontólogo", "laboratorio"
-];
-
 
 export default async function handler(req, res) {
-// ... El resto del handler permanece IGUAL, confiando en la instrucción de sistema.
     if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Método no permitido' });
     }
@@ -135,7 +126,7 @@ export default async function handler(req, res) {
         
         let finalResponseData = { responseText: modelResponseText };
 
-        // Lógica de ENRIQUECIMIENTO con Places API (Ahora con chequeo de Salud Dinámico)
+        // Lógica de ENRIQUECIMIENTO con Places API
         try {
             const jsonStart = modelResponseText.indexOf('{');
             const jsonEnd = modelResponseText.lastIndexOf('}');
@@ -149,21 +140,16 @@ export default async function handler(req, res) {
                     if (parsedJson.type === 'place' && parsedJson.placeToSearch) {
                         
                         const placeNameSearch = parsedJson.placeToSearch.trim();
-                        // Obtiene la categoría clasificada por Gemini
-                        const category = parsedJson.placeCategory ? parsedJson.placeCategory.toLowerCase() : '';
-
-                        // Determina si es un lugar de salud analizando la categoría
-                        const isHealthPlace = HEALTH_KEYWORDS.some(keyword => category.includes(keyword));
+                        // Utilizamos el nuevo flag booleano para la regla de salud
+                        const isHealthPlace = parsedJson.isHealthPlace === true; 
 
                         // **** REGLA DE SALUD DINÁMICA: Bloqueo de Enriquecimiento ****
                         if (isHealthPlace) {
                             // SI ES SALUD: Bloqueamos el enriquecimiento de Places API (teléfono, reseñas)
-                            console.log(`Regla de Salud Dinámica Aplicada: Bloqueando enriquecimiento Places para ${placeNameSearch} (${category})`);
+                            console.log(`Regla de Salud Dinámica Aplicada: Bloqueando enriquecimiento Places para ${placeNameSearch}`);
                             
                             // Aseguramos que los campos sensibles estén nulos para que el frontend los ignore
-                            // Pero incluimos una URL base para que Mapa/Google Search funcione.
-                            
-                            // Esta URL se usará para el botón "Ver en Mapa" si no hay placeData.mapUrl
+                            // Usamos el nombre del lugar para generar la URL de búsqueda básica en Google Maps/Search.
                             const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
 
                             finalResponseData.responseText = JSON.stringify({
@@ -187,8 +173,8 @@ export default async function handler(req, res) {
                                     reviewUrl: placeData.reviewUrl, 
                                 });
                             } else {
-                                // Si falla Places, retornamos el JSON original
-                                delete parsedJson.placeToSearch; 
+                                // Si falla Places, al menos eliminamos placeToSearch para evitar confusiones
+                                delete parsedJson.placeToSearch;
                                 finalResponseData.responseText = JSON.stringify(parsedJson);
                             }
                         }
