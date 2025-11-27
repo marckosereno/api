@@ -15,10 +15,10 @@
         .model-bubble { border-radius: 18px 18px 18px 0; max-width: 80%;padding-left:8px; white-space: pre-wrap; /* Necesario para listas de Gemini */ }
         .action-bar-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 10px; padding-bottom: 5px }
         
-        /* 1. ESTILOS DE BOTÓN DE ACCIÓN (Corregido con mejor diseño) */
+        /* 1. ESTILOS DE BOTÓN DE ACCIÓN */
         .action-btn { 
             white-space: nowrap; 
-            font-size: 0.8rem; /* Un poco más pequeño */
+            font-size: 0.8rem; 
             font-weight: 600;
             padding: 8px 12px;
             border-radius: 10px;
@@ -47,7 +47,7 @@
         .map-input {
             flex-grow: 1;
             padding: 0.75rem 0.75rem; 
-            color: #1F2937; /* Color de texto más oscuro */
+            color: #1F2937; 
             font-size: 1.125rem;
             background: transparent;
             border: none;
@@ -84,7 +84,7 @@
         
         /* 1. Para navegadores basados en Webkit (Chrome, Safari, Android) */
         * {
-            -webkit-tap-highlight-color: transparent !important; /* SOLUCIÓN CLAVE para el toque en móvil */
+            -webkit-tap-highlight-color: transparent !important; 
         }
         
         /* 2. Asegura la eliminación del outline/ring en estados focus/active */
@@ -99,7 +99,7 @@
             --tw-ring-color: transparent !important;
         }
         .hover\:bg-gray-300:active {
-            background-color: #d1d5db; /* mantiene el color del hover al hacer click */
+            background-color: #d1d5db; 
         }
         
         /* --- Efecto Ola y Transición para los Chips --- */
@@ -118,8 +118,8 @@
 
         /* Estilo para el Timestamp */
         .timestamp {
-            font-size: 0.7rem; /* Fuente pequeña */
-            color: #9ca3af; /* Color gris suave */
+            font-size: 0.7rem; 
+            color: #9ca3af; 
             margin-top: 2px;
         }
     </style>
@@ -334,7 +334,7 @@
         if (messageContainer) messageContainer.scrollTop = messageContainer.scrollHeight; 
     }
     
-    // 5. y 6. CORRECCIÓN: Manejo del input y el loading
+    // Manejo del input y el loading
     function toggleInput(d) {
         if (inputElement) inputElement.disabled = d;
         if (sendButton) sendButton.disabled = d;
@@ -485,7 +485,7 @@
 
                 const entityName = isPlace ? m.placeName : m.categoryName;
                 
-                // NUEVO: Verificamos si es una categoría sensible/de salud
+                // Verificamos si es una categoría sensible/de salud
                 const isSensitive = SENSITIVE_CATEGORIES.some(cat => 
                     (m.text && m.text.toLowerCase().includes(cat.toLowerCase().replace(/_/g, ' '))) || 
                     (m.categoryName && m.categoryName.toLowerCase().includes(cat.toLowerCase().replace(/_/g, ' ')))
@@ -498,7 +498,7 @@
 
                 if (typeof alertUser === 'function') alertUser(alertText, "i");
 
-                // 2. y 3. CORRECCIÓN: El contenido es el texto de Gemini, que ahora es conciso
+                // Contenido es el texto de Gemini, que ahora es conciso
                 content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">${m.text || m.description}</div>`;
                 
                 // --- Generación de la Barra de Acciones ---
@@ -512,7 +512,7 @@
                 } else if (isCategory || isPlace) {
                     const searchName = entityName ? encodeURIComponent(entityName + " Nuevo Progreso Tamps") : 'Nuevo+Progreso+Tamaulipas';
                     
-                    // 🚨 CORRECCIÓN CLAVE AQUÍ 🚨: Usamos una URL de Google Maps válida para la búsqueda
+                    // ✅ CORRECCIÓN FINAL: Usamos una URL de Google Maps válida
                     mapUrl = `https://www.google.com/maps/search/?api=1&query=${searchName}`; 
                     searchUrl = `https://www.google.com/search?q=${searchName}`;
                 }
@@ -623,7 +623,7 @@
         hideChipGroup(languageChipsGroup, languageChips);
         languageMenuVisible = false;
 
-        // 5. y 6. CORRECCIÓN: Activar el loading y cambiar el placeholder
+        // Activar el loading y cambiar el placeholder
         toggleInput(true);
         
         const timestamp = new Date();
@@ -663,7 +663,7 @@
                         role: 'model',
                         isStructured: true,
                         type: parsedJson.type, 
-                        // El texto de la ficha ahora es la descripción, sin repeticiones de título (punto 2 y 3)
+                        // El texto de la ficha ahora es la descripción, sin repeticiones de título
                         text: parsedJson.description || modelResponseText, 
                         // Campos específicos para 'place'
                         placeName: parsedJson.placeName, 
@@ -700,8 +700,7 @@
             };
         });
 
-        // 🟢 CORRECCIÓN CLAVE 1: Prepara el array 'contents' para la API de Gemini
-        // Añadimos el prompt del usuario al final del historial como el último turno.
+        // Prepara el array 'contents' para la API de Gemini
         const contents = [...historyForAPI, { role: 'user', parts: [{ text: userPrompt }] }]; 
 
         try {
@@ -709,7 +708,6 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    // 🟢 CORRECCIÓN CLAVE 2: Enviamos 'contents' y 'currentLanguage'
                     contents: contents, 
                     currentLanguage: currentLanguage
                 }) 
@@ -753,7 +751,6 @@
             const lang = currentLanguage;
             const query = this.getAttribute(`data-query-${lang}`);
             handleSend(query); 
-            // El menú se oculta dentro de handleSend/handleMenuAction
         });
     });
 
