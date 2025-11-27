@@ -456,8 +456,7 @@
         }
     }
     
-    // Función para crear las burbujas de mensaje (User/Model)
-    // Función para crear las burbujas de mensaje (User/Model)
+// Función para crear las burbujas de mensaje (User/Model)
 function createMessageBubble(m) {
     const w = document.createElement('div');
     
@@ -477,46 +476,73 @@ function createMessageBubble(m) {
         w.className = 'flex flex-col justify-start w-full mb-2';
         let content = '';
         const strings = UI_STRINGS[currentLanguage];
-
+        
+        // 🛑 Generación de la Ficha Estructurada (isStructured: true)
         if (m.isStructured) { 
             
-            // 🛑 Lógica de Contenido Estructurado (isStructured: true) 🛑
             const isPlace = m.type === 'place';
             const isCategory = m.type === 'category';
-
-            const entityName = isPlace ? m.placeName : m.categoryName;
+            const isList = m.type === 'list'; // NUEVO TIPO
             
-            // Verificamos si es una categoría sensible para el descargo de responsabilidad
+            // Usamos categoryName o placeName para el título de la ficha y la búsqueda
+            const entityName = isPlace ? m.placeName : (m.categoryName || 'Categoría'); 
+            
+            // Verificamos si es una categoría sensible
             const isSensitive = SENSITIVE_CATEGORIES.some(cat => 
-                (m.text && m.text.toLowerCase().includes(cat.toLowerCase().replace(/_/g, ' '))) || 
                 (m.categoryName && m.categoryName.toLowerCase().includes(cat.toLowerCase().replace(/_/g, ' ')))
             );
             
             // Alerta de respuesta estructurada
-            const alertText = isPlace 
-                ? strings.alertStructured(entityName)
-                : strings.alertCategory(entityName);
-
-            if (typeof alertUser === 'function') alertUser(alertText, "i");
-
-            // Contenido es el texto de Gemini, que ahora es conciso
-            content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">${m.text || m.description}</div>`;
+            if (typeof alertUser === 'function') {
+                if (isPlace) alertUser(strings.alertStructured(entityName), "i");
+                else if (isCategory) alertUser(strings.alertCategory(entityName), "i");
+                else if (isList) alertUser(strings.alertCategory(entityName), "i");
+            }
             
-            // --- Generación de la Barra de Acciones (Específicas) ---
+            // --- Construcción del Contenido (Texto o Lista Estilizada) ---
+            
+            if (isList) {
+                // 1. Renderizar la Lista Bonita (type: 'list')
+                const listItems = (m.placeList || []).map((item, index) => {
+                    const placeTitle = item.title || 'Lugar Desconocido';
+                    const placeAddress = item.address || 'Dirección no disponible';
+                    
+                    return `
+                        <div class="bg-white p-3 border-b border-gray-200 last:border-b-0">
+                            <h4 class="font-bold text-base text-gray-800">${index + 1}. ${placeTitle}</h4>
+                            <p class="text-sm text-gray-600">${placeAddress}</p>
+                        </div>
+                    `;
+                }).join('');
+                
+                content = `
+                    <div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">
+                        <p class="mb-3 font-semibold text-gray-700">${m.description || ''}</p>
+                        <div class="bg-white rounded-lg shadow-inner overflow-hidden border border-gray-300">
+                            ${listItems}
+                        </div>
+                    </div>
+                `;
+            } else {
+                // 2. Renderizar Ficha de Lugar o Categoría (type: 'place' o 'category')
+                content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">${m.description || ''}</div>`;
+            }
+
+
+            // --- Generación de la Barra de Acciones (Específicas o Generales) ---
             let actionsHTML = '';
             let mapUrl = '#';
             let searchUrl = '#';
 
             // 1. URLs base para búsqueda/mapa
-            if (isPlace && m.mapUrl) {
-                mapUrl = m.mapUrl;
-            } else if (isCategory || isPlace) {
-                // Si la ficha es de categoría o lugar, usamos el nombre de la entidad para la búsqueda
+            const isActionable = isPlace || isCategory || isList;
+            if (isActionable) {
+                // Si la ficha es de categoría, lista o lugar (sin URL específica), usamos el nombre de la entidad para la búsqueda
                 const searchName = entityName ? encodeURIComponent(entityName + " Nuevo Progreso Tamps") : 'Nuevo+Progreso+Tamaulipas';
                 
-                // La URL de Maps para búsqueda (corregida)
-                mapUrl = `https://www.google.com/maps/search/?api=1&query=${searchName}`; 
-                searchUrl = `https://www.google.com/search?q=${searchName}`;
+                // 🛑 PUNTO 1 CORREGIDO: URL DE GOOGLE MAPS Y BÚSQUEDA
+                mapUrl = m.mapUrl || `https://www.google.com/maps/search/${searchName}`; 
+                searchUrl = m.reviewUrl || `https://www.google.com/search?q=${searchName}`;
             }
 
             // 2. Botón VER EN MAPA (SIEMPRE VISIBLE para isStructured: true)
@@ -524,12 +550,12 @@ function createMessageBubble(m) {
                 <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white hover:bg-green-600 transition flex-shrink-0">${strings.map}</a>
             `;
 
-            // 3. Botones específicos para LUGAR (Teléfono y Reseñas)
+            // 3. Botones específicos para LUGAR (Teléfono y Reseñas) - SOLO si es type: 'place'
             if (isPlace && !isSensitive) {
                 const isPhoneAvailable = !!m.placePhone;
                 actionsHTML += `
                     <a href="${m.placePhone ? `tel:${m.placePhone}` : 'javascript:void(0)'}" onclick="${m.placePhone ? '' : `alert('${strings.unavailable}')`}" class="action-btn ${isPhoneAvailable ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400 cursor-not-allowed' } text-white transition flex-shrink-0">${strings.call}</a>
-                    <a href="${m.reviewUrl || mapUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 hover:bg-yellow-500 transition flex-shrink-0">${strings.reviews}</a>
+                    <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 hover:bg-yellow-500 transition flex-shrink-0">${strings.reviews}</a>
                 `;
             }
 
@@ -538,9 +564,9 @@ function createMessageBubble(m) {
                 <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-gray-600 text-white hover:bg-gray-700 transition flex-shrink-0">${strings.search}</a>
             `;
             
-            // 5. Botón de Recomendación (Solo si es CATEGORÍA)
-            if (isCategory) {
-                const catName = m.categoryName || m.text.split('**')[1] || 'lugares'; 
+            // 5. Botón de Recomendación (Solo si es CATEGORÍA o LISTA, no lugar específico)
+            if (isCategory || isList) {
+                const catName = m.categoryName || entityName; 
                 const recommendPrompt = `${strings.recommend} ${catName} en Nuevo Progreso.`;
                 actionsHTML += `
                     <button onclick="handleSend('${recommendPrompt.replace(/'/g, "\\'")}')" class="action-btn bg-yellow-400 text-gray-800 hover:bg-yellow-500 transition flex-shrink-0">${strings.recommend}</button>
@@ -564,27 +590,17 @@ function createMessageBubble(m) {
             `;
 
         } else {
-            // ✅ CORRECCIÓN APLICADA: Muestra botones GENERALES incluso si isStructured es false (ej. listas o respuestas conversacionales)
+            // 🛑 Generación de la Respuesta Conversacional (isStructured: false)
             
-            // 1. Mensaje de texto plano conversacional/lista
+            // 1. Mensaje de texto plano conversacional
             content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">${m.text || ''}</div>`;
 
             // 2. Generación de URLs genéricas
-            // Usamos un query general, pero podríamos intentar parsear la categoría de la última pregunta del usuario (más complejo)
-            const defaultSearchName = 'Negocios en Nuevo Progreso Tamps'; 
-            
-            // Intentamos obtener el nombre de la categoría del texto si es una respuesta de lista (ej. de "10 clínicas dentales")
-            let listCategory = 'Nuevo Progreso';
-            if (m.description && m.description.length > 10) {
-                 // Intenta extraer "clínicas dentales" o similar del inicio de la descripción
-                 const matches = m.description.match(/Aquí tienes.*?(\w+\s\w+)/i);
-                 if (matches && matches[1]) {
-                    listCategory = matches[1];
-                 }
-            }
-            const finalSearchName = encodeURIComponent(listCategory + " Nuevo Progreso Tamps");
+            const generalSearchName = 'Nuevo Progreso Tamps';
+            const finalSearchName = encodeURIComponent(generalSearchName);
 
-            const mapUrl = `https://www.google.com/maps/search/?api=1&query=${finalSearchName}`; 
+            // 🛑 PUNTO 1 CORREGIDO: URL DE GOOGLE MAPS Y BÚSQUEDA
+            const mapUrl = `https://www.google.com/maps/search/${finalSearchName}`; 
             const searchUrl = `https://www.google.com/search?q=${finalSearchName}`;
 
             // 3. HTML de acciones GENERALES
@@ -612,6 +628,7 @@ function createMessageBubble(m) {
     }
     return w;
 }
+
 
 
     function renderChat() {
