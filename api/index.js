@@ -1,5 +1,5 @@
 // --- 1. IMPORTS Y CONFIGURACIÓN INICIAL ---
-const { GoogleGenAI } = require('@google/genai');
+const { GoogleGenAI, Type } = require('@google/genai');
 const rateLimit = require('express-rate-limit');
 const fs = require('fs');
 const path = require('path');
@@ -53,8 +53,6 @@ const limiter = rateLimit({
 
 // --- 4. LÓGICA DE FILTRADO Y PROMPT ---
 
-// --- 4. LÓGICA DE FILTRADO Y PROMPT ---
-
 // NUEVA LISTA DE CATEGORÍAS SENSIBLES
 const SENSITIVE_CATEGORIES = [
     'clinicas_dentales', 
@@ -74,6 +72,9 @@ function generateSystemInstruction(allPlaces, currentLanguage) {
     const instruction = `
         Eres un guía turístico e informador útil, amigable y **conciso** para el poblado de Nuevo Progreso, Tamaulipas.
         Tu misión es ser un asistente de conversación experto que utiliza el conocimiento general de Google y la web, no solo la lista interna.
+        
+        --- REGLA CRÍTICA DE RESPUESTA ---
+        SIEMPRE debes intentar responder usando el formato JSON. Si la pregunta no requiere una ficha de lugar o categoría, usa el formato JSON de texto simple.
 
         --- REGLAS DE CONVERSACIÓN ---
         1. Responde siempre en ${lang}.
@@ -93,22 +94,60 @@ function generateSystemInstruction(allPlaces, currentLanguage) {
            d. **NUNCA** muestres números de teléfono, reseñas o precios.
 
         --- DESCARGO DE RESPONSABILIDAD (Para añadir en Fichas de Salud y Listas de Recomendación) ---
-        (ESPAÑOL: "Nota: No proporcionamos información médica, precios, números de teléfono ni referencias de calidad. Le recomendamos usar los botones 'Ver en Mapa' o 'Buscar en Google' para más opciones y verificar la información de forma independiente.")
+        (ESPAÑOL: "Nota: No proporcionamos información médica, precios, precios, números de teléfono ni referencias de calidad. Le recomendamos usar los botones 'Ver en Mapa' o 'Buscar en Google' para más opciones y verificar la información de forma independiente.")
         (ENGLISH: "Note: We do not provide medical information, prices, phone numbers, or quality references. We recommend using the 'View on Map' or 'Search on Google' buttons for more options and to verify information independently.")
 
         --- LISTA INTERNA DE LUGARES (Úsala SOLO para RECOMENDACIONES EXPLÍCITAS) ---
         ${internalPlaceList}
         
-        --- ESTRUCTURA DE FICHA (Ejemplo, SOLO si es estructurada) ---
-        { "isStructured": true, "type": "place" | "category", "placeName": "...", "categoryName": "...", "description": "..." }
     `;
 
     return instruction;
 }
 
+// --- 6. ESQUEMA DE RESPUESTA JSON (¡NUEVO Y CLAVE!) ---
+const responseSchema = {
+    type: Type.OBJECT,
+    properties: {
+        isStructured: {
+            type: Type.BOOLEAN,
+            description: "Debe ser 'true' si es una ficha de lugar o categoría, 'false' si es una respuesta conversacional simple o una lista."
+        },
+        type: {
+            type: Type.STRING,
+            description: "Tipo de ficha: 'place', 'category', o 'text' (si isStructured es false)."
+        },
+        description: {
+            type: Type.STRING,
+            description: "El contenido principal de la respuesta. Si es una ficha, es la descripción concisa. Si es 'text', es la respuesta conversacional o la lista formateada."
+        },
+        // Propiedades opcionales, solo para type: 'place' o 'category'
+        placeName: {
+            type: Type.STRING,
+            description: "Nombre del lugar (solo si type='place')."
+        },
+        categoryName: {
+            type: Type.STRING,
+            description: "Nombre de la categoría (solo si type='category')."
+        },
+        mapUrl: {
+            type: Type.STRING,
+            description: "URL de Google Maps para el lugar o una búsqueda general (solo si type='place' o 'category')."
+        },
+        placePhone: {
+            type: Type.STRING,
+            description: "Número de teléfono del lugar (solo si type='place' y NO es una categoría sensible)."
+        },
+        reviewUrl: {
+            type: Type.STRING,
+            description: "URL de reseñas del lugar (solo si type='place' y NO es una categoría sensible)."
+        }
+    },
+    required: ["isStructured", "type", "description"]
+};
 
 
-// --- 5. FUNCIÓN HANDLER PRINCIPAL DE VERCEL ---
+// --- 7. FUNCIÓN HANDLER PRINCIPAL DE VERCEL ---
 module.exports = async (req, res) => {
     // Aplica el Rate Limiter
     await new Promise(resolve => {
@@ -136,10 +175,8 @@ module.exports = async (req, res) => {
             req.on('error', reject);
         });
         
-        // 🟢 CORRECCIÓN CLAVE 1: Desestructurar 'contents' y 'currentLanguage'
         const { contents, currentLanguage } = JSON.parse(body);
 
-        // 🟢 CORRECCIÓN CLAVE 2: Validar si 'contents' está presente
         if (!contents) {
             res.status(400).json({ error: true, message: "Falta el 'prompt' en el cuerpo de la petición." });
             return;
@@ -150,31 +187,37 @@ module.exports = async (req, res) => {
         // Llama a la API de Gemini
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            // 🟢 CORRECCIÓN CLAVE 3: Pasar el array 'contents' completo
             contents: contents, 
             config: {
                 systemInstruction: systemInstruction,
-                temperature: 0.1 
+                temperature: 0.1,
+                // 🛑 CORRECCIÓN CLAVE: Forzar la salida JSON con el esquema
+                responseMimeType: 'application/json',
+                responseSchema: responseSchema
             }
         });
 
+        // El texto de la respuesta de Gemini ahora debería ser un JSON string
         const textResponse = response.text.trim();
 
         res.setHeader('Content-Type', 'application/json');
         res.status(200).json({
-            responseText: textResponse // Nota: cambiado a responseText para coincidir con el frontend
+            responseText: textResponse 
         });
 
     } catch (error) {
         console.error("Error al llamar a la API de Gemini:", error.message);
         
+        let errorMessage = 'Lo siento, ocurrió un error en el servidor. Inténtalo de nuevo más tarde.';
+
         if (error.message.includes('Quota exceeded')) {
              console.error("Gemini API Quota Exceeded. The service is temporarily blocked by Google.");
+             errorMessage = 'La cuota del servicio Gemini ha sido excedida. Por favor, inténtalo más tarde. 🚧';
         }
         
         res.status(500).json({ 
             error: true,
-            message: 'Lo siento, ocurrió un error en el servidor. Inténtalo de nuevo más tarde.'
+            message: errorMessage
         });
     }
 };
