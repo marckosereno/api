@@ -9,22 +9,23 @@ const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
 const placesClient = new PlacesClient({});
 
-// 2. Definimos la Instrucción del Sistema
+// 2. Definimos la Instrucción del Sistema MODIFICADA
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 
 REGLAS DE FORMATO:
 1. **Responde exclusivamente en {LANG_PLACEHOLDER}**.
-2. **MODO FICHA DE LUGAR (JSON):** Úsalo SOLO si la solicitud es de un lugar o negocio específico (ej: "mejor dentista", "bares"). Debe incluir la propiedad 'placeToSearch' con el nombre exacto del lugar.
-3. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo SOLO si la solicitud es una categoría general (ej: "Salud y Estética", "Restaurantes").
-4. **MODO CONVERSACIONAL (Texto Plano):** Úsalo para preguntas generales o de seguimiento.
-5. Los formatos JSON requeridos son:
+2. **REGLA CRÍTICA DE SALUD Y PRIVACIDAD:** Nunca respondas con el 'MODO FICHA DE LUGAR (JSON)' ni proporciones información de contacto (teléfonos, reseñas, horarios) para preguntas relacionadas con **clínicas dentales**, **farmacias**, **ópticas** o cualquier otro servicio médico/de salud. Para estas categorías, debes responder **exclusivamente en MODO CONVERSACIONAL (Texto Plano)** con una descripción general del servicio en la ciudad.
+3. **MODO FICHA DE LUGAR (JSON):** Úsalo SOLO si la solicitud es de un lugar o negocio específico **NO relacionado con la salud** (ej: "Arturo's Restaurant", "Tienda de Artesanías Shaddai"). Debe incluir la propiedad 'placeToSearch' con el nombre exacto del lugar.
+4. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo SOLO si la solicitud es una categoría general (ej: "Restaurantes", "Tiendas de Artesanías").
+5. **MODO CONVERSACIONAL (Texto Plano):** Úsalo para preguntas generales, de seguimiento o, **de forma obligatoria**, para servicios de salud.
+6. Los formatos JSON requeridos son:
    
-   // Formato para LUGAR ESPECÍFICO
+   // Formato para LUGAR ESPECÍFICO (SOLO NO-SALUD)
    {
      "type": "place", 
      "placeName": "Nombre del Lugar", 
-     "placeToSearch": "Nombre Exacto a buscar en Places API, ej: Dr. Miguel Lopez Dental Clinic", 
+     "placeToSearch": "Nombre Exacto a buscar en Places API, ej: Arturo's Restaurant", 
      "description": "Descripción corta de no más de 3 oraciones.",
      "isStructured": true
    }
@@ -43,6 +44,7 @@ REGLAS DE FORMATO:
  * @returns {object|null} Objeto con detalles del lugar o null si falla.
  */
 async function getPlaceDetails(query) {
+// ... El resto de la función getPlaceDetails permanece IGUAL, ya que el modelo ahora es quien filtra.
     if (!placesApiKey) {
         console.error("GOOGLE_PLACES_API_KEY no definida.");
         return null;
@@ -93,6 +95,7 @@ async function getPlaceDetails(query) {
 
 
 export default async function handler(req, res) {
+// ... El resto del handler permanece IGUAL, confiando en la instrucción de sistema.
     if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Método no permitido' });
     }
@@ -119,7 +122,7 @@ export default async function handler(req, res) {
         
         let finalResponseData = { responseText: modelResponseText };
 
-        // Lógica de ENRIQUECIMIENTO con Places API (Solo si es type: "place")
+        // Lógica de ENRIQUECIMIENTO con Places API (Solo si es type: "place" - el modelo debe haberlo filtrado)
         try {
             const jsonStart = modelResponseText.indexOf('{');
             const jsonEnd = modelResponseText.lastIndexOf('}');
