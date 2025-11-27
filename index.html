@@ -482,12 +482,10 @@ function createMessageBubble(m) {
             
             const isPlace = m.type === 'place';
             const isCategory = m.type === 'category';
-            const isList = m.type === 'list'; // NUEVO TIPO
+            const isList = m.type === 'list'; 
             
-            // Usamos categoryName o placeName para el título de la ficha y la búsqueda
             const entityName = isPlace ? m.placeName : (m.categoryName || 'Categoría'); 
             
-            // Verificamos si es una categoría sensible
             const isSensitive = SENSITIVE_CATEGORIES.some(cat => 
                 (m.categoryName && m.categoryName.toLowerCase().includes(cat.toLowerCase().replace(/_/g, ' ')))
             );
@@ -537,20 +535,19 @@ function createMessageBubble(m) {
             // 1. URLs base para búsqueda/mapa
             const isActionable = isPlace || isCategory || isList;
             if (isActionable) {
-                // Si la ficha es de categoría, lista o lugar (sin URL específica), usamos el nombre de la entidad para la búsqueda
                 const searchName = entityName ? encodeURIComponent(entityName + " Nuevo Progreso Tamps") : 'Nuevo+Progreso+Tamaulipas';
                 
-                // 🛑 PUNTO 1 CORREGIDO: URL DE GOOGLE MAPS Y BÚSQUEDA
-                mapUrl = m.mapUrl || `https://www.google.com/maps/search/${searchName}`; 
+                // ✅ CORRECCIÓN CRÍTICA DE URL: Usa la sintaxis correcta para Google Maps
+                mapUrl = m.mapUrl || `https://www.google.com/maps/search/?api=1&query=${searchName}`; 
                 searchUrl = m.reviewUrl || `https://www.google.com/search?q=${searchName}`;
             }
 
-            // 2. Botón VER EN MAPA (SIEMPRE VISIBLE para isStructured: true)
+            // 2. Botón VER EN MAPA 
             actionsHTML += `
                 <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white hover:bg-green-600 transition flex-shrink-0">${strings.map}</a>
             `;
 
-            // 3. Botones específicos para LUGAR (Teléfono y Reseñas) - SOLO si es type: 'place'
+            // 3. Botones específicos para LUGAR 
             if (isPlace && !isSensitive) {
                 const isPhoneAvailable = !!m.placePhone;
                 actionsHTML += `
@@ -559,12 +556,12 @@ function createMessageBubble(m) {
                 `;
             }
 
-            // 4. Botón Buscar en Google (SIEMPRE VISIBLE para isStructured: true)
+            // 4. Botón Buscar en Google
             actionsHTML += `
                 <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-gray-600 text-white hover:bg-gray-700 transition flex-shrink-0">${strings.search}</a>
             `;
             
-            // 5. Botón de Recomendación (Solo si es CATEGORÍA o LISTA, no lugar específico)
+            // 5. Botón de Recomendación 
             if (isCategory || isList) {
                 const catName = m.categoryName || entityName; 
                 const recommendPrompt = `${strings.recommend} ${catName} en Nuevo Progreso.`;
@@ -599,8 +596,8 @@ function createMessageBubble(m) {
             const generalSearchName = 'Nuevo Progreso Tamps';
             const finalSearchName = encodeURIComponent(generalSearchName);
 
-            // 🛑 PUNTO 1 CORREGIDO: URL DE GOOGLE MAPS Y BÚSQUEDA
-            const mapUrl = `https://www.google.com/maps/search/${finalSearchName}`; 
+            // ✅ CORRECCIÓN CRÍTICA DE URL: Usa la sintaxis correcta para Google Maps
+            const mapUrl = `https://www.google.com/maps/search/?api=1&query=${finalSearchName}`; 
             const searchUrl = `https://www.google.com/search?q=${finalSearchName}`;
 
             // 3. HTML de acciones GENERALES
@@ -628,6 +625,7 @@ function createMessageBubble(m) {
     }
     return w;
 }
+
 
 
 
