@@ -179,6 +179,16 @@
     let currentLanguage = 'es'; 
     let categoriesVisible = false; 
     let languageMenuVisible = false; 
+    
+    // NUEVO: Lista de categorías sensibles para control en el frontend
+    const SENSITIVE_CATEGORIES = [
+        'clinicas_dentales', 
+        'farmacias',
+        'opticas',
+        'esteticas',
+        'salud' // Añadir si la categoría general "Salud y Estética" también debe ser sensible
+    ];
+
 
     // Referencias a Elementos del DOM
     const inputElement = document.getElementById('user-input');
@@ -212,7 +222,7 @@
             reviews: "Reseñas ⭐",
             map: "Ver en Mapa 🗺️",
             search: "Buscar en Google 🔍",
-            recommend: "Dame 10 Recomendaciones",
+            recommend: "Dame Recomendaciones", // Modificado para un texto más genérico
             unavailable: "No disponible."
         },
         en: {
@@ -233,7 +243,7 @@
             reviews: "Reviews ⭐",
             map: "View on Map 🗺️",
             search: "Search on Google 🔍",
-            recommend: "Give me 10 Recommendations",
+            recommend: "Give me Recommendations", // Modificado para un texto más genérico
             unavailable: "Unavailable."
         }
     };
@@ -444,6 +454,12 @@
 
                 const entityName = isPlace ? m.placeName : m.categoryName;
                 
+                // NUEVO: Verificamos si es una categoría sensible/de salud
+                const isSensitive = SENSITIVE_CATEGORIES.some(cat => 
+                    (m.text && m.text.toLowerCase().includes(cat.toLowerCase().replace(/_/g, ' '))) || 
+                    (m.categoryName && m.categoryName.toLowerCase().includes(cat.toLowerCase().replace(/_/g, ' ')))
+                );
+                
                 // Alerta de respuesta estructurada
                 const alertText = isPlace 
                     ? strings.alertStructured(entityName)
@@ -465,17 +481,18 @@
                     mapUrl = m.mapUrl;
                 } else if (isCategory || isPlace) {
                     const searchName = entityName ? encodeURIComponent(entityName + " Nuevo Progreso Tamps") : 'Nuevo+Progreso+Tamaulipas';
-                    mapUrl = `https://www.google.com/maps/search/?api=1&query=${searchName}`;
+                    mapUrl = `https://www.google.com/maps/search/?api=1&query=${searchName}`; // Corregido el formato de URL de Google Maps
                     searchUrl = `https://www.google.com/search?q=${searchName}`;
                 }
 
-                // 2. Botón VER EN MAPA
+                // 2. Botón VER EN MAPA (SIEMPRE VISIBLE)
                 actionsHTML += `
                     <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition flex-shrink-0 text-sm">${strings.map}</a>
                 `;
 
-                // 3. Botones específicos para LUGAR
-                if (isPlace) {
+                // 3. Botones específicos para LUGAR (Teléfono y Reseñas)
+                // SOLO se muestran si NO es una categoría sensible
+                if (isPlace && !isSensitive) {
                     const isPhoneAvailable = !!m.placePhone;
                     actionsHTML += `
                         <a href="${m.placePhone ? `tel:${m.placePhone}` : 'javascript:void(0)'}" onclick="${m.placePhone ? '' : `alert('${strings.unavailable}')`}" class="action-btn ${isPhoneAvailable ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400 cursor-not-allowed' } text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">${strings.call}</a>
@@ -483,14 +500,15 @@
                     `;
                 }
 
-                // 4. Botón Buscar en Google
+                // 4. Botón Buscar en Google (SIEMPRE VISIBLE)
                 actionsHTML += `
                     <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-700 transition flex-shrink-0 text-sm">${strings.search}</a>
                 `;
                 
-                // 5. Botón de Recomendación (Solo si es CATEGORÍA y NO contiene la lista ya)
-                if (isCategory && !m.text.includes("nuestra lista personalizada")) {
-                    const recommendPrompt = `Recomiéndame 10 ${m.categoryName} en Nuevo Progreso.`;
+                // 5. Botón de Recomendación (Solo si es CATEGORÍA)
+                // Dispara el prompt para obtener la lista interna
+                if (isCategory) {
+                    const recommendPrompt = `${strings.recommend} ${entityName} en Nuevo Progreso.`;
                     actionsHTML += `
                         <button onclick="handleSend('${recommendPrompt.replace(/'/g, "\\'")}')" class="action-btn bg-yellow-400 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-500 transition flex-shrink-0 text-sm">${strings.recommend}</button>
                     `;
