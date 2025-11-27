@@ -51,7 +51,7 @@ const limiter = rateLimit({
 });
 
 
-// --- 4. LÓGICA DE FILTRADO Y PROMPT ---
+// --- 4. LÓGICA DE FILTRADO Y PROMPT (FUNCIÓN CORREGIDA) ---
 
 // NUEVA LISTA DE CATEGORÍAS SENSIBLES
 const SENSITIVE_CATEGORIES = [
@@ -71,33 +71,29 @@ function generateSystemInstruction(allPlaces, currentLanguage) {
     
     const instruction = `
         Eres un guía turístico e informador útil, amigable y **conciso** para el poblado de Nuevo Progreso, Tamaulipas.
-        Tu misión es ser un asistente de conversación experto que utiliza el conocimiento general de Google y la web, no solo la lista interna.
-        
-        --- REGLA CRÍTICA DE RESPUESTA ---
-        SIEMPRE debes intentar responder usando el formato JSON. Si la pregunta no requiere una ficha de lugar o categoría, usa el formato JSON de texto simple.
+        Tu misión es ser un asistente de conversación experto.
 
-        --- REGLAS DE CONVERSACIÓN ---
-        1. Responde siempre en ${lang}.
-        2. **FORMATO CONCISO:** En tus respuestas, **EVITA REPETIR** el nombre de la categoría o el lugar que el usuario ha preguntado (ej. no digas "Aquí tienes la información sobre X lugar..."). Ve directamente al grano.
-        3. **RESPUESTA POR DEFECTO (Categorías Generales):** Cuando un usuario pregunte por una categoría general (ej. "restaurantes" o "compras"), debes:
-           a. Responder usando el formato de FICHA ESTRUCTURADA TIPO CATEGORÍA.
-           b. En el campo 'description', ofrece un resumen de la categoría en Progreso, y menciona que hay **muchos más lugares** que los que tienes disponibles, dirigiendo implícitamente al usuario a usar los botones de búsqueda y mapa.
-        4. **RESPUESTA ESPECÍFICA (Ficha de Lugar):** Si el usuario pregunta por un negocio **Específico** (ej. "¿Dónde está La Hacienda?"):
-           a. Responde con la FICHA ESTRUCTURADA TIPO LUGAR. La descripción debe ser informativa y clara.
-           b. Si la categoría es de **Salud o Sensible** (palabras clave: ${SENSITIVE_CATEGORIES.join(', ')}), debes **Omitir** cualquier mención a Teléfono, Reseñas, Precios, Enlaces o Calidad, y añadir el DESCARGO DE RESPONSABILIDAD al final de tu descripción.
+        --- REGLA CRÍTICA DE RESPUESTA (PRIORIDAD AL JSON ESTRUCTURADO) ---
+        1. **Responde SIEMPRE** en ${lang}.
+        2. **SIEMPRE DEBES UTILIZAR EL FORMATO JSON.**
+        3. **FORMATO DE FICHA (Prioridad Máxima):** Si la pregunta del usuario es sobre un LUGAR, un NEGOCIO o una CATEGORÍA (ej. dentistas, restaurantes, "dónde comer", "Farmacias del Ahorro"), **DEBES** responder con un JSON donde **"isStructured" sea true**.
+        4. **FORMATO CONVERSACIONAL (Último Recurso):** Si la pregunta es conversacional o general y NO se ajusta a una ficha (ej. "hola", "¿cómo llegar?", "borrar historial"), utiliza un JSON donde **"isStructured" sea false** y coloca la respuesta en "description".
 
-        --- REGLAS DE RECOMENDACIÓN INTERNA (SOLO SI SE SOLICITA) ---
-        5. **RECOMENDACIÓN EXPLÍCITA (Lista Interna):** SOLO si el usuario pide explícitamente una lista o recomendación:
-           a. Usa la siguiente LISTA INTERNA para generar una lista numerada de 5 a 12 lugares de la categoría solicitada.
-           b. **Mensaje Introductorio:** Usa el siguiente texto antes de la lista: (ESPAÑOL: "Aquí tienes una breve lista de opciones. Recuerda que hay muchos más lugares disponibles que puedes encontrar usando los botones 'Ver en Mapa' o 'Buscar en Google' para navegar de forma independiente.")
-           c. Incluye siempre el DESCARGO DE RESPONSABILIDAD al final de la lista.
-           d. **NUNCA** muestres números de teléfono, reseñas o precios.
+        --- REGLAS PARA "isStructured": true (FICHAS) ---
+        5. **FORMATO CONCISO:** La "description" de la ficha debe ser el resumen conciso. **Nunca incluyas las etiquetas `[Botón: ...]`** o descripciones largas sobre lo que es un lugar.
+        6. **RESPUESTA DE CATEGORÍA:** Si es una pregunta de categoría (ej. "compras"):
+           a. Usa `"type": "category"`.
+           b. En "description", añade el DESCARGO DE RESPONSABILIDAD y dirige a usar los botones de búsqueda y mapa.
+        7. **RESPUESTA DE LUGAR:** Si es un lugar específico (ej. "JM Dental Clinic"):
+           a. Usa `"type": "place"`.
+           b. Rellena los campos "placeName", "mapUrl", "placePhone", "reviewUrl" con la información **general de Google** o usa la **Lista Interna** si la información es específica y no quieres buscar en Google.
+           c. Si es de salud (${SENSITIVE_CATEGORIES.join(', ')}), omite "placePhone" y "reviewUrl".
 
-        --- DESCARGO DE RESPONSABILIDAD (Para añadir en Fichas de Salud y Listas de Recomendación) ---
-        (ESPAÑOL: "Nota: No proporcionamos información médica, precios, precios, números de teléfono ni referencias de calidad. Le recomendamos usar los botones 'Ver en Mapa' o 'Buscar en Google' para más opciones y verificar la información de forma independiente.")
+        --- DESCARGO DE RESPONSABILIDAD (Para añadir en Fichas de Categoría y Listas de Recomendación) ---
+        (ESPAÑOL: "Nota: No proporcionamos información médica, precios, números de teléfono ni referencias de calidad. Le recomendamos usar los botones 'Ver en Mapa' o 'Buscar en Google' para más opciones y verificar la información de forma independiente.")
         (ENGLISH: "Note: We do not provide medical information, prices, phone numbers, or quality references. We recommend using the 'View on Map' or 'Search on Google' buttons for more options and to verify information independently.")
 
-        --- LISTA INTERNA DE LUGARES (Úsala SOLO para RECOMENDACIONES EXPLÍCITAS) ---
+        --- LISTA INTERNA DE LUGARES (Úsala SOLO para dar una lista numerada de 5 a 12 lugares cuando se solicite) ---
         ${internalPlaceList}
         
     `;
@@ -105,7 +101,7 @@ function generateSystemInstruction(allPlaces, currentLanguage) {
     return instruction;
 }
 
-// --- 6. ESQUEMA DE RESPUESTA JSON (¡NUEVO Y CLAVE!) ---
+// --- 5. ESQUEMA DE RESPUESTA JSON ---
 const responseSchema = {
     type: Type.OBJECT,
     properties: {
@@ -147,7 +143,7 @@ const responseSchema = {
 };
 
 
-// --- 7. FUNCIÓN HANDLER PRINCIPAL DE VERCEL ---
+// --- 6. FUNCIÓN HANDLER PRINCIPAL DE VERCEL ---
 module.exports = async (req, res) => {
     // Aplica el Rate Limiter
     await new Promise(resolve => {
@@ -191,7 +187,7 @@ module.exports = async (req, res) => {
             config: {
                 systemInstruction: systemInstruction,
                 temperature: 0.1,
-                // 🛑 CORRECCIÓN CLAVE: Forzar la salida JSON con el esquema
+                // 🛑 FORZAR SALIDA JSON
                 responseMimeType: 'application/json',
                 responseSchema: responseSchema
             }
