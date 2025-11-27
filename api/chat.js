@@ -7,7 +7,7 @@ const MODEL_NAME = "gemini-2.5-flash";
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
-const placesClient = new Client({});
+const placesClient = new PlacesClient({});
 
 
 // 2. Definimos la Instrucción del Sistema MODIFICADA
