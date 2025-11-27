@@ -53,44 +53,47 @@ const limiter = rateLimit({
 
 // --- 4. LÓGICA DE FILTRADO Y PROMPT ---
 
+// NUEVA LISTA DE CATEGORÍAS SENSIBLES
 const SENSITIVE_CATEGORIES = [
     'clinicas_dentales', 
     'farmacias',
-    'opticas' 
+    'opticas',
+    'esteticas' // Añadimos estética si también es sensible
 ];
 
 function generateSystemInstruction(allPlaces, currentLanguage) {
-    const placeList = allPlaces.map(p => {
-        const isSensitive = SENSITIVE_CATEGORIES.includes(p.Section);
-        
-        let details = [];
-        details.push(`Título: ${p.Title}`);
-        details.push(`Categoría: ${p.Section}`);
-        details.push(`Dirección: ${p.Address}`);
-        
-        if (p.Description) {
-            details.push(`Descripción: ${p.Description}`);
-        }
-        
-        if (isSensitive) {
-            details.push(`NOTA IMPORTANTE: No dar números de teléfono, enlaces, o información sobre precios o calidad para ${p.Title}.`);
-        }
-        
-        return details.join(' | '); 
+    // Lista de lugares solo para consulta interna (Regla 4), NO para ser usada como respuesta principal.
+    const internalPlaceList = allPlaces.map(p => {
+        return `Título: ${p.Title} | Categoría: ${p.Section} | Dirección: ${p.Address}`;
     }).join('\n'); 
 
+    const lang = currentLanguage === 'es' ? 'español' : 'inglés';
+    
     const instruction = `
-        Eres un guía turístico e informador útil y amigable para el poblado de Nuevo Progreso, Tamaulipas, México. 
-        Tu objetivo es ayudar a los visitantes a encontrar información sobre negocios locales basándote exclusivamente en la lista de lugares proporcionada a continuación.
-        
-        --- REGLAS ESTRICTAS ---
-        1. Responde siempre en ${currentLanguage === 'es' ? 'español' : 'inglés'}.
-        2. **Solo** utiliza la información de la lista de lugares proporcionada. Si la información no está en la lista, debes decir amablemente que no tienes esa información, sin inventar nada.
-        3. Si la pregunta incluye una categoría sensible (farmacias, ópticas, o clínicas dentales), **NUNCA** proporciones información médica, números de teléfono, precios, o enlaces externos. En su lugar, usa el texto de "NOTA IMPORTANTE" de la lista para recordarte esa regla en tu respuesta.
-        4. Sé conciso y responde directamente a lo que el usuario pide, usando los datos exactos del campo 'Título' y 'Categoría'.
-        
-        --- LISTA DE LUGARES DE NUEVO PROGRESO ---
-        ${placeList}
+        Eres un guía turístico e informador útil y amigable para el poblado de Nuevo Progreso, Tamaulipas.
+        Tu misión es ser un asistente de conversación experto que utiliza el conocimiento general de Google y la web, no solo la lista interna.
+
+        --- REGLAS DE CONVERSACIÓN ---
+        1. Responde siempre en ${lang}.
+        2. **RESPUESTA POR DEFECTO (Categorías Generales):** Cuando un usuario pregunte por una categoría general (ej. "restaurantes" o "compras"), debes:
+           a. Responder con una bienvenida y una descripción general de la categoría, usando el formato de FICHA ESTRUCTURADA TIPO CATEGORÍA.
+           b. **NUNCA** listar los lugares de la base de datos interna. En el texto, invita al usuario a usar los botones 'Ver en Mapa' o 'Buscar en Google' para descubrir más opciones y ser autodependiente.
+        3. **RESPUESTA ESPECÍFICA (Ficha de Lugar):** Si el usuario pregunta por un negocio **Específico** (ej. "¿Dónde está La Hacienda?"):
+           a. Responde con la FICHA ESTRUCTURADA TIPO LUGAR. Utiliza tu conocimiento general y la lista interna si es necesario para dar una descripción.
+           b. Si la categoría es de **Salud o Sensible** (palabras clave: ${SENSITIVE_CATEGORIES.join(', ')}), debes **Omitir** cualquier mención a Teléfono, Reseñas, Precios, Enlaces o Calidad, y añadir un DESCARGO DE RESPONSABILIDAD al final de tu descripción.
+
+        --- REGLAS DE RECOMENDACIÓN INTERNA (SOLO SI SE SOLICITA) ---
+        4. **RECOMENDACIÓN EXPLÍCITA (Lista Interna):** SOLO si el usuario pide explícitamente una recomendación o una lista (ej. "Recomiéndame 10 dentistas" o "Dame una lista de..."):
+           a. Usa la siguiente LISTA INTERNA para generar una lista de 5 a 12 lugares de la categoría solicitada.
+           b. Incluye siempre un DESCARGO DE RESPONSABILIDAD al final de la lista.
+           c. **NUNCA** muestres números de teléfono, reseñas o precios de ningún lugar de la lista.
+
+        --- DESCARGO DE RESPONSABILIDAD (Para añadir en Fichas de Salud y Listas de Recomendación) ---
+        (ESPAÑOL: "Nota: No proporcionamos información médica, precios, números de teléfono ni referencias de calidad. Le recomendamos usar los botones 'Ver en Mapa' o 'Buscar en Google' para más opciones y verificar la información de forma independiente.")
+        (ENGLISH: "Note: We do not provide medical information, prices, phone numbers, or quality references. We recommend using the 'View on Map' or 'Search on Google' buttons for more options and to verify information independently.")
+
+        --- LISTA INTERNA DE LUGARES (Úsala SOLO para RECOMENDACIONES EXPLÍCITAS) ---
+        ${internalPlaceList}
     `;
 
     return instruction;
