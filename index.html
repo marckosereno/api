@@ -197,7 +197,7 @@
     const categoryChips = document.querySelectorAll('#category-chips-group .category-chip');
     const languageChips = document.querySelectorAll('#language-chips-group .language-chip');
     const menuActionChips = document.querySelectorAll('#menu-actions .menu-action-chip');
-    const btnClearTop = document.getElementById('btn-clear-top'); // <-- NUEVA REFERENCIA
+    const btnClearTop = document.getElementById('btn-clear-top'); 
 
     // Objeto de Traducción y textos de chips
     const UI_STRINGS = {
@@ -241,7 +241,9 @@
     
     function saveHistory() {
         try {
-            localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+            // Se usa chatHistory para guardar los mensajes sin el mensaje de bienvenida.
+            const historyToSave = chatHistory.filter(m => !(m.role === 'model' && m.isWelcomeBack));
+            localStorage.setItem('chatHistory', JSON.stringify(historyToSave));
         } catch (e) {
             console.error("Error al guardar el historial en localStorage", e);
         }
@@ -265,17 +267,21 @@
             try {
                 const loadedHistory = JSON.parse(savedHistory);
                 if (loadedHistory.length > 0) {
-                    chatHistory = loadedHistory; // Carga el historial existente
+                    chatHistory = loadedHistory; 
                     
-                    // Crea un mensaje de bienvenida de vuelta (solo si hay historial)
+                    // Crea el mensaje de bienvenida de vuelta
                     const welcomeBackText = currentLanguage === 'es' 
                         ? '¡Bienvenido/a de vuelta! Aquí está tu conversación anterior. ¿En qué más puedo ayudarte hoy? 👋' 
                         : 'Welcome back! Here is your previous conversation. What else can I help you with today? 👋';
                     
-                    // Añade el mensaje de bienvenida de vuelta (role: model para que se vea bien)
-                    chatHistory.push({ role: 'model', text: welcomeBackText, timestamp: new Date() });
+                    // Renderiza la conversación existente
+                    renderChat(); 
                     
-                    renderChat();
+                    // AÑADIMOS Y RENDERIZAMOS EL MENSAJE DE BIENVENIDA DIRECTAMENTE AL DOM (no al chatHistory)
+                    const welcomeMessage = { role: 'model', text: welcomeBackText, timestamp: new Date() };
+                    messageContainer.appendChild(createMessageBubble(welcomeMessage));
+                    scrollToBottom();
+
                     return true;
                 }
             } catch (e) {
@@ -358,7 +364,6 @@
         languageMenuVisible = false;
 
         // Actualizar textos de la interfaz
-        // document.getElementById('header-text').textContent = strings.header; // Eliminado por el nuevo diseño
         inputElement.placeholder = strings.placeholder;
         document.getElementById('go-text').textContent = strings.goButton; 
 
@@ -410,7 +415,7 @@
                 showChipGroupWithWave(languageChipsGroup, languageChips);
                 languageMenuVisible = true;
             }
-        } else if (action === 'CLEAR_HISTORY') { // <-- Nuevo manejo de Borrar Chat
+        } else if (action === 'CLEAR_HISTORY') { 
             clearChatHistory();
             return;
         } else {
@@ -462,14 +467,19 @@
                 let reviewUrl = null;
                 
                 if (isPlace) {
-                    directionsUrl = m.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(entityName + " Nuevo Progreso Tamps")}`;
-                    searchUrl = `https://www.google.com/search?q=${encodeURIComponent(entityName + " Nuevo Progreso Tamps")}`;
+                    // CORRECCIÓN DE URL A GOOGLE MAPS ESTÁNDAR
+                    const query = encodeURIComponent(entityName + " Nuevo Progreso Tamps");
+                    directionsUrl = m.mapUrl || `https://www.google.com/maps/search/?api=1&query=${query}`;
+                    
+                    searchUrl = `https://www.google.com/search?q=${query}`;
                     phoneUrl = m.placePhone ? `tel:${m.placePhone}` : `javascript:alert('${currentLanguage === 'es' ? 'Número no disponible.' : 'Number unavailable.'}')`;
                     reviewUrl = m.reviewUrl || directionsUrl; 
                     
                 } else if (isCategory) {
-                    directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(entityName + " Nuevo Progreso Tamps")}`;
-                    searchUrl = `https://www.google.com/search?q=${encodeURIComponent(entityName + " Nuevo Progreso Tamps")}`;
+                    // CORRECCIÓN DE URL A GOOGLE MAPS ESTÁNDAR
+                    const query = encodeURIComponent(entityName + " Nuevo Progreso Tamps");
+                    directionsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
+                    searchUrl = `https://www.google.com/search?q=${query}`;
                 }
                 
                 
@@ -657,7 +667,7 @@
         }
 
         chatHistory.push(finalMessage);
-        saveHistory(); // <-- Guardar después de la respuesta del modelo
+        saveHistory(); 
         
         if (typeof renderChat === 'function') renderChat();
         if (typeof toggleInput === 'function') toggleInput(false);
@@ -677,7 +687,7 @@
     // Conexión del nuevo botón flotante superior
     if (btnClearTop) {
         btnClearTop.addEventListener('click', function() {
-            handleMenuAction(this); // Usa la misma función que maneja CLEAR_HISTORY
+            handleMenuAction(this); 
         });
     }
 
@@ -702,7 +712,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         setInterfaceLanguage('es'); 
-        loadHistory(); // <-- Cargar historial al iniciar
+        loadHistory(); 
     });
 </script>
 </body>
