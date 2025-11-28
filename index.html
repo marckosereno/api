@@ -584,22 +584,31 @@
     function alertUser(m, t='i', preferenceType = 'news') {
         
         // 🛑 NUEVO: Si no es un error y la preferencia está desactivada, salir.
-        // Los errores (t === 'error') siempre se muestran.
         if (t !== 'error' && !notificationPreferences[preferenceType]) {
             console.log(`Notificación de tipo "${preferenceType}" deshabilitada por el usuario. Mensaje: ${m}`);
             return; 
         }
 
+        // --- MODO DE LIMPIEZA INMEDIATA PARA EVITAR ACUMULACIÓN ---
+        if (appAlertContainer) {
+            // Elimina inmediatamente cualquier alerta existente en el contenedor
+            const existingAlert = appAlertContainer.querySelector('.notification-card');
+            if (existingAlert) {
+                existingAlert.remove(); 
+            }
+        }
+        // --------------------------------------------------------
+        
+        // Función auxiliar para esconder la alerta (con animación)
         const hideAlert = (alertElement) => {
-            if (!alertElement) return;
+            if (!alertElement || !alertElement.parentNode) return;
             alertElement.classList.remove('show');
             alertElement.style.opacity = '0';
-            setTimeout(() => alertElement.remove(), 400); 
+            // Espera a que termine la transición (400ms) antes de eliminar del DOM
+            setTimeout(() => {
+                if (alertElement.parentNode) alertElement.remove();
+            }, 400); 
         };
-
-        if (appAlertContainer && appAlertContainer.querySelector('.notification-card')) {
-            hideAlert(appAlertContainer.querySelector('.notification-card'));
-        }
 
         const a = document.createElement('div');
         const icon = (t === 'error') 
