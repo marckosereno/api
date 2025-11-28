@@ -25,8 +25,8 @@
             background-color: transparent; 
             overflow: hidden 
         }
-        .user-bubble { border-radius: 18px 18px 0 18px; max-width: 80% }
-        .model-bubble { border-radius: 18px 18px 18px 0; max-width: 80%;padding-left:8px; }
+        .user-bubble { border-radius: 18px 18px 0 18px; max-width: 90% }
+        .model-bubble { border-radius: 18px 18px 18px 0; max-width: 90%;padding-left:8px;backgroud-color: rgb(140 154 178/6%); }
         .action-bar-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 10px; padding-bottom: 5px }
         .action-btn { white-space: nowrap }
         .chip-group-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
@@ -853,7 +853,7 @@
             w.className = 'flex justify-end mb-2'; 
             w.innerHTML = `
                 <div class="flex flex-col items-end">
-                    <div class="user-bubble bg-blue-500 text-white p-3 shadow-md">${m.text}</div>
+                    <div class="user-bubble bg-black text-white p-3 shadow-md">${m.text}</div>
                     ${timeSpan}
                 </div>
             `; 
@@ -890,7 +890,7 @@
                     searchUrl = `https://www.google.com/search?q=${query}`;
                 }
                 
-                content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">${m.text || m.description}</div>`;
+                content = `<div class="model-bubble text-gray-800 p-3 shadow-md">${m.text || m.description}</div>`;
                 
                 let actionsHTML = `
                     <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Ver en Mapa 🗺️' : 'View on Map 🗺️'}</a>
@@ -938,7 +938,7 @@
                 `;
 
             } else {
-                content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">${m.text || ''}</div>`;
+                content = `<div class="model-bubble text-gray-800 p-3 shadow-md">${m.text || ''}</div>`;
                 w.innerHTML = `
                     <div class="flex flex-col items-start">
                         ${content}
