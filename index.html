@@ -31,8 +31,8 @@
         .action-btn { white-space: nowrap }
         .chip-group-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
         
-        /* Estilo de la barra de chat */
-        .map-search-bar {
+        /* Estilo de la barra de chat ANTERIOR */
+        /* .map-search-bar {
             background-color: white; 
             border-radius: 20px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
@@ -42,7 +42,21 @@
             padding: 4px; 
             width: 100%; 
             box-sizing: border-box; 
+        } */
+        
+        /* Estilo de la barra de chat NUEVO (GLASSMOPRHISM) */
+        .map-search-bar {
+            background-color: #ffffffb8; /* Fondo blanco con 72% de opacidad (Glassmorphism) */
+            border-radius: 20px;
+            box-shadow: 1px 2px 2px 2px #b2b2b2a8, 0 2px 4px -2px rgba(0, 0, 0, 0.06); /* Sombra personalizada */
+            border: 1px solid #e5e7eb; /* Mantenemos el borde para definición */
+            display: flex;
+            align-items: center;
+            padding: 4px; 
+            width: 100%; 
+            box-sizing: border-box; 
         }
+        
         .map-input {
             flex-grow: 1;
             padding: 0.75rem 0.75rem; 
@@ -312,17 +326,28 @@
             font-size: 1.1rem;
         }
         
-        /* 1. 🎨 FONDO PARA EL QUICK REPLIES CONTAINER (Fondo del menú de chips) */
-        #quick-replies-container {
+        /* --- CAMBIOS SOLICITADOS EN CSS --- */
+        
+        /* NUEVO: ESTILO PARA EL CONTENEDOR INFERIOR COMPLETO (Quick Replies + Chat Bar) */
+        .bottom-action-area {
             border-top: 1px solid #e5e7eb;
             background: linear-gradient(90deg, rgba(196, 228, 242, 0.35) 0%, #eff6ff 40%, #eff6ff 100%);
-            padding: 0.5rem; 
             box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
+            z-index: 10;
+            padding-bottom: 0; /* Ajustamos con los p-4 internos */
+        }
+
+        /* 1. 🎨 FONDO PARA EL QUICK REPLIES CONTAINER (Adaptado para usar el fondo del padre) */
+        #quick-replies-container {
+            border-top: none; /* El padre (bottom-action-area) ya tiene un borde superior */
+            background: transparent; /* Fondo transparente para que use el del padre */
+            padding: 0.5rem; 
+            box-shadow: none; /* La sombra la maneja el padre */
             z-index: 10;
         }
 
 
-        /* --- NUEVOS ESTILOS GLASS CHIP --- */
+        /* --- NUEVOS ESTILOS GLASS CHIP (SIN CAMBIOS) --- */
         .glass-chip {
             /* 2. 🎨 FONDO PARA LOS BOTONES (Menu Action Chip) */
             background: linear-gradient(90deg, rgb(226 246 255 / 35%) 0%, #f9fafb 90%) !important; 
@@ -381,45 +406,48 @@
             <dotlottie-wc src="https://lottie.host/65b2d1fc-9840-476c-867e-6236ce234b38/SwsGK4ZVOj.lottie" style="width: 150px; height:" autoplay loop></dotlottie-wc>
         </div>
         
-        <div id="quick-replies-container" class="quick-replies-container flex-shrink-0 flex flex-col space-y-2">
+        <div class="bottom-action-area flex-shrink-0 flex flex-col space-y-2">
             
-            <div id="category-chips-group" class="chip-group-scroll hidden">
-                <div id="category-chips-list" class="inline-flex space-x-3 pb-3 border-b border-gray-200"> 
-                    <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-green-500 bg-green-50 text-green-700 cursor-pointer transition hover:bg-green-100" data-query-es="Dime sobre la Categoría Salud y Estética en Progreso" data-query-en="Tell me about the Health and Beauty Category in Progreso">🏥 Salud & Estética</div>
-                    <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-blue-500 bg-blue-50 text-blue-700 cursor-pointer transition hover:bg-blue-100" data-query-es="Dime sobre la Categoría Compras y Tiendas en Progreso" data-query-en="Tell me about the Shopping and Stores Category in Progreso">🛍️ Compras</div>
-                    <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-purple-500 bg-purple-50 text-purple-700 cursor-pointer transition hover:bg-purple-100" data-query-es="Dime sobre la Categoría Entretenimiento y Atracciones en Progreso" data-query-en="Tell me about the Entertainment and Attractions Category in Progreso">🎺 Entretenimiento</div>
-                    <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-yellow-500 bg-yellow-50 text-yellow-700 cursor-pointer transition hover:bg-yellow-100" data-query-es="Top 10 Dentistas en Progreso" data-query-en="Top 10 Dentists in Progreso">🦷 Top 10 Dental</div>
-                </div>
-            </div>
-
-            <div id="language-chips-group" class="chip-group-scroll hidden">
-                <div class="inline-flex space-x-3 pb-3 border-b border-gray-200"> 
-                    <div class="language-chip flex items-center p-2 rounded-full text-sm font-semibold border border-gray-400 bg-white text-gray-800 cursor-pointer transition hover:bg-gray-100" data-lang="es">🇲🇽 Español</div>
-                    <div class="language-chip flex items-center p-2 rounded-full text-sm font-semibold border border-gray-400 bg-white text-gray-800 cursor-pointer transition hover:bg-gray-100" data-lang="en">🇺🇸 English</div>
-                </div>
-            </div>
-            
-            <div id="menu-actions" class="chip-group-scroll">
-                <div class="inline-flex space-x-3 pt-2">
-                    <div id="btn-categorias" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="CATEGORIES">📂 Categorías</div>
-                    <div id="btn-lenguaje" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="LANGUAGE">🌐 Lenguaje</div>
-                    <div id="btn-comollegar" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="GET_THERE" data-query-es="Dime cómo llegar a Progreso, Tamaulipas." data-query-en="Tell me how to get to Progreso, Tamaulipas.">📍 Cómo Llegar</div>
-                    <div id="btn-info" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="INFO" data-query-es="Información general sobre Nuevo Progreso." data-query-en="General information about Nuevo Progreso.">ℹ️ Info</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="p-4 bg-white shadow-xl flex-shrink-0">
-            <div class="map-search-bar w-full">
-                <input type="text" id="user-input" class="map-input focus:outline-none focus:ring-0" placeholder="Ask the map">
+            <div id="quick-replies-container" class="quick-replies-container flex-shrink-0 flex flex-col space-y-2">
                 
-                <button id="go-button" class="go-button transition hover:opacity-90 disabled:opacity-50">
-                    <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 122.88 122.88" class="h-5 w-5"><g><path class="st0" d="M62.43,122.88h-1.98c0-16.15-6.04-30.27-18.11-42.34C30.27,68.47,16.16,62.43,0,62.43v-1.98 c16.16,0,30.27-6.04,42.34-18.14C54.41,30.21,60.45,16.1,60.45,0h1.98c0,16.15,6.04,30.27,18.11,42.34 c12.07,12.07,26.18,18.11,42.34,18.11v1.98c-16.15,0-30.27,6.04-42.34,18.11C68.47,92.61,62.43,106.72,62.43,122.88L62.43,122.88z"/></g></svg>
-                    <span id="go-text">Ir</span> 
-                </button>
+                <div id="category-chips-group" class="chip-group-scroll hidden">
+                    <div id="category-chips-list" class="inline-flex space-x-3 pb-3 border-b border-gray-200"> 
+                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-green-500 bg-green-50 text-green-700 cursor-pointer transition hover:bg-green-100" data-query-es="Dime sobre la Categoría Salud y Estética en Progreso" data-query-en="Tell me about the Health and Beauty Category in Progreso">🏥 Salud & Estética</div>
+                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-blue-500 bg-blue-50 text-blue-700 cursor-pointer transition hover:bg-blue-100" data-query-es="Dime sobre la Categoría Compras y Tiendas en Progreso" data-query-en="Tell me about the Shopping and Stores Category in Progreso">🛍️ Compras</div>
+                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-purple-500 bg-purple-50 text-purple-700 cursor-pointer transition hover:bg-purple-100" data-query-es="Dime sobre la Categoría Entretenimiento y Atracciones en Progreso" data-query-en="Tell me about the Entertainment and Attractions Category in Progreso">🎺 Entretenimiento</div>
+                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-yellow-500 bg-yellow-50 text-yellow-700 cursor-pointer transition hover:bg-yellow-100" data-query-es="Top 10 Dentistas en Progreso" data-query-en="Top 10 Dentists in Progreso">🦷 Top 10 Dental</div>
+                    </div>
+                </div>
+
+                <div id="language-chips-group" class="chip-group-scroll hidden">
+                    <div class="inline-flex space-x-3 pb-3 border-b border-gray-200"> 
+                        <div class="language-chip flex items-center p-2 rounded-full text-sm font-semibold border border-gray-400 bg-white text-gray-800 cursor-pointer transition hover:bg-gray-100" data-lang="es">🇲🇽 Español</div>
+                        <div class="language-chip flex items-center p-2 rounded-full text-sm font-semibold border border-gray-400 bg-white text-gray-800 cursor-pointer transition hover:bg-gray-100" data-lang="en">🇺🇸 English</div>
+                    </div>
+                </div>
+                
+                <div id="menu-actions" class="chip-group-scroll">
+                    <div class="inline-flex space-x-3 pt-2">
+                        <div id="btn-categorias" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="CATEGORIES">📂 Categorías</div>
+                        <div id="btn-lenguaje" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="LANGUAGE">🌐 Lenguaje</div>
+                        <div id="btn-comollegar" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="GET_THERE" data-query-es="Dime cómo llegar a Progreso, Tamaulipas." data-query-en="Tell me how to get to Progreso, Tamaulipas.">📍 Cómo Llegar</div>
+                        <div id="btn-info" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="INFO" data-query-es="Información general sobre Nuevo Progreso." data-query-en="General information about Nuevo Progreso.">ℹ️ Info</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-4 flex-shrink-0 pt-2"> 
+                <div class="map-search-bar w-full">
+                    <input type="text" id="user-input" class="map-input focus:outline-none focus:ring-0" placeholder="Ask the map">
+                    
+                    <button id="go-button" class="go-button transition hover:opacity-90 disabled:opacity-50">
+                        <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 122.88 122.88" class="h-5 w-5"><g><path class="st0" d="M62.43,122.88h-1.98c0-16.15-6.04-30.27-18.11-42.34C30.27,68.47,16.16,62.43,0,62.43v-1.98 c16.16,0,30.27-6.04,42.34-18.14C54.41,30.21,60.45,16.1,60.45,0h1.98c0,16.15,6.04,30.27,18.11,42.34 c12.07,12.07,26.18,18.11,42.34,18.11v1.98c-16.15,0-30.27,6.04-42.34,18.11C68.47,92.61,62.43,106.72,62.43,122.88L62.43,122.88z"/></g></svg>
+                        <span id="go-text">Ir</span> 
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
+        </div>
     
     <div id="notification-preferences-modal" class="notification-modal-overlay">
         <div class="notification-panel">
