@@ -301,6 +301,44 @@
             margin-right: 8px;
             font-size: 1.1rem;
         }
+        
+        /* --- NUEVOS ESTILOS GLASS CHIP --- */
+        .glass-chip {
+            /* Fondo semi-transparente para simular el vidrio */
+            background: rgba(255, 255, 255, 0.4) !important; 
+            /* El efecto clave: desenfocar el fondo */
+            backdrop-filter: blur(8px); 
+            -webkit-backdrop-filter: blur(8px);
+            /* Borde claro y suave */
+            border: 1px solid rgba(255, 255, 255, 0.5) !important;
+            /* Sombra interna para el brillo superior e inferior */
+            box-shadow: 
+                inset 0 1px 0 rgba(255, 255, 255, 0.5),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+            /* Color de texto más definido sobre fondo claro */
+            color: #1f2937 !important; 
+            
+            transition: all 0.2s ease-in-out;
+        }
+
+        .glass-chip:hover {
+            background: rgba(255, 255, 255, 0.6) !important;
+            box-shadow: 
+                0 2px 4px rgba(0, 0, 0, 0.1), /* Sombra externa al pasar el ratón */
+                inset 0 1px 0 rgba(255, 255, 255, 0.7),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+        }
+
+        .glass-chip:active {
+            background: rgba(255, 255, 255, 0.7) !important;
+            box-shadow: none !important; /* Presionar el botón */
+        }
+
+        /* Anular el fondo gris de Tailwind en los chips de menú principales */
+        #menu-actions .menu-action-chip {
+            background-color: transparent !important;
+        }
+        
     </style>
     <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
 </head>
@@ -343,11 +381,11 @@
             
             <div id="menu-actions" class="chip-group-scroll">
                 <div class="inline-flex space-x-3 pt-2">
-                    <div id="btn-categorias" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-gray-200 text-gray-800 cursor-pointer transition hover:bg-gray-300" data-action="CATEGORIES">📂 Categorías</div>
-                    <div id="btn-lenguaje" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-gray-200 text-gray-800 cursor-pointer transition hover:bg-gray-300" data-action="LANGUAGE">🌐 Lenguaje</div>
-                    <div id="btn-comollegar" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-gray-200 text-gray-800 cursor-pointer transition hover:bg-gray-300" data-action="GET_THERE" data-query-es="Dime cómo llegar a Progreso, Tamaulipas." data-query-en="Tell me how to get to Progreso, Tamaulipas.">📍 Cómo Llegar</div>
-                    <div id="btn-info" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-gray-200 text-gray-800 cursor-pointer transition hover:bg-gray-300" data-action="INFO" data-query-es="Información general sobre Nuevo Progreso." data-query-en="General information about Nuevo Progreso.">ℹ️ Info</div>
-                    </div>
+                    <div id="btn-categorias" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="CATEGORIES">📂 Categorías</div>
+                    <div id="btn-lenguaje" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="LANGUAGE">🌐 Lenguaje</div>
+                    <div id="btn-comollegar" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="GET_THERE" data-query-es="Dime cómo llegar a Progreso, Tamaulipas." data-query-en="Tell me how to get to Progreso, Tamaulipas.">📍 Cómo Llegar</div>
+                    <div id="btn-info" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="INFO" data-query-es="Información general sobre Nuevo Progreso." data-query-en="General information about Nuevo Progreso.">ℹ️ Info</div>
+                </div>
             </div>
         </div>
         
@@ -804,15 +842,7 @@
                     searchUrl = `https://www.google.com/search?q=${query}`;
                 }
                 
-                // CÓDIGO ELIMINADO: La alerta estructurada se ha movido a handleSend()
-                /*
-                const alertText = isPlace 
-                    ? UI_STRINGS[currentLanguage].alertStructured(entityName)
-                    : UI_STRINGS[currentLanguage].alertCategory(entityName);
-
-                // ALERTA ESTRUCTURADA USA 'reminders'
-                if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
-                */
+                // La alerta estructurada se ha movido a handleSend()
 
 
                 content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">${m.text || m.description}</div>`;
@@ -989,7 +1019,7 @@
 
         chatHistory.push(finalMessage);
         
-        // 🛑 NUEVO: Lógica para disparar la alerta SOLO UNA VEZ si el mensaje es estructurado
+        // 🛑 Lógica para disparar la alerta SOLO UNA VEZ si el mensaje es estructurado
         if (finalMessage.isStructured) {
             const isPlace = finalMessage.type === 'place';
             const entityName = isPlace 
