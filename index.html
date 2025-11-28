@@ -14,7 +14,7 @@
             height: 100%; 
             margin: 0; 
             padding: 0; 
-            /* 1. 🎨 AÑADIDO: Gradiente sutil para que el Glassmorphism funcione */
+            /* Fondo sutil para que el Glassmorphism funcione */
             background: linear-gradient(135deg, #f0f0f5 0%, #e0e0e8 100%);
         }
         .chat-window { 
@@ -22,7 +22,7 @@
             width: 100vw; 
             display: flex; 
             flex-direction: column; 
-            background-color: transparent; /* Ahora el gradiente se ve a través */
+            background-color: transparent; 
             overflow: hidden 
         }
         .user-bubble { border-radius: 18px 18px 0 18px; max-width: 80% }
@@ -83,7 +83,7 @@
         
         /* 1. Para navegadores basados en Webkit (Chrome, Safari, Android) */
         * {
-            -webkit-tap-highlight-color: transparent !important; /* SOLUCIÓN CLAVE para el toque en móvil */
+            -webkit-tap-highlight-color: transparent !important; 
         }
         
         /* 2. Asegura la eliminación del outline/ring en estados focus/active */
@@ -98,7 +98,7 @@
             --tw-ring-color: transparent !important;
         }
         .hover\:bg-gray-300:active {
-            background-color: #d1d5db; /* mantiene el color del hover al hacer click */
+            background-color: #d1d5db; 
         }
         
         /* --- Efecto Ola y Transición para los Chips --- */
@@ -117,14 +117,14 @@
 
         /* Estilo para el Timestamp */
         .timestamp {
-            font-size: 0.7rem; /* Fuente pequeña */
-            color: #9ca3af; /* Color gris suave */
+            font-size: 0.7rem; 
+            color: #9ca3af; 
             margin-top: 2px;
         }
 
         /* AJUSTE CRÍTICO PARA EL NUEVO HEADER FLOTANTE */
         #message-container {
-            padding-top: 6rem; /* Deja espacio para el botón Borrar Chat superior */
+            padding-top: 6rem; 
         }
         #btn-clear-top {
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
@@ -136,15 +136,14 @@
             background-color: white;
             border-radius: 16px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.05);
-            color: #1f2937; /* Gris oscuro para el texto */
+            color: #1f2937; 
             padding: 12px 16px;
             max-width: 90%;
             min-width: 250px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-top: 10px; /* Separación del top */
-            /* Animación de entrada: comienza arriba y se desliza hacia abajo */
+            margin-top: 10px; 
             transform: translateY(-100%);
             transition: transform 0.4s ease-out, opacity 0.4s ease-out;
             opacity: 0;
@@ -166,7 +165,7 @@
         .notification-card .close-btn {
             background: none;
             border: none;
-            color: #9ca3af; /* Gris suave para la X */
+            color: #9ca3af; 
             font-size: 1.2rem;
             cursor: pointer;
             margin-left: 15px;
@@ -177,21 +176,19 @@
         }
         
         .notification-card .close-btn:active {
-            color: #4b5563; /* Gris más oscuro al presionar */
+            color: #4b5563; 
         }
 
-        /* NUEVOS ESTILOS PARA EL BOTÓN DE NOTIFICACIONES Y EL PANEL */
-
-        /* Botón de Notificaciones */
+        /* Botón de Notificaciones (SIN CAMBIOS) */
         #btn-notifications {
             background-color: white;
-            color: #4b5563; /* Gris oscuro para el icono */
-            border: 1px solid #d1d5db; /* Borde gris suave */
+            color: #4b5563; 
+            border: 1px solid #d1d5db; 
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
             outline: none !important;
-            padding: 8px 12px; /* Ajuste de padding para que sea más pequeño y redondo */
-            border-radius: 9999px; /* Completamente redondo */
-            font-size: 1.1rem; /* Tamaño del icono */
+            padding: 8px 12px; 
+            border-radius: 9999px; 
+            font-size: 1.1rem; 
             display: flex;
             align-items: center;
             justify-content: center;
@@ -206,18 +203,18 @@
             color: #000;
         }
 
-        /* Contenedor del Modal */
+        /* Panel de Preferencias (SIN CAMBIOS) */
         .notification-modal-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5); /* Fondo semitransparente */
+            background-color: rgba(0, 0, 0, 0.5); 
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 100; /* Asegura que esté por encima de todo */
+            z-index: 100; 
             opacity: 0;
             visibility: hidden;
             transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
@@ -228,18 +225,17 @@
             visibility: visible;
         }
 
-        /* Panel de Preferencias */
         .notification-panel {
             background-color: white;
             border-radius: 12px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2), 0 5px 10px rgba(0, 0, 0, 0.1);
             width: 90%;
-            max-width: 400px; /* Ancho máximo del panel */
-            transform: translateY(20px); /* Para la animación de entrada */
+            max-width: 400px; 
+            transform: translateY(20px); 
             transition: transform 0.3s ease-out, opacity 0.3s ease-out;
             opacity: 0;
             padding: 20px;
-            pointer-events: auto; /* Permite interacción */
+            pointer-events: auto; 
         }
 
         .notification-modal-overlay.show .notification-panel {
@@ -247,12 +243,12 @@
             opacity: 1;
         }
 
-        /* Toggles (Switch) - Usando Tailwind para la base y CSS para el estilo personalizado */
+        /* Toggles (Switch) - (SIN CAMBIOS) */
         .toggle-switch {
             position: relative;
             display: inline-block;
-            width: 40px; /* Ancho del toggle */
-            height: 20px; /* Alto del toggle */
+            width: 40px; 
+            height: 20px; 
             flex-shrink: 0;
         }
 
@@ -269,26 +265,26 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: #ccc; /* Fondo cuando está OFF */
+            background-color: #ccc; 
             transition: .4s;
-            border-radius: 20px; /* Bordes redondeados */
+            border-radius: 20px; 
         }
 
         .slider:before {
             position: absolute;
             content: "";
-            height: 16px; /* Alto del "botón" del toggle */
-            width: 16px; /* Ancho del "botón" del toggle */
-            left: 2px; /* Posición inicial */
+            height: 16px; 
+            width: 16px; 
+            left: 2px; 
             bottom: 2px;
             background-color: white;
             transition: .4s;
-            border-radius: 50%; /* Redondo */
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2); /* Sombra para el botón */
+            border-radius: 50%; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2); 
         }
 
         input:checked + .slider {
-            background-color: #2563eb; /* Fondo cuando está ON (azul de Tailwind blue-600) */
+            background-color: #2563eb; 
         }
 
         input:focus + .slider {
@@ -296,14 +292,14 @@
         }
 
         input:checked + .slider:before {
-            transform: translateX(20px); /* Mover a la derecha cuando está ON */
+            transform: translateX(20px); 
         }
 
-        /* Info card dentro del panel */
+        /* Info card dentro del panel (SIN CAMBIOS) */
         .info-card-panel {
-            background-color: #eff6ff; /* blue-50 de Tailwind */
-            color: #1e40af; /* blue-800 de Tailwind */
-            border-left: 4px solid #3b82f6; /* blue-500 de Tailwind */
+            background-color: #eff6ff; 
+            color: #1e40af; 
+            border-left: 4px solid #3b82f6; 
             border-radius: 4px;
             padding: 12px;
             font-size: 0.9rem;
@@ -316,37 +312,46 @@
             font-size: 1.1rem;
         }
         
+        /* 1. 🎨 FONDO PARA EL QUICK REPLIES CONTAINER (Fondo del menú de chips) */
+        #quick-replies-container {
+            border-top: 1px solid #e5e7eb;
+            background: linear-gradient(90deg, rgba(196, 228, 242, 0.35) 0%, #eff6ff 40%, #eff6ff 100%);
+            padding: 0.5rem; 
+            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
+            z-index: 10;
+        }
+
+
         /* --- NUEVOS ESTILOS GLASS CHIP --- */
         .glass-chip {
-            /* Fondo semi-transparente para simular el vidrio */
-            /* Aumentamos la opacidad ligeramente para más visibilidad sobre el gradiente */
-            background: rgba(255, 255, 255, 0.5) !important; 
-            /* El efecto clave: desenfocar el fondo */
+            /* 2. 🎨 FONDO PARA LOS BOTONES (Menu Action Chip) */
+            background: linear-gradient(90deg, rgb(226 246 255 / 35%) 0%, #f9fafb 90%) !important; 
+            
             backdrop-filter: blur(8px); 
             -webkit-backdrop-filter: blur(8px);
-            /* Borde claro y suave */
-            border: 1px solid rgba(255, 255, 255, 0.7) !important;
-            /* Sombra interna para el brillo superior e inferior */
+            
+            border: 1px solid rgba(255, 255, 255, 0.8) !important; 
+            
             box-shadow: 
-                inset 0 1px 0 rgba(255, 255, 255, 0.8), /* Brillo superior más fuerte */
-                inset 0 -1px 0 rgba(0, 0, 0, 0.05);
-            /* Color de texto más definido sobre fondo claro */
+                inset 0 1px 0 rgba(255, 255, 255, 0.9),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+            
             color: #1f2937 !important; 
             
             transition: all 0.2s ease-in-out;
         }
 
         .glass-chip:hover {
-            background: rgba(255, 255, 255, 0.7) !important;
+            background: linear-gradient(90deg, rgb(226 246 255 / 50%) 0%, #ffffff 100%) !important;
             box-shadow: 
-                0 2px 4px rgba(0, 0, 0, 0.1), /* Sombra externa al pasar el ratón */
-                inset 0 1px 0 rgba(255, 255, 255, 0.9),
-                inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+                0 2px 4px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 1),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.2);
         }
 
         .glass-chip:active {
-            background: rgba(255, 255, 255, 0.8) !important;
-            box-shadow: none !important; /* Presionar el botón */
+            background: rgb(226 246 255 / 80%) !important;
+            box-shadow: none !important; 
         }
 
         /* Anular el fondo gris de Tailwind en los chips de menú principales */
@@ -376,7 +381,7 @@
             <dotlottie-wc src="https://lottie.host/65b2d1fc-9840-476c-867e-6236ce234b38/SwsGK4ZVOj.lottie" style="width: 150px; height:" autoplay loop></dotlottie-wc>
         </div>
         
-        <div id="quick-replies-container" class="quick-replies-container p-2 border-t border-gray-100 bg-white flex-shrink-0 flex flex-col space-y-2">
+        <div id="quick-replies-container" class="quick-replies-container flex-shrink-0 flex flex-col space-y-2">
             
             <div id="category-chips-group" class="chip-group-scroll hidden">
                 <div id="category-chips-list" class="inline-flex space-x-3 pb-3 border-b border-gray-200"> 
@@ -570,25 +575,29 @@
     }
     
     function loadHistory() {
-        const savedHistory = localStorage.getItem('chatHistory');
-        if (savedHistory) {
-            try {
+        // Inicializa chatHistory como array vacío si no se encuentra o es inválido
+        let loaded = false;
+        try {
+            const savedHistory = localStorage.getItem('chatHistory');
+            if (savedHistory) {
                 const loadedHistory = JSON.parse(savedHistory);
-                if (loadedHistory.length > 0) {
+                if (Array.isArray(loadedHistory) && loadedHistory.length > 0) {
                     chatHistory = loadedHistory; 
-                    
-                    // 3. ⚠️ CORRECCIÓN DE ERROR: Eliminamos el mensaje de bienvenida para no interferir con el estado de inicio.
                     renderChat(); 
-                    
                     scrollToBottom();
-
-                    return true;
+                    loaded = true;
                 }
-            } catch (e) {
-                console.error("Error al cargar o parsear el historial de localStorage", e);
             }
+        } catch (e) {
+            console.error("Error al cargar o parsear el historial de localStorage", e);
+            // Si hay un error de parseo, aseguramos que el historial esté vacío
+            chatHistory = []; 
         }
-        return false;
+        // 3. ⚠️ CORRECCIÓN DE ERROR CLAVE: Asegurar que chatHistory esté listo.
+        if (!loaded) {
+            chatHistory = []; 
+        }
+        return loaded;
     }
 
     // NUEVAS FUNCIONES PARA LA PERSISTENCIA DE NOTIFICACIONES
@@ -731,7 +740,6 @@
     }
 
     function setInterfaceLanguage(lang) {
-        // 2. ⚠️ CORRECCIÓN DE ERROR: Solo mostrar la alerta si el idioma realmente ha cambiado.
         const langChanged = currentLanguage !== lang;
         currentLanguage = lang;
         const strings = UI_STRINGS[lang];
@@ -752,7 +760,6 @@
             chip.textContent = categoryChipTexts[index];
         });
 
-        // ALERTA DE CAMBIO DE IDIOMA USA 'news'
         if (langChanged) {
             alertUser(`Interfaz y conversación cambiadas a ${lang === 'es' ? 'Español' : 'English'}`, 'i', 'news');
         }
@@ -774,7 +781,6 @@
             languageMenuVisible = false;
         }
         
-        // CERRAR EL MODAL DE NOTIFICACIONES SI ESTÁ ABIERTO
         if (notificationModal.classList.contains('show')) {
             notificationModal.classList.remove('show');
         }
@@ -856,9 +862,6 @@
                     searchUrl = `https://www.google.com/search?q=${query}`;
                 }
                 
-                // La alerta estructurada se ha movido a handleSend()
-
-
                 content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">${m.text || m.description}</div>`;
                 
                 let actionsHTML = `
@@ -1033,7 +1036,6 @@
 
         chatHistory.push(finalMessage);
         
-        // 🛑 Lógica para disparar la alerta SOLO UNA VEZ si el mensaje es estructurado
         if (finalMessage.isStructured) {
             const isPlace = finalMessage.type === 'place';
             const entityName = isPlace 
@@ -1046,7 +1048,6 @@
 
             if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
         }
-        // ---------------------------------------------------------------------------------
 
         saveHistory(); 
         
@@ -1140,10 +1141,17 @@
 
 
     document.addEventListener('DOMContentLoaded', () => {
-        // 2. ⚠️ CORRECCIÓN DE ERROR: Llamar setInterfaceLanguage sin disparar alerta
+        // Establece el idioma por defecto y actualiza la interfaz (sin disparar alerta)
         setInterfaceLanguage(currentLanguage); 
+        
+        // Carga el historial o asegura que chatHistory es []
         loadHistory(); 
+        
+        // Cargar preferencias de notificación
         loadNotificationPreferences(); 
+        
+        // 4. ⚠️ CORRECCIÓN DE ERROR ADICIONAL: Desbloquear la entrada por si acaso
+        toggleInput(false); 
     });
 </script>
 </body>
