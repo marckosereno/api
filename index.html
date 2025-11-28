@@ -804,12 +804,15 @@
                     searchUrl = `https://www.google.com/search?q=${query}`;
                 }
                 
+                // CÓDIGO ELIMINADO: La alerta estructurada se ha movido a handleSend()
+                /*
                 const alertText = isPlace 
                     ? UI_STRINGS[currentLanguage].alertStructured(entityName)
                     : UI_STRINGS[currentLanguage].alertCategory(entityName);
 
                 // ALERTA ESTRUCTURADA USA 'reminders'
                 if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
+                */
 
 
                 content = `<div class="model-bubble bg-gray-200 text-gray-800 p-3 shadow-md">${m.text || m.description}</div>`;
@@ -920,7 +923,7 @@
         }
     }
 
-    // --- Lógica Principal del Chatbot (handleSend) (SIN CAMBIOS) ---
+    // --- Lógica Principal del Chatbot (handleSend) ---
     async function handleSend(userPromptInput = null) {
         const userPrompt = userPromptInput || inputElement.value.trim();
         if (!userPrompt) return;
@@ -985,6 +988,22 @@
         }
 
         chatHistory.push(finalMessage);
+        
+        // 🛑 NUEVO: Lógica para disparar la alerta SOLO UNA VEZ si el mensaje es estructurado
+        if (finalMessage.isStructured) {
+            const isPlace = finalMessage.type === 'place';
+            const entityName = isPlace 
+                ? (finalMessage.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
+                : (finalMessage.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
+
+            const alertText = isPlace 
+                ? UI_STRINGS[currentLanguage].alertStructured(entityName)
+                : UI_STRINGS[currentLanguage].alertCategory(entityName);
+
+            if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
+        }
+        // ---------------------------------------------------------------------------------
+
         saveHistory(); 
         
         if (typeof renderChat === 'function') renderChat();
