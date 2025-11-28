@@ -9,8 +9,22 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
         /* Estilos base */
-        html, body { font-family:Avenir; height: 100%; margin: 0; padding: 0; }
-        .chat-window { height: 100%; width: 100vw; display: flex; flex-direction: column; background-color: #f7f7f7; overflow: hidden }
+        html, body { 
+            font-family:Avenir; 
+            height: 100%; 
+            margin: 0; 
+            padding: 0; 
+            /* 1. 🎨 AÑADIDO: Gradiente sutil para que el Glassmorphism funcione */
+            background: linear-gradient(135deg, #f0f0f5 0%, #e0e0e8 100%);
+        }
+        .chat-window { 
+            height: 100%; 
+            width: 100vw; 
+            display: flex; 
+            flex-direction: column; 
+            background-color: transparent; /* Ahora el gradiente se ve a través */
+            overflow: hidden 
+        }
         .user-bubble { border-radius: 18px 18px 0 18px; max-width: 80% }
         .model-bubble { border-radius: 18px 18px 18px 0; max-width: 80%;padding-left:8px; }
         .action-bar-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 10px; padding-bottom: 5px }
@@ -305,15 +319,16 @@
         /* --- NUEVOS ESTILOS GLASS CHIP --- */
         .glass-chip {
             /* Fondo semi-transparente para simular el vidrio */
-            background: rgba(255, 255, 255, 0.4) !important; 
+            /* Aumentamos la opacidad ligeramente para más visibilidad sobre el gradiente */
+            background: rgba(255, 255, 255, 0.5) !important; 
             /* El efecto clave: desenfocar el fondo */
             backdrop-filter: blur(8px); 
             -webkit-backdrop-filter: blur(8px);
             /* Borde claro y suave */
-            border: 1px solid rgba(255, 255, 255, 0.5) !important;
+            border: 1px solid rgba(255, 255, 255, 0.7) !important;
             /* Sombra interna para el brillo superior e inferior */
             box-shadow: 
-                inset 0 1px 0 rgba(255, 255, 255, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8), /* Brillo superior más fuerte */
                 inset 0 -1px 0 rgba(0, 0, 0, 0.05);
             /* Color de texto más definido sobre fondo claro */
             color: #1f2937 !important; 
@@ -322,15 +337,15 @@
         }
 
         .glass-chip:hover {
-            background: rgba(255, 255, 255, 0.6) !important;
+            background: rgba(255, 255, 255, 0.7) !important;
             box-shadow: 
                 0 2px 4px rgba(0, 0, 0, 0.1), /* Sombra externa al pasar el ratón */
-                inset 0 1px 0 rgba(255, 255, 255, 0.7),
-                inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+                inset 0 1px 0 rgba(255, 255, 255, 0.9),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.15);
         }
 
         .glass-chip:active {
-            background: rgba(255, 255, 255, 0.7) !important;
+            background: rgba(255, 255, 255, 0.8) !important;
             box-shadow: none !important; /* Presionar el botón */
         }
 
@@ -562,14 +577,9 @@
                 if (loadedHistory.length > 0) {
                     chatHistory = loadedHistory; 
                     
-                    const welcomeBackText = currentLanguage === 'es' 
-                        ? '¡Bienvenido/a de vuelta! Aquí está tu conversación anterior. ¿En qué más puedo ayudarte hoy? 👋' 
-                        : 'Welcome back! Here is your previous conversation. What else can I help you with today? 👋';
-                    
+                    // 3. ⚠️ CORRECCIÓN DE ERROR: Eliminamos el mensaje de bienvenida para no interferir con el estado de inicio.
                     renderChat(); 
                     
-                    const welcomeMessage = { role: 'model', text: welcomeBackText, timestamp: new Date() };
-                    messageContainer.appendChild(createMessageBubble(welcomeMessage));
                     scrollToBottom();
 
                     return true;
@@ -721,6 +731,8 @@
     }
 
     function setInterfaceLanguage(lang) {
+        // 2. ⚠️ CORRECCIÓN DE ERROR: Solo mostrar la alerta si el idioma realmente ha cambiado.
+        const langChanged = currentLanguage !== lang;
         currentLanguage = lang;
         const strings = UI_STRINGS[lang];
         
@@ -741,7 +753,9 @@
         });
 
         // ALERTA DE CAMBIO DE IDIOMA USA 'news'
-        alertUser(`Interfaz y conversación cambiadas a ${lang === 'es' ? 'Español' : 'English'}`, 'i', 'news');
+        if (langChanged) {
+            alertUser(`Interfaz y conversación cambiadas a ${lang === 'es' ? 'Español' : 'English'}`, 'i', 'news');
+        }
     }
 
     function handleMenuAction(actionChip) {
@@ -1126,9 +1140,10 @@
 
 
     document.addEventListener('DOMContentLoaded', () => {
-        setInterfaceLanguage('es'); 
+        // 2. ⚠️ CORRECCIÓN DE ERROR: Llamar setInterfaceLanguage sin disparar alerta
+        setInterfaceLanguage(currentLanguage); 
         loadHistory(); 
-        loadNotificationPreferences(); // Cargar preferencias de notificación al inicio
+        loadNotificationPreferences(); 
     });
 </script>
 </body>
