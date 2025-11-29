@@ -660,6 +660,7 @@
                 : (t === 'i' ? 'ℹ️' : '✅'); 
 
             a.className = 'notification-card opacity-0 pointer-events-auto';
+            a.setAttribute('data-type', t); // Para aplicar estilos de error
             a.innerHTML = `
                 <div class="message-content">
                     <span class="mr-2">${icon}</span> 
@@ -844,7 +845,7 @@
                         ? (m.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
                         : (m.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
                     
-                    // 🛑 CORRECCIÓN CRÍTICA DE URL: Asegura el fallback de URL de Google Maps/Search.
+                    // 🛑 CORRECCIÓN CRÍTICA DE URL: Usa el formato correcto para Google Maps/Search.
                     const queryEncoded = encodeURIComponent(entityName + " Nuevo Progreso Tamps");
                     
                     let directionsUrl = '#';
@@ -866,7 +867,8 @@
                     // -------------------------------------------------------------
                     
                     // El contenido de la burbuja usa la propiedad 'description' si existe para el texto.
-                    content = `<div class="model-bubble p-3 shadow-md">${m.text || m.description}</div>`;
+                    // Si el backend falló en dar una descripción pero dio una respuesta (e.g. error de JSON mal formado), usa el texto plano.
+                    content = `<div class="model-bubble p-3 shadow-md">${m.text || m.description || ''}</div>`;
                     
                     let actionsHTML = `
                         <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition flex-shrink-0">${currentLanguage === 'es' ? 'Ver en Mapa 🗺️' : 'View on Map 🗺️'}</a>
@@ -962,8 +964,9 @@
                 });
 
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(`Error HTTP: ${response.status}. Mensaje: ${errorData.error || 'El servicio de chat falló.'}`);
+                    const errorData = await response.json().catch(() => ({ error: 'Respuesta sin formato JSON válido.' }));
+                    const errorMessage = errorData.error || `El servicio de chat falló con status ${response.status}.`;
+                    throw new Error(errorMessage);
                 }
 
                 const data = await response.json();
