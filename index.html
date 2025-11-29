@@ -498,11 +498,17 @@
     
     // **NOTA: Debe coincidir con el endpoint de Vercel/backend**
     const BACKEND_URL = "/api/chat"; 
+    const MAX_CHAT_RESULTS = 4; // Límite de resultados mostrado en texto plano (DEBE COINCIDIR CON CHAT.JS)
     
     let chatHistory = [];
     let currentLanguage = 'es'; 
     let categoriesVisible = false; 
     let languageMenuVisible = false; 
+    
+    // VARIABLES GLOBALES PARA EL PROTOCOLO DE RECOMENDACIÓN LOCAL
+    let lastTotalCount = 0; // Para guardar el conteo total de la última recomendación
+    let lastApiQuery = null; // Para guardar el query de Places para el chip
+
 
     // Referencias a Elementos del DOM
     const inputElement = document.getElementById('user-input');
@@ -600,6 +606,8 @@
         scrollToBottom();
         // OCULTAR BOTÓN DE ACCIÓN RÁPIDA AL LIMPIAR
         quickActionFullList.classList.add('hidden');
+        lastTotalCount = 0;
+        lastApiQuery = null;
     }
     
     function loadHistory() {
@@ -802,6 +810,8 @@
 
         // Siempre ocultar el botón de lista completa al hacer una acción de menú
         quickActionFullList.classList.add('hidden');
+        lastTotalCount = 0;
+        lastApiQuery = null;
 
 
         if (action !== 'CATEGORIES' && categoriesVisible) {
@@ -903,21 +913,28 @@
                 if (isPlace) {
                     const phoneAvailable = !!m.placePhone;
                     const reviewsAvailable = !!m.reviewUrl;
-
-                    if (phoneAvailable) {
-                        actionsHTML += `
-                            <a href="${phoneUrl}" class="action-btn bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">
-                                ${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}
-                            </a>
-                        `;
-                    }
                     
-                    if (reviewsAvailable) {
-                        actionsHTML += `
-                            <a href="${reviewUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-500 transition flex-shrink-0 text-sm">
-                                ${currentLanguage === 'es' ? 'Reseñas ⭐' : 'Reviews ⭐'}
-                            </a>
-                        `;
+                    // REGLA CRÍTICA DE SALUD: Si mapUrl es el URL de búsqueda básico,
+                    // significa que el backend bloqueó la información sensible.
+                    const isHealthBlocked = m.mapUrl && m.mapUrl.includes('googleusercontent.com/maps.google.com/0{encodeURIComponent');
+
+                    if (!isHealthBlocked) {
+                         // Si NO está bloqueado (No es salud), mostramos todo:
+                        if (phoneAvailable) {
+                            actionsHTML += `
+                                <a href="${phoneUrl}" class="action-btn bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">
+                                    ${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}
+                                </a>
+                            `;
+                        }
+                        
+                        if (reviewsAvailable) {
+                            actionsHTML += `
+                                <a href="${reviewUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-500 transition flex-shrink-0 text-sm">
+                                    ${currentLanguage === 'es' ? 'Reseñas ⭐' : 'Reviews ⭐'}
+                                </a>
+                            `;
+                        }
                     }
                 }
 
@@ -1012,8 +1029,10 @@
         hideChipGroup(languageChipsGroup, languageChips);
         languageMenuVisible = false;
 
-        // Ocultar el botón al enviar un nuevo prompt
+        // Limpiar el estado del chip de lista completa al iniciar el envío
         quickActionFullList.classList.add('hidden');
+        lastTotalCount = 0;
+        lastApiQuery = null;
 
         if (typeof toggleInput === 'function') toggleInput(true);
         
@@ -1029,6 +1048,8 @@
         let modelResponseText = await getGeminiResponse(userPrompt, limitedHistory);
         
         let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date(), isStructured: false };
+        let totalCount = 0; // Inicializar para la lógica de abajo
+        let apiQuery = null; // Inicializar para la lógica de abajo
 
         try {
             const jsonStart = modelResponseText.indexOf('{');
@@ -1038,8 +1059,10 @@
                 const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
                 const parsedJson = JSON.parse(jsonString);
 
+                // *** INICIO DE LA LÓGICA DE PROCESAMIENTO DE RESPUESTA ***
+
+                // 1. Manejo de Respuesta Estructurada (Fichas)
                 if (parsedJson.isStructured === true) {
-                    // Si es estructurada, es una ficha de lugar/categoría
                     
                     if (parsedJson.type === 'place') {
                         finalMessage = {
@@ -1063,15 +1086,34 @@
                             timestamp: finalMessage.timestamp
                         };
                     }
+                } 
+                
+                // 2. Manejo de Recomendación Local (Texto Plano Forzado con metadatos)
+                else if (parsedJson.isLocalRecommendation === true) {
+                    // Si es una recomendación local forzada (que Gemini respondió como texto plano)
+                    totalCount = parsedJson.totalCount || 0;
+                    apiQuery = parsedJson.apiQueryForChip || null;
+                    
+                    // Aseguramos que el texto plano sea el que Gemini generó (eliminando el JSON de los metadatos)
+                    finalMessage.text = modelResponseText.replace(jsonString, '').trim();
+                    if (finalMessage.text.length < 5) finalMessage.text = modelResponseText;
                 }
             }
         } catch (e) {
-            console.error("Error al parsear JSON estructurado:", e);
+            console.error("Error al parsear JSON estructurado o de recomendación:", e);
             finalMessage.text = modelResponseText;
         }
 
+        // *** FIN DE LA LÓGICA DE PROCESAMIENTO DE RESPUESTA ***
+
         chatHistory.push(finalMessage);
         
+        // --- LÓGICA DE CHIP DE ACCIÓN RÁPIDA Y ALERTA ---
+        
+        // Limpiamos los estados de las variables globales antes de reasignar
+        lastTotalCount = 0;
+        lastApiQuery = null;
+
         if (finalMessage.isStructured) {
             const isPlace = finalMessage.type === 'place';
             const entityName = isPlace 
@@ -1084,14 +1126,29 @@
 
             if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
             
-            // Si es una respuesta estructurada, **no** mostramos el botón de acción rápida de lista completa.
+            // Si es una ficha estructurada, no mostramos el botón.
+            quickActionFullList.classList.add('hidden');
+
+        } else if (totalCount > MAX_CHAT_RESULTS && apiQuery) {
+            // Caso de Recomendación Local Forzada (Texto Plano) con más de 4 resultados
+            
+            // Guardar en las variables globales para el listener del botón
+            lastTotalCount = totalCount;
+            lastApiQuery = apiQuery;
+            
+            // Actualizar el texto del botón con el conteo
+            btnViewAllPlaces.innerHTML = currentLanguage === 'es' 
+                ? `➡️ Ver todos los ${totalCount} lugares` 
+                : `➡️ View all ${totalCount} places`;
+
+            // Mostrar el botón de acción rápida
+            quickActionFullList.classList.remove('hidden');
 
         } else {
-            // Si es una respuesta de texto plano, asumimos que podría ser una recomendación
-            // basada en la base de datos local y MOSTRAMOS el botón de acción rápida.
-            quickActionFullList.classList.remove('hidden');
+            // Otros casos de texto plano (ej. preguntas generales, menos de 4 resultados, o error)
+            quickActionFullList.classList.add('hidden');
         }
-
+        
         saveHistory(); 
         
         if (typeof renderChat === 'function') renderChat();
@@ -1135,12 +1192,33 @@
         });
     });
 
-    // NUEVO LISTENER PARA EL BOTÓN "VER TODOS LOS LUGARES"
+    // NUEVO LISTENER PARA EL BOTÓN "VER TODOS LOS LUGARES" (usa las variables globales)
     if (btnViewAllPlaces) {
         btnViewAllPlaces.addEventListener('click', () => {
             vibrateDevice();
-            // TODO: Añadir aquí la lógica para dirigir al usuario a la lista completa
-            alertUser('Funcionalidad para **Ver todos los lugares** en desarrollo. Aquí se integrará la lista de Google Places.', 'i', 'news');
+            quickActionFullList.classList.add('hidden'); // Ocultar después de hacer clic
+
+            if (lastApiQuery) {
+                const query = encodeURIComponent(lastApiQuery);
+                const searchUrl = `https://www.google.com/search?q=${query}`;
+
+                // Abrir la búsqueda en una nueva pestaña/ventana
+                window.open(searchUrl, '_blank'); 
+                
+                alertUser(currentLanguage === 'es' 
+                    ? `Abriendo búsqueda en Google de: "${lastApiQuery}"` 
+                    : `Opening Google search for: "${lastApiQuery}"`, 
+                'i', 'news');
+            } else {
+                alertUser(currentLanguage === 'es' 
+                    ? 'No se encontró la consulta de lugares.' 
+                    : 'Place query not found.', 
+                'error');
+            }
+            
+            // Limpiar el estado de las variables globales
+            lastTotalCount = 0;
+            lastApiQuery = null;
         });
     }
 
