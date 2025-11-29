@@ -93,22 +93,34 @@ export default async function handler(req, res) {
         // 3. Llamada a Gemini con el prompt forzado
         const contents = [{ role: "user", parts: [{ text: promptText }] }];
         
-        const geminiResponse = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ contents: contents })
-        });
+        try { // <- Nuevo bloque try
+            const geminiResponse = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ contents: contents })
+            });
 
-        const data = await geminiResponse.json();
-        const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text || (langCode === 'es' ? "Aquí tienes algunos lugares recomendados." : "Here are some recommended places.");
+            if (!geminiResponse.ok) { // <- Nueva verificación de error
+                const errorBody = await geminiResponse.text();
+                console.error("Error de la API de Gemini (Local Rec):", geminiResponse.status, errorBody);
+                return res.status(500).json({ error: "Error en la API de Gemini (Recomendación Local)." });
+            }
 
-        // Retorno con Metadatos para el Chip de Acción Rápida
-        return res.status(200).json({
-          responseText: replyText, 
-          isLocalRecommendation: true,
-          totalCount: matches.length,
-          apiQueryForChip: `${keyword} en Nuevo Progreso`
-        });
+            const data = await geminiResponse.json();
+            const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text || (langCode === 'es' ? "Aquí tienes algunos lugares recomendados." : "Here are some recommended places.");
+
+            // Retorno con Metadatos para el Chip de Acción Rápida
+            return res.status(200).json({
+                responseText: replyText, 
+                isLocalRecommendation: true,
+                totalCount: matches.length,
+                apiQueryForChip: `${keyword} en Nuevo Progreso`
+            });
+
+        } catch (e) { // <- Nuevo catch para errores de red/JSON
+            console.error("Error al procesar la solicitud de Recomendación Local:", e);
+            return res.status(500).json({ error: "Error interno al procesar recomendación local." });
+        }
       }
     }
   }
@@ -139,7 +151,7 @@ export default async function handler(req, res) {
       "type": "category",
       "categoryName": "[Nombre de la categoría, ej: Farmacias]",
       "description": "[Resumen de la categoría y sus beneficios en la zona, mencionando lugares top]",
-      "mapUrl": "[Link a Google Maps con búsqueda para la categoría, ej: https://maps.app.goo.gl/search/Pharmacies+Progreso]"
+      "mapUrl": "[Link a Google Maps con búsqueda para la categoría, ej: https://maps.google.com/...]"
     }
 
     De lo contrario, responde en texto plano de forma amigable usando el historial de conversación. Asegúrate de responder siempre en el idioma solicitado: ${currentLanguage === 'es' ? 'Español' : 'English'}. NO uses emojis en la respuesta final de texto plano ni en el JSON.`;
@@ -159,6 +171,12 @@ export default async function handler(req, res) {
       body: JSON.stringify({ contents: contents })
     });
 
+    if (!fallBackResp.ok) { // <- Nueva verificación de error
+        const errorBody = await fallBackResp.text();
+        console.error("Error de la API de Gemini (Fallback):", fallBackResp.status, errorBody);
+        return res.status(500).json({ error: "Error en la API de Gemini (Fallback)." });
+    }
+
     const data = await fallBackResp.json();
     const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Error: No se pudo obtener la respuesta.";
     
@@ -167,6 +185,7 @@ export default async function handler(req, res) {
     
   } catch (error) {
     console.error("Error fallback Gemini:", error);
-    return res.status(500).json({ error: "Error procesando solicitud con Gemini." });
+    // Este catch ya existía, pero ahora los errores de status son manejados arriba.
+    return res.status(500).json({ error: "Error procesando solicitud con Gemini (red o JSON)." });
   }
 }
