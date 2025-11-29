@@ -892,6 +892,7 @@
                 
                 if (isPlace) {
                     const query = encodeURIComponent(entityName + " Nuevo Progreso Tamps");
+                    // Aquí se espera que el backend haya insertado la URL correcta o la URL de búsqueda básica.
                     directionsUrl = m.mapUrl || `https://www.google.com/maps/search/?api=1&query=${query}`;
                     
                     searchUrl = `https://www.google.com/search?q=${query}`;
@@ -914,27 +915,21 @@
                     const phoneAvailable = !!m.placePhone;
                     const reviewsAvailable = !!m.reviewUrl;
                     
-                    // REGLA CRÍTICA DE SALUD: Si mapUrl es el URL de búsqueda básico,
-                    // significa que el backend bloqueó la información sensible.
-                    const isHealthBlocked = m.mapUrl && m.mapUrl.includes('googleusercontent.com/maps.google.com/0{encodeURIComponent');
-
-                    if (!isHealthBlocked) {
-                         // Si NO está bloqueado (No es salud), mostramos todo:
-                        if (phoneAvailable) {
-                            actionsHTML += `
-                                <a href="${phoneUrl}" class="action-btn bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">
-                                    ${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}
-                                </a>
-                            `;
-                        }
-                        
-                        if (reviewsAvailable) {
-                            actionsHTML += `
-                                <a href="${reviewUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-500 transition flex-shrink-0 text-sm">
-                                    ${currentLanguage === 'es' ? 'Reseñas ⭐' : 'Reviews ⭐'}
-                                </a>
-                            `;
-                        }
+                    // REGLA CRÍTICA DE SALUD EN EL FRONTEND: Si el backend bloqueó placePhone, no se muestra.
+                    if (phoneAvailable) {
+                        actionsHTML += `
+                            <a href="${phoneUrl}" class="action-btn bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">
+                                ${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}
+                            </a>
+                        `;
+                    }
+                    
+                    if (reviewsAvailable) {
+                        actionsHTML += `
+                            <a href="${reviewUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-500 transition flex-shrink-0 text-sm">
+                                ${currentLanguage === 'es' ? 'Reseñas ⭐' : 'Reviews ⭐'}
+                            </a>
+                        `;
                     }
                 }
 
@@ -1196,23 +1191,28 @@
     if (btnViewAllPlaces) {
         btnViewAllPlaces.addEventListener('click', () => {
             vibrateDevice();
-            quickActionFullList.classList.add('hidden'); // Ocultar después de hacer clic
+            
+            // Ocultar después de hacer clic, independientemente del éxito.
+            quickActionFullList.classList.add('hidden'); 
 
             if (lastApiQuery) {
-                const query = encodeURIComponent(lastApiQuery);
-                const searchUrl = `https://www.google.com/search?q=${query}`;
+                
+                // 🛑 LÓGICA DUAL: El botón usa la consulta API completa para buscar en Google (Local + Genérica).
+                
+                // 1. Codificar el query completo (ej: 'Taquerías y Tacos en Nuevo Progreso')
+                const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(lastApiQuery + " Nuevo Progreso Tamps")}`;
 
-                // Abrir la búsqueda en una nueva pestaña/ventana
+                // 2. Abrir la búsqueda en una nueva pestaña/ventana (complementando la lista local)
                 window.open(searchUrl, '_blank'); 
                 
                 alertUser(currentLanguage === 'es' 
-                    ? `Abriendo búsqueda en Google de: "${lastApiQuery}"` 
-                    : `Opening Google search for: "${lastApiQuery}"`, 
+                    ? `Abriendo la lista completa en Google: "${lastApiQuery}"` 
+                    : `Opening the full list on Google: "${lastApiQuery}"`, 
                 'i', 'news');
             } else {
                 alertUser(currentLanguage === 'es' 
-                    ? 'No se encontró la consulta de lugares.' 
-                    : 'Place query not found.', 
+                    ? 'No se encontró la consulta de lugares. Por favor, intenta de nuevo.' 
+                    : 'Place query not found. Please try again.', 
                 'error');
             }
             
