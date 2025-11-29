@@ -9,7 +9,7 @@ const MAX_CHAT_RESULTS = 4; // Límite de resultados a mostrar en el texto plano
 
 // Mapeo de intención de usuario a Secciones de JSON y Query de API de Places
 const CATEGORY_MAP = {
-    // Patrón de Búsqueda -> { Secciones JSON, Query API de Places }
+    // Patrón de Búsqueda -> { Secciones JSON, Query API de Places (para Google Search) }
     'tacos': {
         sections: ['taquerias_tacos_y_lonches', 'tacos_barbacoa'], 
         apiQuery: 'Taquerías y Tacos en Nuevo Progreso'
@@ -37,7 +37,7 @@ const CATEGORY_MAP = {
     'souvenirs': {
         sections: ['tiendas_artesanias'], 
         apiQuery: 'Tiendas de Souvenirs Nuevo Progreso'
-    }
+    },
     // NOTA: Categorías de salud/estética son manejadas en modo JSON.
 };
 
@@ -271,9 +271,9 @@ export default async function handler(req, res) {
                             // SI ES SALUD: Bloqueamos el enriquecimiento de Places API (teléfono, reseñas)
                             console.log(`Regla de Salud Dinámica Aplicada: Bloqueando enriquecimiento Places para ${placeNameSearch}`);
                             
-                            // Aseguramos que los campos sensibles estén nulos para que el frontend los ignore
                             // Usamos el nombre del lugar para generar la URL de búsqueda básica en Google Maps/Search.
-                            const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=$${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
+                            // Nota: El frontend debe manejar la apertura de esta URL.
+                            const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
 
                             finalResponseData.responseText = JSON.stringify({
                                 ...parsedJson,
@@ -324,7 +324,7 @@ export default async function handler(req, res) {
                 const metaData = {
                     isLocalRecommendation: true,
                     totalCount: totalResultsCount,
-                    apiQueryForChip: apiQueryForChip
+                    apiQueryForChip: apiQueryForChip // CLAVE para el botón "Ver todos"
                 };
                 // Anexamos el JSON al final del texto de Gemini
                 finalResponseData.responseText = finalResponseData.responseText.trim() + '\n' + JSON.stringify(metaData);
