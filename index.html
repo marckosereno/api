@@ -88,12 +88,12 @@
         }
         
         /* 2. Asegura la eliminación del outline/ring en estados focus/active */
-        .action-chip, .category-chip, .language-chip, .go-button, .map-input {
+        .action-chip, .category-chip, .language-chip, .go-button, .map-input, .dynamic-chip {
             outline: none !important;
             box-shadow: none !important;
             --tw-ring-color: transparent !important;
         }
-        .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active, .go-button:focus, .go-button:active {
+        .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active, .go-button:focus, .go-button:active, .dynamic-chip:focus, .dynamic-chip:active {
             outline: none !important;
             box-shadow: none !important;
             --tw-ring-color: transparent !important;
@@ -103,7 +103,7 @@
         }
         
         /* --- Efecto Ola y Transición para los Chips --- */
-        .category-chip, .language-chip {
+        .category-chip, .language-chip, .dynamic-chip {
             opacity: 0;
             transform: translateY(20px);
             transition: opacity 0.3s ease-out, transform 0.3s ease-out;
@@ -403,7 +403,12 @@
             
             <div id="quick-replies-container" class="quick-replies-container flex-shrink-0 flex flex-col space-y-2">
                 
-                <div id="category-chips-group" class="chip-group-scroll hidden">
+                <div id="dynamic-chips-group" class="chip-group-scroll hidden px-4 pt-0">
+                    <div id="dynamic-chips-list" class="inline-flex space-x-3 pt-2"> 
+                        </div>
+                </div>
+                
+                <div id="category-chips-group" class="chip-group-scroll hidden px-4">
                     <div id="category-chips-list" class="inline-flex space-x-3 pb-3 border-b border-gray-200"> 
                         <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-green-500 bg-green-50 text-green-700 cursor-pointer transition hover:bg-green-100" data-query-es="Dime sobre la Categoría Salud y Estética en Progreso" data-query-en="Tell me about the Health and Beauty Category in Progreso">🏥 Salud & Estética</div>
                         <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-blue-500 bg-blue-50 text-blue-700 cursor-pointer transition hover:bg-blue-100" data-query-es="Dime sobre la Categoría Compras y Tiendas en Progreso" data-query-en="Tell me about the Shopping and Stores Category in Progreso">🛍️ Compras</div>
@@ -412,14 +417,14 @@
                     </div>
                 </div>
 
-                <div id="language-chips-group" class="chip-group-scroll hidden">
+                <div id="language-chips-group" class="chip-group-scroll hidden px-4">
                     <div class="inline-flex space-x-3 pb-3 border-b border-gray-200"> 
                         <div class="language-chip flex items-center p-2 rounded-full text-sm font-semibold border border-gray-400 bg-white text-gray-800 cursor-pointer transition hover:bg-gray-100" data-lang="es">🇲🇽 Español</div>
                         <div class="language-chip flex items-center p-2 rounded-full text-sm font-semibold border border-gray-400 bg-white text-gray-800 cursor-pointer transition hover:bg-gray-100" data-lang="en">🇺🇸 English</div>
                     </div>
                 </div>
                 
-                <div id="menu-actions" class="chip-group-scroll">
+                <div id="menu-actions" class="chip-group-scroll px-4">
                     <div class="inline-flex space-x-3 pt-2">
                         <div id="btn-categorias" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="CATEGORIES">📂 Categorías</div>
                         <div id="btn-lenguaje" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="LANGUAGE">🌐 Lenguaje</div>
@@ -536,6 +541,10 @@
     // NUEVAS REFERENCIAS PARA EL BOTÓN DE ACCIÓN RÁPIDA "VER TODOS LOS LUGARES"
     const quickActionFullList = document.getElementById('quick-action-full-list');
     const btnViewAllPlaces = document.getElementById('btn-view-all-places');
+    
+    // NUEVAS REFERENCIAS PARA CHIPS DINÁMICOS
+    const dynamicChipsGroup = document.getElementById('dynamic-chips-group');
+    const dynamicChipsList = document.getElementById('dynamic-chips-list');
 
 
     // Objeto de Traducción y textos de chips (SIN CAMBIOS)
@@ -604,8 +613,9 @@
         alertUser(currentLanguage === 'es' ? '¡Conversación eliminada! Empecemos de cero. 👋' : 'Conversation cleared! Let\'s start fresh. 👋', 'i', 'news');
         
         scrollToBottom();
-        // OCULTAR BOTÓN DE ACCIÓN RÁPIDA AL LIMPIAR
+        // OCULTAR BOTONES DE ACCIÓN RÁPIDA
         quickActionFullList.classList.add('hidden');
+        dynamicChipsGroup.classList.add('hidden'); // Ocultar chips dinámicos
         lastTotalCount = 0;
         lastApiQuery = null;
     }
@@ -755,9 +765,13 @@
     
     function hideChipGroup(groupElement, chipElements) {
         groupElement.classList.add('hidden');
-        chipElements.forEach(chip => {
-            chip.classList.remove('visible-chip');
-        });
+        if (chipElements) {
+            chipElements.forEach(chip => {
+                chip.classList.remove('visible-chip');
+            });
+        } else if (groupElement.id === 'dynamic-chips-group') {
+            dynamicChipsList.innerHTML = ''; // Limpiamos la lista al ocultar
+        }
     }
 
     function showChipGroupWithWave(groupElement, chipElements) {
@@ -808,8 +822,9 @@
 
         vibrateDevice(); 
 
-        // Siempre ocultar el botón de lista completa al hacer una acción de menú
+        // Siempre ocultar los botones de acción rápida
         quickActionFullList.classList.add('hidden');
+        dynamicChipsGroup.classList.add('hidden'); // Ocultar chips dinámicos
         lastTotalCount = 0;
         lastApiQuery = null;
 
@@ -973,6 +988,56 @@
             scrollToBottom();
         }
     }
+    
+    // --- NUEVA FUNCIÓN PARA RENDERIZAR CHIPS DINÁMICOS ---
+    function renderDynamicChips(chips) {
+        dynamicChipsList.innerHTML = ''; // Limpiar cualquier chip anterior
+        
+        // Ocultar cualquier otro chip de acción
+        quickActionFullList.classList.add('hidden'); 
+        hideChipGroup(categoryChipsGroup, categoryChips);
+        categoriesVisible = false;
+        hideChipGroup(languageChipsGroup, languageChips);
+        languageMenuVisible = false;
+
+        dynamicChipsGroup.classList.remove('hidden');
+
+        chips.forEach((chipData, index) => {
+            const chip = document.createElement('div');
+            // Usamos la clase glass-chip que ya tiene buen estilo
+            chip.className = 'dynamic-chip action-chip glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer'; 
+            chip.textContent = chipData.label;
+            chip.setAttribute('data-query', chipData.query);
+            
+            chip.addEventListener('click', function() {
+                vibrateDevice();
+                const query = this.getAttribute('data-query');
+                // Al hacer clic, enviamos la nueva consulta, que el backend transformará en FICHA CATEGORÍA
+                handleSend(query); 
+                // Ocultamos los chips dinámicos después de la acción
+                dynamicChipsGroup.classList.add('hidden'); 
+            });
+
+            // Aplicar el efecto de "Ola"
+            chip.style.opacity = '0';
+            chip.style.transform = 'translateY(20px)';
+            chip.style.transition = 'none';
+
+            void chip.offsetWidth; 
+
+            setTimeout(() => {
+                chip.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+                chip.style.opacity = '1';
+                chip.style.transform = 'translateY(0)';
+            }, index * 100); 
+
+            dynamicChipsList.appendChild(chip);
+        });
+        
+        // Aseguramos que el chat baje para ver los nuevos chips
+        scrollToBottom();
+    }
+
 
     // --- CÓDIGO DE CONEXIÓN AL BACKEND (SIN CAMBIOS) ---
 
@@ -1024,8 +1089,9 @@
         hideChipGroup(languageChipsGroup, languageChips);
         languageMenuVisible = false;
 
-        // Limpiar el estado del chip de lista completa al iniciar el envío
+        // Limpiar el estado de todos los chips de acción al iniciar el envío
         quickActionFullList.classList.add('hidden');
+        dynamicChipsGroup.classList.add('hidden'); // Ocultar chips dinámicos
         lastTotalCount = 0;
         lastApiQuery = null;
 
@@ -1043,8 +1109,9 @@
         let modelResponseText = await getGeminiResponse(userPrompt, limitedHistory);
         
         let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date(), isStructured: false };
-        let totalCount = 0; // Inicializar para la lógica de abajo
-        let apiQuery = null; // Inicializar para la lógica de abajo
+        let totalCount = 0; 
+        let apiQuery = null; 
+        let dynamicChipsData = null; // NUEVO: Para guardar los datos de los chips
 
         try {
             const jsonStart = modelResponseText.indexOf('{');
@@ -1083,7 +1150,16 @@
                     }
                 } 
                 
-                // 2. Manejo de Recomendación Local (Texto Plano Forzado con metadatos)
+                // 2. Manejo de Chips Dinámicos (NUEVA LÓGICA)
+                else if (parsedJson.isDynamicChips === true) {
+                    dynamicChipsData = parsedJson.chips;
+                    
+                    // Aseguramos que solo el texto conversacional se muestre en la burbuja
+                    finalMessage.text = modelResponseText.replace(jsonString, '').trim();
+                    if (finalMessage.text.length < 5) finalMessage.text = modelResponseText;
+                }
+                
+                // 3. Manejo de Recomendación Local (Texto Plano Forzado con metadatos)
                 else if (parsedJson.isLocalRecommendation === true) {
                     // Si es una recomendación local forzada (que Gemini respondió como texto plano)
                     totalCount = parsedJson.totalCount || 0;
@@ -1095,7 +1171,7 @@
                 }
             }
         } catch (e) {
-            console.error("Error al parsear JSON estructurado o de recomendación:", e);
+            console.error("Error al parsear JSON estructurado o de chip:", e);
             finalMessage.text = modelResponseText;
         }
 
@@ -1103,13 +1179,19 @@
 
         chatHistory.push(finalMessage);
         
-        // --- LÓGICA DE CHIP DE ACCIÓN RÁPIDA Y ALERTA ---
+        // --- LÓGICA DE ACTIVACIÓN DE CHIPS Y ALERTA ---
         
         // Limpiamos los estados de las variables globales antes de reasignar
         lastTotalCount = 0;
         lastApiQuery = null;
 
-        if (finalMessage.isStructured) {
+        if (dynamicChipsData && dynamicChipsData.length > 0) {
+            // Caso de CHIPS DINÁMICOS
+            renderDynamicChips(dynamicChipsData);
+            quickActionFullList.classList.add('hidden'); // Asegurar que el otro chip esté oculto
+            
+        } else if (finalMessage.isStructured) {
+            // Caso de FICHA ESTRUCTURADA
             const isPlace = finalMessage.type === 'place';
             const entityName = isPlace 
                 ? (finalMessage.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
@@ -1121,7 +1203,6 @@
 
             if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
             
-            // Si es una ficha estructurada, no mostramos el botón.
             quickActionFullList.classList.add('hidden');
 
         } else if (totalCount > MAX_CHAT_RESULTS && apiQuery) {
