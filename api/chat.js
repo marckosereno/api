@@ -204,10 +204,9 @@ export default async function handler(req, res) {
         let totalResultsCount = 0;
         let apiQueryForChip = null;
         let isLocalRecommendation = false;
-
+        let actionButton = null; // NUEVO: Objeto para el botón de acción rápida
 
         // Patrón para detectar solicitudes de listado/recomendación
-        // Ahora el patrón incluye las palabras clave de salud para que la lógica local las intercepte.
         const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra).*\\s+(\\d+|unos cuantos)?\\s*(taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias|salud|estetica|dental|farmacia|optica)s?`, 'i');
         
         const match = userPrompt.match(recommendationPattern);
@@ -222,12 +221,10 @@ export default async function handler(req, res) {
                 // 2. Determinar la intención del usuario usando el mapa
                 const categoryKeyRaw = match[3].toLowerCase(); 
                 
-                // Mapeo flexible para obtener la clave correcta del CATEGORY_MAP
                 let categoryKey;
                 if (categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('tacos')) {
                     categoryKey = 'tacos';
                 } else if (categoryKeyRaw.includes('estetica') || categoryKeyRaw.includes('salud')) {
-                    // Si se pide 'Salud' o 'Estetica', se mapea a 'salud'
                     categoryKey = 'salud'; 
                 } else if (categoryKeyRaw.includes('dental')) {
                     categoryKey = 'dental';
@@ -244,37 +241,27 @@ export default async function handler(req, res) {
                 if (categoryIntent) {
                     
                     // 3. Filtrar usando las SECCIONES del JSON para obtener TODOS los resultados
-                    
-                    // Nota: Si la sección es de salud, EXCLUSIÓN DE SALUD la dejará vacía.
+                    // Filtramos SOLO por lugares NO saludables para la lista conversacional
                     const allMatchingResults = allLocalData.filter(place => 
                         categoryIntent.sections.includes(place.Section) && place.isHealthPlace === false
                     );
                     
-                    // ** APLICAMOS LA EXCLUSIÓN DE SALUD A LA LISTA QUE SE ENVÍA A GEMINI **
-                    
                     totalResultsCount = allMatchingResults.length;
                     
-                    // Si encontramos resultados, aplicamos el protocolo de recomendación
+                    // LÓGICA DE RECOMENDACIÓN PARA LUGARES NO SALUDABLES (LISTADO CONVERSACIONAL)
                     if (totalResultsCount > 0) {
                         
-                        // Limitamos a MAX_CHAT_RESULTS para la respuesta conversacional de Gemini
                         const recommendationsForGemini = allMatchingResults.slice(0, MAX_CHAT_RESULTS); 
-                        
-                        // New (Nuevo) - Implementación del protocolo de Alineación Forzada
-                        // ---------------------------------------------------------------
-                        // Creamos una lista numerada estricta: 1. **Title:** Description
                         const recommendationList = recommendationsForGemini.map((r, index) => 
                             `${index + 1}. **${r.Title}:** ${r.Description.trim()}`
                         ).join('\n');
                         
-                        const listContext = categoryIntent.apiQuery; // Ejemplo: "Taquerías y Tacos en Nuevo Progreso"
+                        const listContext = categoryIntent.apiQuery; 
 
-                        // Si encontramos lugares, activamos el protocolo
                         isLocalRecommendation = true;
-                        apiQueryForChip = categoryIntent.apiQuery; // Guardamos la query para el chip
+                        apiQueryForChip = categoryIntent.apiQuery; 
 
-                        // 4. SOBRESCRIBIMOS el prompt para FORZAR el MODO CONVERSACIONAL (texto plano)
-                        
+                        // 4. SOBRESCRIBIMOS el prompt
                         promptToSend = `El usuario pidió una recomendación de ${listContext}. Nuestra lista local encontró ${totalResultsCount} lugares. Tu respuesta DEBE EMPEZAR con un saludo amigable (ej: "¡Claro que sí! 🌮 Nuevo Progreso tiene..."), y DEBE usar estricta y únicamente la siguiente lista numerada de ${recommendationsForGemini.length} lugares en tu listado de respuesta, sin inventar nombres ni cambiar las descripciones:
                         
                         --- LISTA FORZADA Y NUMERADA ---
@@ -283,26 +270,39 @@ export default async function handler(req, res) {
                         
                         Tu respuesta DEBE TERMINAR con el CIERRE REQUERIDO del protocolo de recomendación local (mencionando que encontraste ${totalResultsCount} lugares y la instrucción de "Ver todos los lugares"). NO uses el formato JSON estructurado.`;
                         
-                        console.log("PROTOCOLO LOCAL ACTIVADO. Total encontrados:", totalResultsCount);
+                        console.log("PROTOCOLO LOCAL ACTIVADO (NO SALUD). Total encontrados:", totalResultsCount);
+                    
                     } else {
-                         // Lógica de Protocolo Local para CATEGORÍAS DE SALUD (resultados locales > 0, pero la lista de NO salud es 0)
+                        // LÓGICA DE PROTOCOLO PARA CATEGORÍAS DE SALUD O LISTADOS VACÍOS (SOLO CHIP)
                         
-                        // Buscamos el conteo TOTAL, sin el filtro de isHealthPlace
-                        const totalHealthResults = allLocalData.filter(place => 
+                        // Buscamos el conteo TOTAL (incluyendo salud)
+                        const totalFullResults = allLocalData.filter(place => 
                             categoryIntent.sections.includes(place.Section)
                         ).length;
 
-                        if (totalHealthResults > 0) {
+                        if (totalFullResults > 0) {
                             // Si encontramos resultados de salud, forzamos un mensaje que guíe al usuario al chip
                             isLocalRecommendation = true;
-                            totalResultsCount = totalHealthResults;
+                            totalResultsCount = totalFullResults;
                             apiQueryForChip = categoryIntent.apiQuery;
 
                             // Forzamos un prompt que guíe a Gemini a dar un resumen de la categoría
-                            promptToSend = `El usuario preguntó sobre ${categoryIntent.apiQuery}. Tu respuesta DEBE ser conversacional y DEBE dar un resumen de la categoría. Luego, DEBE TERMINAR con el CIERRE REQUERIDO del protocolo de recomendación local mencionando que encontraste ${totalHealthResults} lugares. NUNCA listes lugares individuales ni uses el formato JSON estructurado.`;
+                            promptToSend = `El usuario preguntó sobre ${categoryIntent.apiQuery}. Tu respuesta DEBE ser conversacional y DEBE dar un resumen de la categoría, sin mencionar nombres de lugares. Luego, DEBE TERMINAR con el CIERRE REQUERIDO del protocolo de recomendación local mencionando que encontraste ${totalFullResults} lugares. NUNCA listes lugares individuales ni uses el formato JSON estructurado.`;
 
-                            console.log(`PROTOCOLO SALUD ACTIVADO. Total encontrados: ${totalHealthResults}. Se espera resumen conversacional y chip.`);
+                            console.log(`PROTOCOLO SALUD/CHIP ACTIVADO. Total encontrados: ${totalFullResults}. Se espera resumen conversacional y chip.`);
                         }
+                    }
+
+                    // AHORA CONSTRUIMOS EL actionButton SI EL PROTOCOLO SE ACTIVÓ
+                    if (isLocalRecommendation && totalResultsCount > 0) {
+                        actionButton = {
+                            // El frontend debe leer esta etiqueta
+                            type: 'showAll',
+                            // La acción que el frontend debe realizar (abrir una búsqueda de Google)
+                            query: apiQueryForChip, 
+                            // Texto que verá el usuario en el botón
+                            text: `Ver todos los ${totalResultsCount} lugares`
+                        };
                     }
                 }
             }
@@ -339,15 +339,14 @@ export default async function handler(req, res) {
                     if (parsedJson.type === 'place' && parsedJson.placeToSearch) {
                         
                         const placeNameSearch = parsedJson.placeToSearch.trim();
-                        // Utilizamos el nuevo flag booleano para la regla de salud
                         const isHealthPlace = parsedJson.isHealthPlace === true; 
 
                         // **** REGLA DE SALUD DINÁMICA: Bloqueo de Enriquecimiento ****
                         if (isHealthPlace) {
-                            // SI ES SALUD: Bloqueamos el enriquecimiento de Places API (teléfono, reseñas)
                             console.log(`Regla de Salud Dinámica Aplicada: Bloqueando enriquecimiento Places para ${placeNameSearch}`);
                             
                             // Usamos el nombre del lugar para generar la URL de búsqueda básica en Google Maps/Search.
+                            // Nota: Corregí el template string para ser compatible con la codificación de URL
                             const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
 
                             finalResponseData.responseText = JSON.stringify({
@@ -390,20 +389,9 @@ export default async function handler(req, res) {
             finalResponseData.responseText = modelResponseText; 
         }
 
-        // LÓGICA DE ANEXAR METADATOS DE RECOMENDACIÓN LOCAL AL FINAL DE LA RESPUESTA
-        // Esto solo ocurre si el protocolo fue activado (isLocalRecommendation = true) 
-        // y la respuesta final NO es JSON estructurado (es texto plano de Gemini)
-        if (isLocalRecommendation && !finalResponseData.responseText.includes('"isStructured": true')) {
-             if (totalResultsCount > MAX_CHAT_RESULTS || (isLocalRecommendation && totalResultsCount > 0)) {
-                // Si el conteo total excede el límite (4) O es una categoría de salud, anexamos los metadatos para el frontend
-                const metaData = {
-                    isLocalRecommendation: true,
-                    totalCount: totalResultsCount,
-                    apiQueryForChip: apiQueryForChip // CLAVE para el botón "Ver todos"
-                };
-                // Anexamos el JSON al final del texto de Gemini
-                finalResponseData.responseText = finalResponseData.responseText.trim() + '\n' + JSON.stringify(metaData);
-            }
+        // NUEVA LÓGICA: Añadir el actionButton si existe.
+        if (actionButton) {
+            finalResponseData.actionButton = actionButton;
         }
 
         // Retornamos la respuesta (enriquecida o original) al frontend
