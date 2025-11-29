@@ -38,6 +38,29 @@ const CATEGORY_MAP = {
         sections: ['tiendas_artesanias'], 
         apiQuery: 'Tiendas de Souvenirs Nuevo Progreso'
     },
+    
+    // --- NUEVAS ENTRADAS PARA CHIPS Y COBERTURA DE SALUD/ESTÉTICA ---
+    'salud': { // Cubre el chip 'Salud & Estética'
+        sections: ['clinicas_dentales', 'salones_belleza', 'farmacias', 'opticas'], 
+        apiQuery: 'Servicios de Salud y Estética en Nuevo Progreso'
+    },
+    'estetica': { // Cubre el chip 'Salud & Estética'
+        sections: ['clinicas_dentales', 'salones_belleza', 'farmacias', 'opticas'], 
+        apiQuery: 'Servicios de Salud y Estética en Nuevo Progreso'
+    },
+    'dental': { // Cubre el chip 'Top 10 Dental'
+        sections: ['clinicas_dentales'], 
+        apiQuery: 'Clínicas Dentales en Nuevo Progreso'
+    },
+    'farmacia': {
+        sections: ['farmacias'],
+        apiQuery: 'Farmacias en Nuevo Progreso'
+    },
+    'optica': {
+        sections: ['opticas'],
+        apiQuery: 'Ópticas en Nuevo Progreso'
+    }
+    // ------------------------------------------------------------------
 };
 
 // 1. Inicializamos los clientes
@@ -184,7 +207,8 @@ export default async function handler(req, res) {
 
 
         // Patrón para detectar solicitudes de listado/recomendación
-        const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra).*\\s+(\\d+|unos cuantos)?\\s*(taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias)s?`, 'i');
+        // Ahora el patrón incluye las palabras clave de salud para que la lógica local las intercepte.
+        const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra).*\\s+(\\d+|unos cuantos)?\\s*(taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias|salud|estetica|dental|farmacia|optica)s?`, 'i');
         
         const match = userPrompt.match(recommendationPattern);
         
@@ -195,21 +219,38 @@ export default async function handler(req, res) {
             
             if (allLocalData.length > 0) {
                 
-                // 2. Determinar la intención del usuario usando el mapa (ej: "taquería" -> "tacos")
-                // Usamos la tercera captura del regex (ej. "taquería")
+                // 2. Determinar la intención del usuario usando el mapa
                 const categoryKeyRaw = match[3].toLowerCase(); 
-                // Mapeamos a la clave de CATEGORY_MAP (ej. 'taqueria' -> 'tacos' si no existe)
-                const categoryKey = categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('tacos') ? 'tacos' : categoryKeyRaw;
+                
+                // Mapeo flexible para obtener la clave correcta del CATEGORY_MAP
+                let categoryKey;
+                if (categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('tacos')) {
+                    categoryKey = 'tacos';
+                } else if (categoryKeyRaw.includes('estetica') || categoryKeyRaw.includes('salud')) {
+                    // Si se pide 'Salud' o 'Estetica', se mapea a 'salud'
+                    categoryKey = 'salud'; 
+                } else if (categoryKeyRaw.includes('dental')) {
+                    categoryKey = 'dental';
+                } else if (categoryKeyRaw.includes('farmacia')) {
+                    categoryKey = 'farmacia';
+                } else if (categoryKeyRaw.includes('optica')) {
+                    categoryKey = 'optica';
+                } else {
+                    categoryKey = categoryKeyRaw;
+                }
                 
                 const categoryIntent = CATEGORY_MAP[categoryKey];
                 
                 if (categoryIntent) {
                     
                     // 3. Filtrar usando las SECCIONES del JSON para obtener TODOS los resultados
-                    // Filtramos por las secciones definidas en CATEGORY_MAP y excluimos los de salud
+                    
+                    // Nota: Si la sección es de salud, EXCLUSIÓN DE SALUD la dejará vacía.
                     const allMatchingResults = allLocalData.filter(place => 
                         categoryIntent.sections.includes(place.Section) && place.isHealthPlace === false
                     );
+                    
+                    // ** APLICAMOS LA EXCLUSIÓN DE SALUD A LA LISTA QUE SE ENVÍA A GEMINI **
                     
                     totalResultsCount = allMatchingResults.length;
                     
@@ -243,6 +284,25 @@ export default async function handler(req, res) {
                         Tu respuesta DEBE TERMINAR con el CIERRE REQUERIDO del protocolo de recomendación local (mencionando que encontraste ${totalResultsCount} lugares y la instrucción de "Ver todos los lugares"). NO uses el formato JSON estructurado.`;
                         
                         console.log("PROTOCOLO LOCAL ACTIVADO. Total encontrados:", totalResultsCount);
+                    } else {
+                         // Lógica de Protocolo Local para CATEGORÍAS DE SALUD (resultados locales > 0, pero la lista de NO salud es 0)
+                        
+                        // Buscamos el conteo TOTAL, sin el filtro de isHealthPlace
+                        const totalHealthResults = allLocalData.filter(place => 
+                            categoryIntent.sections.includes(place.Section)
+                        ).length;
+
+                        if (totalHealthResults > 0) {
+                            // Si encontramos resultados de salud, forzamos un mensaje que guíe al usuario al chip
+                            isLocalRecommendation = true;
+                            totalResultsCount = totalHealthResults;
+                            apiQueryForChip = categoryIntent.apiQuery;
+
+                            // Forzamos un prompt que guíe a Gemini a dar un resumen de la categoría
+                            promptToSend = `El usuario preguntó sobre ${categoryIntent.apiQuery}. Tu respuesta DEBE ser conversacional y DEBE dar un resumen de la categoría. Luego, DEBE TERMINAR con el CIERRE REQUERIDO del protocolo de recomendación local mencionando que encontraste ${totalHealthResults} lugares. NUNCA listes lugares individuales ni uses el formato JSON estructurado.`;
+
+                            console.log(`PROTOCOLO SALUD ACTIVADO. Total encontrados: ${totalHealthResults}. Se espera resumen conversacional y chip.`);
+                        }
                     }
                 }
             }
@@ -334,8 +394,8 @@ export default async function handler(req, res) {
         // Esto solo ocurre si el protocolo fue activado (isLocalRecommendation = true) 
         // y la respuesta final NO es JSON estructurado (es texto plano de Gemini)
         if (isLocalRecommendation && !finalResponseData.responseText.includes('"isStructured": true')) {
-             if (totalResultsCount > MAX_CHAT_RESULTS) {
-                // Si el conteo total excede el límite (4), anexamos los metadatos para el frontend
+             if (totalResultsCount > MAX_CHAT_RESULTS || (isLocalRecommendation && totalResultsCount > 0)) {
+                // Si el conteo total excede el límite (4) O es una categoría de salud, anexamos los metadatos para el frontend
                 const metaData = {
                     isLocalRecommendation: true,
                     totalCount: totalResultsCount,
