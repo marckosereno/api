@@ -2,308 +2,320 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Progreso Tour Guide Chatbot</title>
-    
-    <link href="https://fonts.cdnfonts.com/css/avenir" rel="stylesheet">
-    <link href="https://db.onlinewebfonts.com/c/ddadf4e5d67469bf2fb13ca47ac078ba?family=FH+Oscar+Test+Medium" rel="stylesheet">       
-    
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progreso Tour Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Estilos base */
-        html, body { 
-            font-family:FH Oscar Test Medium; 
-            height: 100%; 
-            margin: 0; 
-            padding: 0; 
-            /* Fondo sutil para que el Glassmorphism funcione */
-            background: linear-gradient(179deg, rgb(224 235 251 / 4%) 0%, #eff6ff 100% 60%);
-        }
-        .chat-window { 
-            height: 100%; 
-            width: 100vw; 
-            max-width: 600px; /* Limite el ancho para un mejor look de chat en escritorio */
-            margin: 0 auto;
-            display: flex; 
-            flex-direction: column; 
-            background-color: transparent; 
-            overflow: hidden 
-        }
-        
-        /* Burbujas de Chat */
-        .user-bubble { 
-            border-radius: 18px 18px 0 18px; 
-            max-width: 90%; 
-            background-color: black;
-            color: white;
-            padding: 0.6rem 1rem;
-            font-size: 0.95rem;
-        }
-        .model-bubble { 
-            border-radius: 18px 18px 18px 0; 
-            max-width: 90%;
-            padding: 0.6rem 1rem; 
-            background-color: rgb(140 154 178 / 6%); /* Gris claro/blanco sutil */
-            color: #1f2937;
-            font-size: 0.95rem;
-            white-space: pre-wrap; /* Mantiene saltos de línea de Gemini */
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        }
-
-        /* Barra de Acciones y Botones */
-        .action-bar-container { 
-            width: 100%; 
-            overflow-x: auto; 
-            -webkit-overflow-scrolling: touch; 
-            padding-top: 10px; 
-            padding-bottom: 5px;
-            
-        }
-        .action-btn { 
-            white-space: nowrap;
-            /* Estilos mínimos para que los botones de ficha se vean bien */
-            font-size: 0.75rem !important; 
-            padding: 0.5rem 0.75rem !important;
-            border-radius: 0.5rem; /* rounded-lg */
-        }
-        .chip-group-scroll { 
-            width: 100%; 
-            overflow-x: auto; 
-            -webkit-overflow-scrolling: touch; 
-            white-space: nowrap;
-            /* Scrollbar oculto */
-            scrollbar-width: none; 
-            -ms-overflow-style: none; 
-        }
-        .chip-group-scroll::-webkit-scrollbar {
-            display: none; 
-        }
-        
-        /* Estilo de la barra de chat (GLASSMOPRHISM) */
-        .map-search-bar {
-            background-color: #ffffffb8; 
-            border-radius: 20px;
-            box-shadow: 1px 2px 2px 2px #000, 0 2px 4px -2px rgba(0, 0, 0, 0.06); 
-            border: 1px solid #e5e7eb; 
+        /* Estilos del Chatbot */
+        .chat-container {
+            max-width: 600px;
+            height: 100vh;
+            margin: auto;
             display: flex;
-            align-items: center;
-            padding: 4px; 
-            width: 100%; 
-            box-sizing: border-box; 
+            flex-direction: column;
+            background-color: #f8f9fa; /* Fondo claro */
         }
-        
-        .map-input {
-            flex-grow: 1;
-            padding: 0.75rem 0.75rem; 
-            color: #1f2937; /* Color de texto más oscuro para visibilidad */
-            font-size: 1.125rem;
-            background: transparent;
-            border: none;
-            min-width: 0; 
-            outline: none !important;
-            box-shadow: none !important;
-        }
-        .go-button {
-            background-color: black;
+        .header {
+            background-color: #007bff; /* Azul primario */
             color: white;
-            font-size: 1rem;
+            padding: 1rem;
+            text-align: center;
+            font-size: 1.25rem;
             font-weight: bold;
-            border-radius: 15px;
-            padding: 0.5rem 1rem; 
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-            transition: opacity 0.2s;
-            flex-shrink: 0;
-            min-width: 60px;
-            height: 44px;
-            box-sizing: border-box;
-            margin-right: 4px;
-            outline: none !important;
         }
-        .go-button:hover:not(:disabled) {
-            opacity: 0.9;
+        .message-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none;  /* IE and Edge */
         }
-        .go-button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+        .message-container::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
         }
-        .go-button svg {
-            margin-right: 0.25rem;
-            width: 1.25rem; 
-            height: 1.25rem;
-            fill: currentColor;
+        
+        .user-bubble {
+            background-color: #007bff;
+            color: white;
+            border-radius: 18px 18px 0 18px;
+            max-width: 80%;
+            word-wrap: break-word;
+            font-size: 0.95rem;
+        }
+        .model-bubble {
+            background-color: #e9ecef; /* Gris claro */
+            color: #212529;
+            border-radius: 18px 18px 18px 0;
+            max-width: 90%;
+            word-wrap: break-word;
+            font-size: 0.95rem;
         }
 
-        /* --- Eliminación de Efecto Celeste/Ring/Highlight en TODOS los botones y chips --- */
-        * { -webkit-tap-highlight-color: transparent !important; }
-        .action-chip, .category-chip, .language-chip, .go-button, .map-input {
-            outline: none !important;
-            box-shadow: none !important;
-            --tw-ring-color: transparent !important;
+        .action-bar-container {
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+            /* Asegura que los botones se envuelvan si es necesario */
+            overflow-x: auto; 
+            max-width: 100%;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none;  /* IE and Edge */
         }
-        .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active, .go-button:focus, .go-button:active {
-            outline: none !important;
-            box-shadow: none !important;
-            --tw-ring-color: transparent !important;
+        .action-bar-container::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
         }
-        .hover\:bg-gray-300:active { background-color: #d1d5db; }
         
-        /* --- Efecto Ola y Transición para los Chips --- */
+        .action-btn {
+            font-size: 0.85rem;
+            padding-top: 0.6rem;
+            padding-bottom: 0.6rem;
+            /* Flex-shrink para evitar que se aplasten */
+            flex-shrink: 0; 
+        }
+
+        .timestamp {
+            font-size: 0.7rem;
+            color: #6c757d;
+            margin-top: 4px;
+        }
+
+        /* Estilos del Footer y Menú */
+        .footer {
+            background-color: white;
+            border-top: 1px solid #dee2e6;
+            padding: 0.5rem;
+            position: sticky;
+            bottom: 0;
+            z-index: 100;
+        }
+        .menu-action-chip {
+            cursor: pointer;
+            padding: 0.5rem 0.75rem;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 20px;
+            transition: background-color 0.2s, transform 0.1s;
+            font-size: 0.8rem;
+            white-space: nowrap; /* Evita que el texto se rompa */
+        }
+        .menu-action-chip:hover {
+            background-color: #e9ecef;
+        }
+        .menu-action-chip:active {
+            transform: scale(0.98);
+        }
+
+        /* Estilos de los Chips de Categoría y Lenguaje (Menú Flotante) */
+        .chip-group {
+            position: absolute;
+            bottom: 110px; /* Sobre la barra de menú */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 95%;
+            padding: 1rem;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            z-index: 50;
+        }
         .category-chip, .language-chip {
+            cursor: pointer;
+            padding: 0.6rem 1rem;
+            background-color: #007bff;
+            color: white;
+            border-radius: 10px;
+            transition: opacity 0.3s, transform 0.3s;
+            font-size: 0.9rem;
+            text-align: center;
             opacity: 0;
             transform: translateY(20px);
-            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
-            white-space: nowrap;
-            display: inline-flex;
-            align-items: center;
+        }
+        .category-chip:hover, .language-chip:hover {
+            background-color: #0056b3;
         }
         .visible-chip {
             opacity: 1;
             transform: translateY(0);
         }
 
-        /* Estilo para el Timestamp */
-        .timestamp {
-            font-size: 0.7rem; 
-            color: #9ca3af; 
-            margin-top: 2px;
-            margin-right: 8px; /* Ajuste para burbuja de usuario */
-            margin-left: 8px; /* Ajuste para burbuja de modelo */
+        /* Estilos del Input */
+        .input-group {
+            display: flex;
+            align-items: center;
+            background-color: white;
+            border: 1px solid #dee2e6;
+            border-radius: 25px;
+            padding: 0.25rem 0.5rem;
+            margin: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
-
-        /* AJUSTE CRÍTICO PARA EL NUEVO HEADER FLOTANTE */
-        #message-container {
+        #user-input {
             flex-grow: 1;
-            overflow-y: auto;
-            padding-top: 6rem; /* Deja espacio para el header fijo/flotante */
-            padding-bottom: 1rem;
-            scroll-behavior: smooth;
+            padding: 0.75rem 1rem;
+            border: none;
+            outline: none;
+            border-radius: 25px 0 0 25px;
+            font-size: 1rem;
         }
-        #btn-clear-top {
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
-            outline: none !important;
+        #go-button {
+            background-color: #28a745; /* Verde para acción */
+            color: white;
+            padding: 0.75rem 1.25rem;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-weight: 600;
+        }
+        #go-button:hover:not(:disabled) {
+            background-color: #218838;
+        }
+        #go-button:disabled {
+            background-color: #90ee90;
+            cursor: not-allowed;
         }
 
-        /* NUEVOS ESTILOS PARA LA TARJETA DE NOTIFICACIÓN */
+        /* Estilos del indicador de carga */
+        #loading-indicator {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Estilos de la Notificación (App Alert) */
         #app-alert-container {
             position: fixed;
-            top: 4.5rem; /* Ajustado debajo de la barra superior */
+            top: 65px; 
             left: 50%;
             transform: translateX(-50%);
-            z-index: 50;
-            max-width: 90%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            z-index: 1000;
+            width: 90%;
+            max-width: 500px;
         }
         .notification-card {
-            background-color: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.05);
-            color: #1f2937; 
-            padding: 12px 16px;
-            max-width: 100%; /* Ajuste a 100% del contenedor padre (que es 90% del viewport) */
-            min-width: 250px;
+            background-color: #fff3cd; 
+            color: #856404;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px;
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            margin-top: 10px; 
-            transform: translateY(-100%);
-            transition: transform 0.4s ease-out, opacity 0.4s ease-out;
-            opacity: 0;
-            pointer-events: auto; /* IMPORTANTE: Para que se pueda hacer clic en el botón de cerrar */
+            align-items: center;
+            transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+            transform: translateY(-20px);
         }
         .notification-card.show {
-            transform: translateY(0);
             opacity: 1;
-        }
-        .notification-card .message-content {
-            flex-grow: 1;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            line-height: 1.3;
+            transform: translateY(0);
         }
         .notification-card .close-btn {
             background: none;
             border: none;
-            color: #9ca3af; 
             font-size: 1.2rem;
             cursor: pointer;
-            margin-left: 15px;
-            padding: 0;
-            outline: none;
-            line-height: 1;
-            transition: color 0.2s;
+            color: #856404;
+            padding: 0 5px;
         }
-        .notification-card .close-btn:active { color: #4b5563; }
-
-        /* Botón de Notificaciones */
-        #btn-notifications {
-            background-color: white;
-            color: #4b5563; 
-            border: 1px solid #d1d5db; 
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
-            outline: none !important;
-            padding: 8px 12px; 
-            border-radius: 9999px; 
-            font-size: 1.1rem; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+        .notification-card[data-type="error"] {
+            background-color: #f8d7da; 
+            color: #721c24;
         }
-        #btn-notifications:hover { background-color: #f3f4f6; color: #1f2937; }
-        #btn-notifications:active { background-color: #e5e7eb; color: #000; }
+        .notification-card[data-type="error"] .close-btn {
+             color: #721c24;
+        }
 
-        /* Panel de Preferencias (overlay/modal) */
-        .notification-modal-overlay {
+
+        /* Estilos del Botón Flotante "Ver todos" */
+        #quick-action-full-list {
+            position: fixed;
+            bottom: 120px; 
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 200;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        #quick-action-full-list.hidden {
+            opacity: 0;
+            transform: translateX(-50%) translateY(30px);
+            pointer-events: none;
+        }
+        #btn-view-all-places {
+            background-color: #ffc107; /* Amarillo */
+            color: #343a40; /* Texto oscuro */
+            font-weight: bold;
+            padding: 12px 20px;
+            border-radius: 25px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            font-size: 0.9rem;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        #btn-view-all-places:hover {
+            background-color: #e0a800;
+        }
+        #btn-view-all-places:active {
+            transform: scale(0.98);
+        }
+
+        /* Estilos del Modal de Notificaciones */
+        .modal {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5); 
+            background-color: rgba(0, 0, 0, 0.5);
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 100; 
-            opacity: 0;
+            z-index: 1000;
             visibility: hidden;
-            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+            opacity: 0;
+            transition: visibility 0s, opacity 0.3s;
         }
-        .notification-modal-overlay.show {
-            opacity: 1;
+        .modal.show {
             visibility: visible;
+            opacity: 1;
         }
         .notification-panel {
             background-color: white;
+            padding: 2rem;
             border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2), 0 5px 10px rgba(0, 0, 0, 0.1);
             width: 90%;
-            max-width: 400px; 
-            transform: translateY(20px); 
-            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
-            opacity: 0;
-            padding: 20px;
-            pointer-events: auto; 
+            max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transform: scale(0.9);
+            transition: transform 0.3s ease-out;
         }
-        .notification-modal-overlay.show .notification-panel {
-            transform: translateY(0);
-            opacity: 1;
+        .modal.show .notification-panel {
+            transform: scale(1);
         }
-
-        /* Toggles (Switch) */
         .toggle-switch {
             position: relative;
             display: inline-block;
-            width: 40px; 
-            height: 20px; 
-            flex-shrink: 0;
+            width: 50px;
+            height: 28px;
         }
-        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
         .slider {
             position: absolute;
             cursor: pointer;
@@ -311,993 +323,920 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: #ccc; 
+            background-color: #ccc;
             transition: .4s;
-            border-radius: 20px; 
+            border-radius: 28px;
         }
         .slider:before {
             position: absolute;
             content: "";
-            height: 16px; 
-            width: 16px; 
-            left: 2px; 
-            bottom: 2px;
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
             background-color: white;
             transition: .4s;
-            border-radius: 50%; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2); 
+            border-radius: 50%;
         }
-        input:checked + .slider { background-color: #2563eb; }
-        input:focus + .slider { box-shadow: 0 0 1px #2563eb; }
-        input:checked + .slider:before { transform: translateX(20px); }
-
-        /* Info card dentro del panel */
-        .info-card-panel {
-            background-color: #eff6ff; 
-            color: #1e40af; 
-            border-left: 4px solid #3b82f6; 
-            border-radius: 4px;
-            padding: 12px;
-            font-size: 0.9rem;
-            display: flex; /* Cambiado de 'none' a 'flex' para ser visible */
-            align-items: flex-start;
-            margin-top: 20px;
+        input:checked + .slider {
+            background-color: #28a745;
         }
-        .info-card-panel span { margin-right: 8px; font-size: 1.1rem; }
-        
-        /* --- ESTILOS PARA LA PARTE INFERIOR --- */
-        .bottom-action-area {
-            border-top: 1px solid #e5e7eb;
-            background: linear-gradient(90deg, rgba(196, 228, 242, 0.35) 0%, #eff6ff 40%, #eff6ff 100%);
-            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
-            z-index: 10;
-            padding-bottom: 0; 
+        input:focus + .slider {
+            box-shadow: 0 0 1px #28a745;
         }
-
-        /* 🎨 FONDO PARA EL QUICK REPLIES CONTAINER */
-        #quick-replies-container {
-            border-top: none; 
-            background: transparent; 
-            padding: 0.5rem; 
-            box-shadow: none; 
-            z-index: 10;
+        input:checked + .slider:before {
+            transform: translateX(22px);
         }
-
-        /* --- ESTILOS GLASS CHIP (Menu Action Chip) --- */
-        .glass-chip {
-            background: linear-gradient(90deg, rgb(226 246 255 / 35%) 0%, #f9fafb 90%) !important; 
-            backdrop-filter: blur(8px); 
-            -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.8) !important; 
-            box-shadow: 
-                inset 0 1px 0 rgba(255, 255, 255, 0.9),
-                inset 0 -1px 0 rgba(0, 0, 0, 0.1);
-            color: #1f2937 !important; 
-            transition: all 0.2s ease-in-out;
-        }
-        .glass-chip:hover {
-            background: linear-gradient(90deg, rgb(226 246 255 / 50%) 0%, #ffffff 100%) !important;
-            box-shadow: 
-                0 2px 4px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 1),
-                inset 0 -1px 0 rgba(0, 0, 0, 0.2);
-        }
-        .glass-chip:active {
-            background: rgb(226 246 255 / 80%) !important;
-            box-shadow: none !important; 
-        }
-
-        #menu-actions .menu-action-chip { background-color: transparent !important; }
-        
     </style>
-    
-    <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
 </head>
 <body>
-    <div id="chat-window" class="chat-window h-screen w-full"> 
-        
-        <div class="fixed top-0 left-0 w-full z-50 p-4 pt-6 flex justify-between bg-transparent" style="max-width: 600px; left: 50%; transform: translateX(-50%);">
-            <div id="top-action-bar-left" class="flex items-center space-x-3">
-                <div id="btn-clear-top" class="action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-white text-red-700 cursor-pointer transition hover:bg-gray-100 shadow-md border border-red-300" data-action="CLEAR_HISTORY">❌ Borrar Chat</div>
-            </div>
-            <div id="top-action-bar-right" class="flex items-center space-x-3">
-                <button id="btn-notifications" class="action-chip flex items-center text-sm font-semibold cursor-pointer">🔔</button>
+
+    <div class="chat-container">
+
+        <div class="header">
+            <span>PROGRESO TOUR GUIDE</span>
+            <div class="flex space-x-2">
+                <button id="btn-clear-top" data-action="CLEAR_HISTORY" class="text-white hover:text-gray-200 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                </button>
+                <button id="btn-notifications" class="text-white hover:text-gray-200 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.405L4 17h5m6 0v2a3 3 0 11-6 0v-2m6 0H9" />
+                    </svg>
+                </button>
             </div>
         </div>
+
+        <div id="app-alert-container"></div>
         
-        <div id="app-alert-container" class="fixed w-full flex justify-center z-50 pointer-events-none"></div>
-
-        <div id="message-container" class="flex-grow overflow-y-auto p-4 flex flex-col">
+        <div id="message-container" class="message-container">
             </div>
-
-        <div id="loading-indicator" class="flex justify-start hidden p-4 pl-1 flex-shrink-0" style="margin-left:5px;margin-bottom:-22px;">
-            <dotlottie-wc src="https://lottie.host/65b2d1fc-9840-476c-867e-6236ce234b38/SwsGK4ZVOj.lottie" style="width: 150px; height: 50px;" autoplay loop></dotlottie-wc>
+        
+        <div id="category-chips-group" class="chip-group hidden grid grid-cols-2 gap-3">
+            <div class="category-chip" id="chip-salud" data-query-es="Muéstrame negocios de salud y estética en Nuevo Progreso" data-query-en="Show me health and beauty businesses in Nuevo Progreso">🏥 Salud & Estética</div>
+            <div class="category-chip" id="chip-compras" data-query-es="Muéstrame negocios de compras y tiendas en Nuevo Progreso" data-query-en="Show me shopping businesses and stores in Nuevo Progreso">🛍️ Compras</div>
+            <div class="category-chip" id="chip-entretenimiento" data-query-es="Muéstrame lugares de entretenimiento, bares o restaurantes en Nuevo Progreso" data-query-en="Show me entertainment spots, bars, or restaurants in Nuevo Progreso">🎺 Entretenimiento</div>
+            <div class="category-chip" id="chip-dental" data-query-es="Muéstrame las mejores 10 clínicas dentales en Nuevo Progreso" data-query-en="Show me the top 10 dental clinics in Nuevo Progreso">🦷 Top 10 Dental</div>
         </div>
-        
-        <div class="bottom-action-area flex-shrink-0 flex flex-col space-y-2">
-            
-            <div id="quick-action-full-list" class="px-4 pt-0 pb-2 hidden">
-                <div id="btn-view-all-places" class="action-chip flex items-center p-3 rounded-xl text-lg font-bold cursor-pointer transition glass-chip justify-center">
-                    ➡️ Ver todos los lugares
-                </div>
-            </div>
-            
-            <div id="quick-replies-container" class="quick-replies-container flex-shrink-0 flex flex-col space-y-2">
-                
-                <div id="category-chips-group" class="chip-group-scroll hidden">
-                    <div id="category-chips-list" class="inline-flex space-x-3 px-4 pb-3 border-b border-gray-200"> 
-                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-green-500 bg-green-50 text-green-700 cursor-pointer transition hover:bg-green-100" data-query-es="Quiero ver negocios de salud y estética" data-query-en="I want to see health and beauty businesses">🏥 Salud & Estética</div>
-                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-blue-500 bg-blue-50 text-blue-700 cursor-pointer transition hover:bg-blue-100" data-query-es="Lugares de compras y souvenirs" data-query-en="Shopping and souvenir places">🛍️ Compras</div>
-                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-purple-500 bg-purple-50 text-purple-700 cursor-pointer transition hover:bg-purple-100" data-query-es="¿Hay lugares de entretenimiento nocturno?" data-query-en="Are there night entertainment places?">🎺 Entretenimiento</div>
-                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-yellow-500 bg-yellow-50 text-yellow-700 cursor-pointer transition hover:bg-yellow-100" data-query-es="Dame una lista de las 10 mejores clínicas dentales" data-query-en="Give me a list of the top 10 dental clinics">🦷 Top 10 Dental</div>
-                    </div>
-                </div>
 
-                <div id="language-chips-group" class="chip-group-scroll hidden">
-                    <div class="inline-flex space-x-3 px-4 pb-3 border-b border-gray-200"> 
-                        <div class="language-chip flex items-center p-2 rounded-full text-sm font-semibold border border-gray-400 bg-white text-gray-800 cursor-pointer transition hover:bg-gray-100" data-lang="es">🇲🇽 Español</div>
-                        <div class="language-chip flex items-center p-2 rounded-full text-sm font-semibold border border-gray-400 bg-white text-gray-800 cursor-pointer transition hover:bg-gray-100" data-lang="en">🇺🇸 English</div>
-                    </div>
-                </div>
-                
-                <div id="menu-actions" class="chip-group-scroll">
-                    <div class="inline-flex space-x-3 px-4 pt-2">
-                        <div id="btn-categorias" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="CATEGORIES">📂 Categorías</div>
-                        <div id="btn-lenguaje" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="LANGUAGE">🌐 Lenguaje</div>
-                        <div id="btn-comollegar" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="MAPS" data-query-es="¿Cómo llegar a Nuevo Progreso desde EE. UU.?" data-query-en="How to get to Nuevo Progreso from the US?">📍 Cómo Llegar</div>
-                        <div id="btn-info" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="INFO" data-query-es="Cuéntame sobre Nuevo Progreso y sus atracciones principales." data-query-en="Tell me about Nuevo Progreso and its main attractions.">ℹ️ Info</div>
-                    </div>
-                </div>
+        <div id="language-chips-group" class="chip-group hidden grid grid-cols-2 gap-3">
+            <div class="language-chip" data-lang="es">🇪🇸 Español</div>
+            <div class="language-chip" data-lang="en">🇺🇸 English</div>
+        </div>
+
+        <div id="quick-action-full-list" class="hidden">
+            <button id="btn-view-all-places" class="block">
+                ➡️ Ver todos los 40 lugares
+            </button>
+        </div>
+
+
+        <div class="footer">
+            <div class="input-group">
+                <input type="text" id="user-input" placeholder="Pregúntale al mapa" autocomplete="off">
+                <div id="loading-indicator" class="hidden"></div>
+                <button id="go-button">
+                    <span id="go-text">Ir</span>
+                </button>
             </div>
             
-            <div class="p-4 flex-shrink-0 pt-2"> 
-                <div class="map-search-bar w-full">
-                    <input type="text" id="user-input" class="map-input focus:outline-none focus:ring-0" placeholder="Ask the map">
-                    
-                    <button id="go-button" class="go-button transition hover:opacity-90 disabled:opacity-50">
-                        <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 122.88 122.88" class="h-5 w-5"><g><path class="st0" d="M62.43,122.88h-1.98c0-16.15-6.04-30.27-18.11-42.34C30.27,68.47,16.16,62.43,0,62.43v-1.98 c16.16,0,30.27-6.04,42.34-18.14C54.41,30.21,60.45,16.1,60.45,0h1.98c0,16.15,6.04,30.27,18.11,42.34 c12.07,12.07,26.18,18.11,42.34,18.11v1.98c-16.15,0-30.27,6.04-42.34,18.11C68.47,92.61,62.43,106.72,62.43,122.88L62.43,122.88z"/></g></svg>
-                        <span id="go-text">Ir</span> 
-                    </button>
-                </div>
+            <div id="menu-actions" class="flex justify-between items-center px-2 py-1 overflow-x-auto space-x-2">
+                <button id="btn-categorias" class="menu-action-chip" data-action="CATEGORIES">📂 Categorías</button>
+                <button id="btn-lenguaje" class="menu-action-chip" data-action="LANGUAGE">🌐 Lenguaje</button>
+                <button id="btn-comollegar" class="menu-action-chip" data-action="GET_THERE" data-query-es="dame direcciones de mi ubicación a Nuevo Progreso" data-query-en="give me directions from my current location to Nuevo Progreso">📍 Cómo Llegar</button>
+                <button id="btn-info" class="menu-action-chip" data-action="INFO" data-query-es="que puedes hacer por mi" data-query-en="what can you do for me">ℹ️ Info</button>
             </div>
         </div>
     </div>
     
-    <div id="notification-preferences-modal" class="notification-modal-overlay">
+    <div id="notification-preferences-modal" class="modal">
         <div class="notification-panel">
-            <h3 class="text-xl font-bold mb-2 text-gray-900">Preferencias de Notificaciones</h3>
-            <p class="text-sm text-gray-600 mb-6">Elige qué notificaciones quieres recibir.</p>
-
+            <h3 class="text-xl font-bold mb-4">Preferencias de Notificación</h3>
+            
             <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <label for="toggle-news" class="text-gray-700">Alertas de Conversación (Ej: Historial borrado)</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-news">
+                        <span class="slider"></span>
+                    </label>
+                </div>
                 
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="font-semibold text-gray-800">Noticias de Interfaz</p>
-                        <p class="text-sm text-gray-500">Alertas de cambios de idioma, historial y otros eventos de la aplicación. (Recomendado)</p>
-                    </div>
+                <div class="flex justify-between items-center">
+                    <label for="toggle-reminders" class="text-gray-700">Alertas de Ficha (Ej: Ficha verificada)</label>
                     <label class="toggle-switch">
-                        <input type="checkbox" id="toggle-news" checked data-pref="news">
+                        <input type="checkbox" id="toggle-reminders">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                
+                <div class="flex justify-between items-center">
+                    <label for="toggle-promotions" class="text-gray-700">Promociones y Ofertas (Próximamente)</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-promotions" disabled>
                         <span class="slider"></span>
                     </label>
                 </div>
 
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="font-semibold text-gray-800">Alertas de Ficha</p>
-                        <p class="text-sm text-gray-500">Notificaciones de confirmación cuando se muestra información de una ficha de lugar o categoría.</p>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="toggle-reminders" checked data-pref="reminders">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-
-                <div class="flex items-center justify-between opacity-50 cursor-not-allowed">
-                    <div>
-                        <p class="font-semibold text-gray-800">Promociones y Ofertas</p>
-                        <p class="text-sm text-gray-500">Recibe notificaciones sobre promociones especiales. (Próximamente)</p>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="toggle-promotions" disabled data-pref="promotions">
-                        <span class="slider"></span>
-                    </label>
-                </div>
             </div>
 
-            <div class="info-card-panel">
-                <span>ℹ️</span> Recuerda que las **alertas de error** (❌) siempre se mostrarán, independientemente de tus preferencias, para garantizar la usabilidad.
-            </div>
-
-            <div class="flex justify-end space-x-3 mt-8">
-                <button id="btn-discard-changes" class="py-2 px-4 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition">Descartar</button>
-                <button id="btn-apply-changes" class="py-2 px-4 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition">Aplicar Cambios</button>
+            <div class="mt-8 flex justify-end space-x-3">
+                <button id="btn-discard-changes" class="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition">
+                    Descartar
+                </button>
+                <button id="btn-apply-changes" class="bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition">
+                    Aplicar Cambios
+                </button>
             </div>
         </div>
     </div>
     
-    
-<script>
-    // --- BLOQUE JAVASCRIPT: SETUP Y UTILIDADES ---
-    
-    // **NOTA: Debe coincidir con el endpoint de Vercel/backend**
-    const BACKEND_URL = "/api/chat"; 
-    const MAX_CHAT_RESULTS = 4; // Límite de resultados mostrado en texto plano (DEBE COINCIDIR CON CHAT.JS)
-    
-    let chatHistory = [];
-    let currentLanguage = 'es'; 
-    let categoriesVisible = false; 
-    let languageMenuVisible = false; 
-    
-    // VARIABLES GLOBALES PARA EL PROTOCOLO DE RECOMENDACIÓN LOCAL
-    let lastTotalCount = 0; 
-    let lastApiQuery = null; 
 
-
-    // Referencias a Elementos del DOM (Conservados)
-    const inputElement = document.getElementById('user-input');
-    const sendButton = document.getElementById('go-button'); 
-    const messageContainer = document.getElementById('message-container');
-    const loadingIndicator = document.getElementById('loading-indicator');
-    const appAlertContainer = document.getElementById('app-alert-container');
-    const categoryChipsGroup = document.getElementById('category-chips-group');
-    const languageChipsGroup = document.getElementById('language-chips-group');
-    const categoryChips = document.querySelectorAll('#category-chips-group .category-chip');
-    const languageChips = document.querySelectorAll('#language-chips-group .language-chip');
-    const menuActionChips = document.querySelectorAll('#menu-actions .menu-action-chip');
-    const btnClearTop = document.getElementById('btn-clear-top'); 
-    
-    // NUEVAS REFERENCIAS A ELEMENTOS DEL DOM para el panel de notificaciones
-    const btnNotifications = document.getElementById('btn-notifications');
-    const notificationModal = document.getElementById('notification-preferences-modal');
-    const notificationPanel = document.querySelector('#notification-preferences-modal .notification-panel');
-    const toggleNews = document.getElementById('toggle-news');
-    const toggleReminders = document.getElementById('toggle-reminders');
-    const togglePromotions = document.getElementById('toggle-promotions'); 
-    const btnDiscardChanges = document.getElementById('btn-discard-changes');
-    const btnApplyChanges = document.getElementById('btn-apply-changes');
-
-    // NUEVAS REFERENCIAS PARA EL BOTÓN DE ACCIÓN RÁPIDA "VER TODOS LOS LUGARES"
-    const quickActionFullList = document.getElementById('quick-action-full-list');
-    const btnViewAllPlaces = document.getElementById('btn-view-all-places');
-
-
-    // Objeto de Traducción y textos de chips (SIN CAMBIOS)
-    const UI_STRINGS = {
-        es: {
-            header: "PROGRESO TOUR GUIDE",
-            placeholder: "Pregúntale al mapa",
-            goButton: "Ir",
-            categories: "📂 Categorías",
-            language: "🌐 Lenguaje",
-            getThere: "📍 Cómo Llegar",
-            info: "ℹ️ Info",
-            alertStructured: (name) => `¡Ficha verificada de ${name}!`,
-            alertCategory: (name) => `Resumen de la categoría ${name}.`,
-            chipHealth: "🏥 Salud & Estética",
-            chipShopping: "🛍️ Compras",
-            chipEntertainment: "🎺 Entretenimiento",
-            chipDental: "🦷 Top 10 Dental",
-        },
-        en: {
-            header: "PROGRESO TOUR GUIDE",
-            placeholder: "Ask the map",
-            goButton: "Go",
-            categories: "📂 Categories",
-            language: "🌐 Language",
-            getThere: "📍 How to get there",
-            info: "ℹ️ Info",
-            alertStructured: (name) => `Verified card for ${name}!`,
-            alertCategory: (name) => `Summary for ${name} category.`,
-            chipHealth: "🏥 Health & Beauty",
-            chipShopping: "🛍️ Shopping",
-            chipEntertainment: "🎺 Entertainment",
-            chipDental: "🦷 Top 10 Dental",
-        }
-    };
-
-    // Estado inicial de las preferencias de notificación
-    let notificationPreferences = {
-        news: true,      // Alertas de interfaz, historial, etc.
-        reminders: true, // Alertas estructuradas (fichas de lugar/categoría)
-        promotions: false
-    };
-
-
-    // Inicialización del estado
-    if (inputElement) inputElement.disabled = false;
-    if (sendButton) sendButton.disabled = false;
-
-    // --- Funciones de PERSISTENCIA y CONTROL DE CHAT ---
-    
-    function saveHistory() {
-        try {
-            localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
-        } catch (e) {
-            console.error("Error al guardar el historial en localStorage", e);
-        }
-    }
-
-    function clearChatHistory() {
-        vibrateDevice();
-        chatHistory = []; 
-        localStorage.removeItem('chatHistory'); 
+    <script>
+        // --- BLOQUE JAVASCRIPT: SETUP Y UTILIDADES ---
         
-        if (messageContainer) messageContainer.innerHTML = ''; 
-        // ALERTA DE CLEAR HISTORY USA 'news'
-        alertUser(currentLanguage === 'es' ? '¡Conversación eliminada! Empecemos de cero. 👋' : 'Conversation cleared! Let\'s start fresh. 👋', 'i', 'news');
+        // **NOTA: Debe coincidir con el endpoint de Vercel/backend**
+        const BACKEND_URL = "/api/chat"; 
+        const MAX_CHAT_RESULTS = 4; // Límite de resultados mostrado en texto plano (DEBE COINCIDIR CON CHAT.JS)
         
-        scrollToBottom();
-        // OCULTAR BOTÓN DE ACCIÓN RÁPIDA AL LIMPIAR
-        quickActionFullList.classList.add('hidden');
-        lastTotalCount = 0;
-        lastApiQuery = null;
-    }
-    
-    function loadHistory() {
-        let loaded = false;
-        try {
-            const savedHistory = localStorage.getItem('chatHistory');
-            if (savedHistory) {
-                const loadedHistory = JSON.parse(savedHistory);
-                if (Array.isArray(loadedHistory) && loadedHistory.length > 0) {
-                    chatHistory = loadedHistory; 
-                    renderChat(); 
-                    scrollToBottom();
-                    loaded = true;
-                }
+        let chatHistory = [];
+        let currentLanguage = 'es'; 
+        let categoriesVisible = false; 
+        let languageMenuVisible = false; 
+        
+        // VARIABLES GLOBALES PARA EL PROTOCOLO DE RECOMENDACIÓN LOCAL
+        let lastTotalCount = 0; 
+        let lastApiQuery = null; 
+
+
+        // Referencias a Elementos del DOM 
+        const inputElement = document.getElementById('user-input');
+        const sendButton = document.getElementById('go-button'); 
+        const messageContainer = document.getElementById('message-container');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const appAlertContainer = document.getElementById('app-alert-container');
+        const categoryChipsGroup = document.getElementById('category-chips-group');
+        const languageChipsGroup = document.getElementById('language-chips-group');
+        const categoryChips = document.querySelectorAll('#category-chips-group .category-chip');
+        const languageChips = document.querySelectorAll('#language-chips-group .language-chip');
+        const menuActionChips = document.querySelectorAll('#menu-actions .menu-action-chip');
+        const btnClearTop = document.getElementById('btn-clear-top'); 
+        
+        // NUEVAS REFERENCIAS A ELEMENTOS DEL DOM para el panel de notificaciones
+        const btnNotifications = document.getElementById('btn-notifications');
+        const notificationModal = document.getElementById('notification-preferences-modal');
+        const notificationPanel = document.querySelector('#notification-preferences-modal .notification-panel');
+        const toggleNews = document.getElementById('toggle-news');
+        const toggleReminders = document.getElementById('toggle-reminders');
+        const togglePromotions = document.getElementById('toggle-promotions'); 
+        const btnDiscardChanges = document.getElementById('btn-discard-changes');
+        const btnApplyChanges = document.getElementById('btn-apply-changes');
+
+        // NUEVAS REFERENCIAS PARA EL BOTÓN DE ACCIÓN RÁPIDA "VER TODOS LOS LUGARES"
+        const quickActionFullList = document.getElementById('quick-action-full-list');
+        const btnViewAllPlaces = document.getElementById('btn-view-all-places');
+
+
+        // Objeto de Traducción y textos de chips
+        const UI_STRINGS = {
+            es: {
+                header: "PROGRESO TOUR GUIDE",
+                placeholder: "Pregúntale al mapa",
+                goButton: "Ir",
+                categories: "📂 Categorías",
+                language: "🌐 Lenguaje",
+                getThere: "📍 Cómo Llegar",
+                info: "ℹ️ Info",
+                alertStructured: (name) => `¡Ficha verificada de ${name}!`,
+                alertCategory: (name) => `Resumen de la categoría ${name}.`,
+                chipHealth: "🏥 Salud & Estética",
+                chipShopping: "🛍️ Compras",
+                chipEntertainment: "🎺 Entretenimiento",
+                chipDental: "🦷 Top 10 Dental",
+            },
+            en: {
+                header: "PROGRESO TOUR GUIDE",
+                placeholder: "Ask the map",
+                goButton: "Go",
+                categories: "📂 Categories",
+                language: "🌐 Language",
+                getThere: "📍 How to get there",
+                info: "ℹ️ Info",
+                alertStructured: (name) => `Verified card for ${name}!`,
+                alertCategory: (name) => `Summary for ${name} category.`,
+                chipHealth: "🏥 Health & Beauty",
+                chipShopping: "🛍️ Shopping",
+                chipEntertainment: "🎺 Entertainment",
+                chipDental: "🦷 Top 10 Dental",
             }
-        } catch (e) {
-            console.error("Error al cargar o parsear el historial de localStorage", e);
-            chatHistory = []; 
-        }
-        if (!loaded) {
-            chatHistory = []; 
-        }
-        return loaded;
-    }
-
-    // NUEVAS FUNCIONES PARA LA PERSISTENCIA DE NOTIFICACIONES
-    function saveNotificationPreferences() {
-        try {
-            localStorage.setItem('notificationPreferences', JSON.stringify(notificationPreferences));
-            alertUser('Preferencias de notificaciones guardadas. ✅', 'i', 'news');
-        } catch (e) {
-            console.error("Error al guardar las preferencias de notificación:", e);
-        }
-    }
-
-    function loadNotificationPreferences() {
-        try {
-            const savedPrefs = localStorage.getItem('notificationPreferences');
-            if (savedPrefs) {
-                notificationPreferences = JSON.parse(savedPrefs);
-            }
-            if (toggleNews) toggleNews.checked = notificationPreferences.news;
-            if (toggleReminders) toggleReminders.checked = notificationPreferences.reminders;
-        } catch (e) {
-            console.error("Error al cargar las preferencias de notificación:", e);
-        }
-    }
-
-    // --- Funciones de utilidad de tiempo (SIN CAMBIOS) ---
-    function formatTime(date) {
-        if (!date) return '';
-        let hours = date.getHours();
-        const minutes = date.getMinutes();
-        const ampm = hours >= 12 ? 'pm' : 'am';
-        hours = hours % 12;
-        hours = hours ? hours : 12; 
-        const minutesStr = minutes < 10 ? '0'+minutes : minutes;
-        return hours + ':' + minutesStr + ' ' + ampm;
-    }
-
-    // FUNCIÓN DE ALERTA MEJORADA CON CONTROL DE PREFERENCIAS
-    function alertUser(m, t='i', preferenceType = 'news') {
-        
-        // 🛑 Control de Preferencias
-        if (t !== 'error' && !notificationPreferences[preferenceType]) {
-            console.log(`Notificación de tipo "${preferenceType}" deshabilitada por el usuario. Mensaje: ${m}`);
-            return; 
-        }
-
-        // --- Limpieza Inmediata ---
-        if (appAlertContainer) {
-            const existingAlert = appAlertContainer.querySelector('.notification-card');
-            if (existingAlert) {
-                existingAlert.remove(); 
-            }
-        }
-        
-        const hideAlert = (alertElement) => {
-            if (!alertElement || !alertElement.parentNode) return;
-            alertElement.classList.remove('show');
-            setTimeout(() => {
-                if (alertElement.parentNode) alertElement.remove();
-            }, 400); 
         };
 
-        const a = document.createElement('div');
-        const icon = (t === 'error') 
-            ? '❌' 
-            : (t === 'i' ? 'ℹ️' : '✅'); 
+        // Estado inicial de las preferencias de notificación
+        let notificationPreferences = {
+            news: true,      
+            reminders: true, 
+            promotions: false
+        };
 
-        a.className = 'notification-card opacity-0 pointer-events-auto';
-        a.innerHTML = `
-            <div class="message-content">
-                <span class="mr-2">${icon}</span> 
-                <span>${m}</span>
-            </div>
-            <button class="close-btn" aria-label="Cerrar notificación">×</button>
-        `;
 
-        if (appAlertContainer) appAlertContainer.appendChild(a);
+        // Inicialización del estado
+        if (inputElement) inputElement.disabled = false;
+        if (sendButton) sendButton.disabled = false;
 
-        setTimeout(() => {
-            a.classList.add('show');
-        }, 10); 
-
-        const closeButton = a.querySelector('.close-btn');
-        closeButton.addEventListener('click', () => {
-            hideAlert(a);
-        });
+        // --- Funciones de PERSISTENCIA y CONTROL DE CHAT ---
         
-        setTimeout(() => {
-            hideAlert(a);
-        }, 4000);
-    }
-    
-    function scrollToBottom() { 
-        if (messageContainer) messageContainer.scrollTop = messageContainer.scrollHeight; 
-    }
-    
-    function toggleInput(d) {
-        if (inputElement) inputElement.disabled = d;
-        if (sendButton) sendButton.disabled = d;
-        if (loadingIndicator) loadingIndicator.classList.toggle('hidden', !d);
-        if (inputElement) inputElement.placeholder = d ? "" : UI_STRINGS[currentLanguage].placeholder;
-    }
-
-    // --- FUNCIONES DE INTERACCIÓN ---
-
-    function vibrateDevice() {
-        if ("vibrate" in navigator) {
-            navigator.vibrate(50); // Vibración más corta
-        }
-    }
-    
-    function hideChipGroup(groupElement, chipElements) {
-        groupElement.classList.add('hidden');
-        chipElements.forEach(chip => {
-            chip.classList.remove('visible-chip');
-        });
-    }
-
-    function showChipGroupWithWave(groupElement, chipElements) {
-        groupElement.classList.remove('hidden');
-        chipElements.forEach((chip, index) => {
-            chip.style.transition = 'none';
-            chip.classList.remove('visible-chip');
-
-            void chip.offsetWidth; 
-
-            setTimeout(() => {
-                chip.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
-                chip.classList.add('visible-chip');
-            }, index * 80); // Velocidad ligeramente más rápida
-        });
-    }
-
-    function setInterfaceLanguage(lang) {
-        const langChanged = currentLanguage !== lang;
-        currentLanguage = lang;
-        const strings = UI_STRINGS[lang];
-        
-        hideChipGroup(languageChipsGroup, languageChips);
-        languageMenuVisible = false;
-
-        inputElement.placeholder = strings.placeholder;
-        document.getElementById('go-text').textContent = strings.goButton; 
-
-        document.getElementById('btn-categorias').textContent = strings.categories;
-        document.getElementById('btn-lenguaje').textContent = strings.language;
-        document.getElementById('btn-comollegar').textContent = strings.getThere;
-        document.getElementById('btn-info').textContent = strings.info;
-
-        const categoryChipTexts = [strings.chipHealth, strings.chipShopping, strings.chipEntertainment, strings.chipDental];
-        categoryChips.forEach((chip, index) => {
-            chip.textContent = categoryChipTexts[index];
-        });
-        
-        // Actualiza el texto del botón flotante si está visible
-        if (!quickActionFullList.classList.contains('hidden') && lastTotalCount > 0) {
-             btnViewAllPlaces.innerHTML = currentLanguage === 'es' 
-                ? `➡️ Ver todos los ${lastTotalCount} lugares` 
-                : `➡️ View all ${lastTotalCount} places`;
-        }
-
-
-        if (langChanged) {
-            alertUser(`Interfaz y conversación cambiadas a ${lang === 'es' ? 'Español' : 'English'}`, 'i', 'news');
-        }
-    }
-
-    function handleMenuAction(actionChip) {
-        const action = actionChip.getAttribute('data-action');
-        const lang = currentLanguage;
-        // La acción GET_THERE en el HTML antiguo ahora se mapea a MAPS en el nuevo JS
-        const query = action === 'GET_THERE' ? actionChip.getAttribute(`data-query-${lang}`) : actionChip.getAttribute(`data-query-${lang}`);
-
-        vibrateDevice(); 
-
-        // Siempre ocultar el botón de lista completa al hacer una acción de menú
-        quickActionFullList.classList.add('hidden');
-        lastTotalCount = 0;
-        lastApiQuery = null;
-
-
-        if (action !== 'CATEGORIES' && categoriesVisible) {
-            hideChipGroup(categoryChipsGroup, categoryChips);
-            categoriesVisible = false;
-        }
-        if (action !== 'LANGUAGE' && languageMenuVisible) {
-            hideChipGroup(languageChipsGroup, languageChips);
-            languageMenuVisible = false;
-        }
-        
-        if (notificationModal.classList.contains('show')) {
-            notificationModal.classList.remove('show');
-        }
-
-
-        if (action === 'CATEGORIES') {
-            if (categoriesVisible) {
-                hideChipGroup(categoryChipsGroup, categoryChips);
-                categoriesVisible = false;
-            } else {
-                showChipGroupWithWave(categoryChipsGroup, categoryChips);
-                categoriesVisible = true;
-            }
-        } else if (action === 'LANGUAGE') {
-            if (languageMenuVisible) {
-                hideChipGroup(languageChipsGroup, languageChips);
-                languageMenuVisible = false;
-            } else {
-                showChipGroupWithWave(languageChipsGroup, languageChips);
-                languageMenuVisible = true;
-            }
-        } else if (action === 'CLEAR_HISTORY') { 
-            clearChatHistory();
-            return;
-        } else {
-            if (query) {
-                handleSend(query); 
-                if (categoriesVisible) { hideChipGroup(categoryChipsGroup, categoryChips); categoriesVisible = false; }
-                if (languageMenuVisible) { hideChipGroup(languageChipsGroup, languageChips); languageMenuVisible = false; }
+        function saveHistory() {
+            try {
+                localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+            } catch (e) {
+                console.error("Error al guardar el historial en localStorage", e);
             }
         }
-    }
-    
-    // Función para crear las burbujas de mensaje (User/Model) - CON CORRECCIONES DE URL
-    function createMessageBubble(m) {
-        const w = document.createElement('div');
-        
-        const timeStr = m.timestamp ? formatTime(m.timestamp) : '';
-        const timeSpan = timeStr ? `<span class="timestamp">${timeStr}</span>` : '';
 
-        if (m.role === 'user') { 
-            w.className = 'flex justify-end mb-2'; 
-            w.innerHTML = `
-                <div class="flex flex-col items-end">
-                    <div class="user-bubble p-3 shadow-md">${m.text}</div>
-                    ${timeSpan}
-                </div>
-            `; 
-        } 
-        else if (m.role === 'model') {
-            w.className = 'flex flex-col justify-start w-full mb-2';
-            let content = '';
-
-            if (m.isStructured) { 
-                
-                const isPlace = m.type === 'place';
-                const isCategory = m.type === 'category';
-
-                const entityName = isPlace 
-                    ? (m.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
-                    : (m.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
-                
-                // 🛑 CORRECCIÓN CRÍTICA DE URL: Asegura el fallback de URL de Google Maps/Search.
-                const queryEncoded = encodeURIComponent(entityName + " Nuevo Progreso Tamps");
-                
-                let directionsUrl = '#';
-                let searchUrl = `https://www.google.com/search?q=${queryEncoded}`;
-                let phoneUrl = null;
-                let reviewUrl = null;
-                
-                if (isPlace) {
-                    // Fallback de URL corregido para Google Maps
-                    directionsUrl = m.mapUrl || `https://www.google.com/maps/search/?api=1&query=${queryEncoded}`;
-                    
-                    phoneUrl = m.placePhone ? `tel:${m.placePhone}` : `javascript:alert('${currentLanguage === 'es' ? 'Número no disponible.' : 'Number unavailable.'}')`;
-                    reviewUrl = m.reviewUrl || directionsUrl; 
-                    
-                } else if (isCategory) {
-                    // Fallback de URL corregido para Categorías 
-                    directionsUrl = m.mapUrl || `https://www.google.com/maps/search/?api=1&query=${queryEncoded}`;
-                }
-                // -------------------------------------------------------------
-                
-                // El contenido de la burbuja usa la propiedad 'description' si existe para el texto.
-                content = `<div class="model-bubble p-3 shadow-md">${m.text || m.description}</div>`;
-                
-                let actionsHTML = `
-                    <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition flex-shrink-0">${currentLanguage === 'es' ? 'Ver en Mapa 🗺️' : 'View on Map 🗺️'}</a>
-                `;
-
-                if (isPlace) {
-                    const phoneAvailable = !!m.placePhone;
-                    const reviewsAvailable = !!m.reviewUrl;
-                    
-                    // Mostrar Call solo si el backend lo permite
-                    if (phoneAvailable) {
-                        actionsHTML += `
-                            <a href="${phoneUrl}" class="action-btn bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0">
-                                ${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}
-                            </a>
-                        `;
-                    }
-                    
-                    if (reviewsAvailable) {
-                        actionsHTML += `
-                            <a href="${reviewUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-500 transition flex-shrink-0">
-                                ${currentLanguage === 'es' ? 'Reseñas ⭐' : 'Reviews ⭐'}
-                            </a>
-                        `;
-                    }
-                }
-
-                actionsHTML += `
-                    <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-700 transition flex-shrink-0">${currentLanguage === 'es' ? 'Buscar en Google 🔍' : 'Search on Google 🔍'}</a>
-                `;
-
-                const actionsBar = `
-                    <div class="action-bar-container">
-                        <div class="inline-flex space-x-3 p-1">
-                            ${actionsHTML}
-                        </div>
-                    </div>
-                `;
-                
-                w.innerHTML = `
-                    <div class="flex flex-col items-start">
-                        ${content}
-                        ${actionsBar}
-                        ${timeSpan}
-                    </div>
-                `;
-
-            } else {
-                content = `<div class="model-bubble p-3 shadow-md">${m.text || ''}</div>`;
-                w.innerHTML = `
-                    <div class="flex flex-col items-start">
-                        ${content}
-                        ${timeSpan}
-                    </div>
-                `;
-            }
-        }
-        return w;
-    }
-
-    function renderChat() {
-        if (messageContainer) {
-            messageContainer.innerHTML = '';
-            chatHistory.forEach((m) => { messageContainer.appendChild(createMessageBubble(m)); });
-            scrollToBottom();
-        }
-    }
-
-    // --- CÓDIGO DE CONEXIÓN AL BACKEND ---
-
-    async function getGeminiResponse(userPrompt, chatHistoryForAPI) {
-        
-        // Mapea el historial para enviar
-        const historyForAPI = chatHistoryForAPI.map(m => {
-            // Usa 'description' (para structured) o 'text' (para normal)
-            const textContent = (m.isStructured && m.description) ? m.description : m.text;
-            
-            return {
-                role: m.role,
-                parts: [{ text: textContent }]
-            };
-        });
-
-        try {
-            const response = await fetch(BACKEND_URL, { 
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    history: historyForAPI, 
-                    userPrompt: userPrompt, 
-                    currentLanguage: currentLanguage 
-                }) 
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`Error HTTP: ${response.status}. Mensaje: ${errorData.error || 'El servicio de chat falló.'}`);
-            }
-
-            const data = await response.json();
-            // El backend devuelve {responseText, isLocalRecommendation, totalCount, apiQueryForChip}
-            return data; 
-
-        } catch (error) {
-            console.error("Fallo del Proxy o API de Gemini:", error);
-            alertUser(`Error de conexión: ${error.message}.`, 'error');
-            return null;
-        }
-    }
-
-    // --- Lógica Principal del Chatbot (handleSend) ---
-    async function handleSend(userPromptInput = null) {
-        const userPrompt = userPromptInput || inputElement.value.trim();
-        if (!userPrompt) return;
-        
-        hideChipGroup(categoryChipsGroup, categoryChips);
-        categoriesVisible = false;
-        hideChipGroup(languageChipsGroup, languageChips);
-        languageMenuVisible = false;
-
-        // Limpiar el estado del chip de lista completa al iniciar el envío
-        quickActionFullList.classList.add('hidden');
-        lastTotalCount = 0;
-        lastApiQuery = null;
-
-        if (typeof toggleInput === 'function') toggleInput(true);
-        
-        // 1. Agregar mensaje de usuario al historial
-        chatHistory.push({ role: 'user', text: userPrompt, timestamp: new Date() });
-        if (typeof renderChat === 'function') renderChat();
-        inputElement.value = '';
-
-        // Limitar historial enviado a la API para ahorrar tokens
-        const MAX_HISTORY_TO_SEND = 10; 
-        const previousHistory = chatHistory.slice(0, -1); 
-        const startIndex = Math.max(0, previousHistory.length - MAX_HISTORY_TO_SEND);
-        const limitedHistory = previousHistory.slice(startIndex);
-        
-        const responseData = await getGeminiResponse(userPrompt, limitedHistory);
-        
-        if (!responseData) {
-            if (typeof toggleInput === 'function') toggleInput(false);
-            return;
-        }
-        
-        const modelResponseText = responseData.responseText;
-
-        let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date(), isStructured: false };
-        let totalCount = responseData.totalCount || 0; 
-        let apiQuery = responseData.apiQueryForChip || null; 
-        let isLocalRecommendation = responseData.isLocalRecommendation || false;
-
-
-        try {
-            // 1. Manejo de Recomendación Local (isLocalRecommendation)
-            if (isLocalRecommendation === true) {
-                
-                finalMessage.text = modelResponseText; 
-                
-            } 
-            // 2. Manejo de Respuesta Estructurada (Fichas)
-            else {
-                // Buscamos JSON en el texto (estructura forzada por Gemini)
-                const jsonStart = modelResponseText.indexOf('{');
-                const jsonEnd = modelResponseText.lastIndexOf('}');
-                
-                if (jsonStart !== -1 && jsonEnd !== -1) {
-                    const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
-                    const parsedJson = JSON.parse(jsonString);
-
-                    if (parsedJson.isStructured === true) {
-                        
-                        // Si es estructurada, extraemos la data para la ficha
-                        const isPlace = parsedJson.type === 'place';
-                        
-                        finalMessage = {
-                            role: 'model',
-                            isStructured: true,
-                            type: parsedJson.type, 
-                            text: parsedJson.description || modelResponseText, 
-                            placeName: isPlace ? parsedJson.placeName : null, 
-                            placePhone: isPlace ? (parsedJson.placePhone || null) : null, 
-                            mapUrl: parsedJson.mapUrl || null,
-                            reviewUrl: isPlace ? (parsedJson.reviewUrl || null) : null,
-                            categoryName: !isPlace ? parsedJson.categoryName : null,
-                            timestamp: finalMessage.timestamp,
-                            // Guardamos la descripción por separado si existe, para el mapeo del historial
-                            description: parsedJson.description || modelResponseText
-                        };
-                    } 
-                } 
-                // Si no hay JSON o falla el parseo, se mantiene como texto plano
-            }
-        } catch (e) {
-            console.error("Error al parsear JSON estructurado:", e);
-            finalMessage.text = modelResponseText;
-        }
-
-        // *** FIN DE LA LÓGICA DE PROCESAMIENTO DE RESPUESTA ***
-
-        chatHistory.push(finalMessage);
-        
-        // --- LÓGICA DE CHIP DE ACCIÓN RÁPIDA Y ALERTA ---
-        
-        lastTotalCount = 0;
-        lastApiQuery = null;
-
-        if (finalMessage.isStructured) {
-            const isPlace = finalMessage.type === 'place';
-            const entityName = isPlace 
-                ? (finalMessage.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
-                : (finalMessage.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
-
-            // El tipo 'reminders' está controlado por el modal de notificaciones
-            const alertText = isPlace 
-                ? UI_STRINGS[currentLanguage].alertStructured(entityName)
-                : UI_STRINGS[currentLanguage].alertCategory(entityName);
-
-            if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
-            
-            // Si es una ficha estructurada, no mostramos el botón.
-            quickActionFullList.classList.add('hidden');
-
-        } else if (isLocalRecommendation === true && totalCount > MAX_CHAT_RESULTS && apiQuery) {
-            // Caso de Recomendación Local Forzada con más de 4 resultados
-            
-            lastTotalCount = totalCount;
-            lastApiQuery = apiQuery;
-            
-            // Actualizar el texto del botón con el conteo
-            btnViewAllPlaces.innerHTML = currentLanguage === 'es' 
-                ? `➡️ Ver todos los ${totalCount} lugares` 
-                : `➡️ View all ${totalCount} places`;
-
-            // Mostrar el botón de acción rápida
-            quickActionFullList.classList.remove('hidden');
-
-        } else {
-            // Otros casos de texto plano 
-            quickActionFullList.classList.add('hidden');
-        }
-        
-        saveHistory(); 
-        
-        if (typeof renderChat === 'function') renderChat();
-        if (typeof toggleInput === 'function') toggleInput(false);
-    }
-    
-    // --- Event Listeners e Inicio (ACTUALIZADO) ---
-    if (sendButton) sendButton.addEventListener('click', () => handleSend());
-    if (inputElement) inputElement.addEventListener('keypress', function(e) { if (e.key === 'Enter') { handleSend(); } });
-    
-    // Listeners para botones del menú principal (Categorías, Lenguaje, etc.)
-    menuActionChips.forEach(chip => {
-        chip.addEventListener('click', function() {
-            handleMenuAction(this);
-        });
-    });
-
-    // Conexión del nuevo botón flotante superior
-    if (btnClearTop) {
-        btnClearTop.addEventListener('click', function() {
-            handleMenuAction(this); 
-        });
-    }
-
-    // Oculta chips de categoría después de usarlos.
-    categoryChips.forEach(chip => {
-        chip.addEventListener('click', function() {
-            const lang = currentLanguage;
-            const query = this.getAttribute(`data-query-${lang}`);
-            handleSend(query); 
-            hideChipGroup(categoryChipsGroup, categoryChips);
-            categoriesVisible = false;
-        });
-    });
-
-    // Oculta chips de idioma después de usarlos (la función setInterfaceLanguage ya lo hace).
-    languageChips.forEach(chip => {
-        chip.addEventListener('click', function() {
-            const lang = this.getAttribute('data-lang');
-            setInterfaceLanguage(lang);
-        });
-    });
-
-    // NUEVO LISTENER PARA EL BOTÓN "VER TODOS LOS LUGARES" (usa las variables globales)
-    if (btnViewAllPlaces) {
-        btnViewAllPlaces.addEventListener('click', () => {
+        function clearChatHistory() {
             vibrateDevice();
+            chatHistory = []; 
+            localStorage.removeItem('chatHistory'); 
             
-            // Ocultar después de hacer clic, independientemente del éxito.
-            quickActionFullList.classList.add('hidden'); 
-
-            if (lastApiQuery) {
-                
-                // 1. Codificar el query completo (ej: 'Taquerías y Tacos en Nuevo Progreso')
-                const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(lastApiQuery + " Nuevo Progreso Tamps")}`;
-
-                // 2. Abrir la búsqueda en una nueva pestaña/ventana (complementando la lista local)
-                window.open(searchUrl, '_blank'); 
-                
-                alertUser(currentLanguage === 'es' 
-                    ? `Abriendo la lista completa en Google: "${lastApiQuery}"` 
-                    : `Opening the full list on Google: "${lastApiQuery}"`, 
-                'i', 'news');
-            } else {
-                alertUser(currentLanguage === 'es' 
-                    ? 'No se encontró la consulta de lugares. Por favor, intenta de nuevo.' 
-                    : 'Place query not found. Please try again.', 
-                'error');
-            }
+            if (messageContainer) messageContainer.innerHTML = ''; 
+            // ALERTA DE CLEAR HISTORY USA 'news'
+            alertUser(currentLanguage === 'es' ? '¡Conversación eliminada! Empecemos de cero. 👋' : 'Conversation cleared! Let\'s start fresh. 👋', 'i', 'news');
             
-            // Limpiar el estado de las variables globales
+            scrollToBottom();
+            // OCULTAR BOTÓN DE ACCIÓN RÁPIDA AL LIMPIAR
+            quickActionFullList.classList.add('hidden');
             lastTotalCount = 0;
             lastApiQuery = null;
-        });
-    }
+        }
+        
+        function loadHistory() {
+            let loaded = false;
+            try {
+                const savedHistory = localStorage.getItem('chatHistory');
+                if (savedHistory) {
+                    const loadedHistory = JSON.parse(savedHistory);
+                    if (Array.isArray(loadedHistory) && loadedHistory.length > 0) {
+                        chatHistory = loadedHistory; 
+                        renderChat(); 
+                        scrollToBottom();
+                        loaded = true;
+                    }
+                }
+            } catch (e) {
+                console.error("Error al cargar o parsear el historial de localStorage", e);
+                chatHistory = []; 
+            }
+            if (!loaded) {
+                chatHistory = []; 
+            }
+            return loaded;
+        }
 
-    // NUEVOS LISTENERS PARA EL PANEL DE NOTIFICACIONES (Modal)
-    if (btnNotifications) {
-        btnNotifications.addEventListener('click', () => {
-            vibrateDevice();
-            loadNotificationPreferences(); 
-            notificationModal.classList.add('show');
-        });
-    }
+        // NUEVAS FUNCIONES PARA LA PERSISTENCIA DE NOTIFICACIONES
+        function saveNotificationPreferences() {
+            try {
+                localStorage.setItem('notificationPreferences', JSON.stringify(notificationPreferences));
+                alertUser('Preferencias de notificaciones guardadas. ✅', 'i', 'news');
+            } catch (e) {
+                console.error("Error al guardar las preferencias de notificación:", e);
+            }
+        }
 
-    // Cerrar el modal al hacer clic fuera del panel (overlay)
-    if (notificationModal) {
-        notificationModal.addEventListener('click', (e) => {
-            if (e.target === notificationModal) { 
+        function loadNotificationPreferences() {
+            try {
+                const savedPrefs = localStorage.getItem('notificationPreferences');
+                if (savedPrefs) {
+                    notificationPreferences = JSON.parse(savedPrefs);
+                }
+                if (toggleNews) toggleNews.checked = notificationPreferences.news;
+                if (toggleReminders) toggleReminders.checked = notificationPreferences.reminders;
+            } catch (e) {
+                console.error("Error al cargar las preferencias de notificación:", e);
+            }
+        }
+
+        // --- Funciones de utilidad de tiempo ---
+        function formatTime(date) {
+            if (!date) return '';
+            let hours = date.getHours();
+            const minutes = date.getMinutes();
+            const ampm = hours >= 12 ? 'pm' : 'am';
+            hours = hours % 12;
+            hours = hours ? hours : 12; 
+            const minutesStr = minutes < 10 ? '0'+minutes : minutes;
+            return hours + ':' + minutesStr + ' ' + ampm;
+        }
+
+        // FUNCIÓN DE ALERTA MEJORADA CON CONTROL DE PREFERENCIAS
+        function alertUser(m, t='i', preferenceType = 'news') {
+            
+            // 🛑 Control de Preferencias
+            if (t !== 'error' && !notificationPreferences[preferenceType]) {
+                console.log(`Notificación de tipo "${preferenceType}" deshabilitada por el usuario. Mensaje: ${m}`);
+                return; 
+            }
+
+            // --- Limpieza Inmediata ---
+            if (appAlertContainer) {
+                const existingAlert = appAlertContainer.querySelector('.notification-card');
+                if (existingAlert) {
+                    existingAlert.remove(); 
+                }
+            }
+            
+            const hideAlert = (alertElement) => {
+                if (!alertElement || !alertElement.parentNode) return;
+                alertElement.classList.remove('show');
+                setTimeout(() => {
+                    if (alertElement.parentNode) alertElement.remove();
+                }, 400); 
+            };
+
+            const a = document.createElement('div');
+            const icon = (t === 'error') 
+                ? '❌' 
+                : (t === 'i' ? 'ℹ️' : '✅'); 
+
+            a.className = 'notification-card opacity-0 pointer-events-auto';
+            a.innerHTML = `
+                <div class="message-content">
+                    <span class="mr-2">${icon}</span> 
+                    <span>${m}</span>
+                </div>
+                <button class="close-btn" aria-label="Cerrar notificación">×</button>
+            `;
+
+            if (appAlertContainer) appAlertContainer.appendChild(a);
+
+            setTimeout(() => {
+                a.classList.add('show');
+            }, 10); 
+
+            const closeButton = a.querySelector('.close-btn');
+            closeButton.addEventListener('click', () => {
+                hideAlert(a);
+            });
+            
+            setTimeout(() => {
+                hideAlert(a);
+            }, 4000);
+        }
+        
+        function scrollToBottom() { 
+            if (messageContainer) messageContainer.scrollTop = messageContainer.scrollHeight; 
+        }
+        
+        function toggleInput(d) {
+            if (inputElement) inputElement.disabled = d;
+            if (sendButton) sendButton.disabled = d;
+            if (loadingIndicator) loadingIndicator.classList.toggle('hidden', !d);
+            if (inputElement) inputElement.placeholder = d ? "" : UI_STRINGS[currentLanguage].placeholder;
+        }
+
+        // --- FUNCIONES DE INTERACCIÓN ---
+
+        function vibrateDevice() {
+            if ("vibrate" in navigator) {
+                navigator.vibrate(50); // Vibración más corta
+            }
+        }
+        
+        function hideChipGroup(groupElement, chipElements) {
+            groupElement.classList.add('hidden');
+            chipElements.forEach(chip => {
+                chip.classList.remove('visible-chip');
+            });
+        }
+
+        function showChipGroupWithWave(groupElement, chipElements) {
+            groupElement.classList.remove('hidden');
+            chipElements.forEach((chip, index) => {
+                chip.style.transition = 'none';
+                chip.classList.remove('visible-chip');
+
+                void chip.offsetWidth; 
+
+                setTimeout(() => {
+                    chip.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+                    chip.classList.add('visible-chip');
+                }, index * 80); // Velocidad ligeramente más rápida
+            });
+        }
+
+        function setInterfaceLanguage(lang) {
+            const langChanged = currentLanguage !== lang;
+            currentLanguage = lang;
+            const strings = UI_STRINGS[lang];
+            
+            hideChipGroup(languageChipsGroup, languageChips);
+            languageMenuVisible = false;
+
+            inputElement.placeholder = strings.placeholder;
+            document.getElementById('go-text').textContent = strings.goButton; 
+
+            document.getElementById('btn-categorias').textContent = strings.categories;
+            document.getElementById('btn-lenguaje').textContent = strings.language;
+            document.getElementById('btn-comollegar').textContent = strings.getThere;
+            document.getElementById('btn-info').textContent = strings.info;
+
+            const categoryChipTexts = [strings.chipHealth, strings.chipShopping, strings.chipEntertainment, strings.chipDental];
+            categoryChips.forEach((chip, index) => {
+                chip.textContent = categoryChipTexts[index];
+            });
+            
+            // Actualiza el texto del botón flotante si está visible
+            if (!quickActionFullList.classList.contains('hidden') && lastTotalCount > 0) {
+                btnViewAllPlaces.innerHTML = currentLanguage === 'es' 
+                    ? `➡️ Ver todos los ${lastTotalCount} lugares` 
+                    : `➡️ View all ${lastTotalCount} places`;
+            }
+
+
+            if (langChanged) {
+                alertUser(`Interfaz y conversación cambiadas a ${lang === 'es' ? 'Español' : 'English'}`, 'i', 'news');
+            }
+        }
+
+        function handleMenuAction(actionChip) {
+            const action = actionChip.getAttribute('data-action');
+            const lang = currentLanguage;
+            // La acción GET_THERE en el HTML antiguo ahora se mapea a MAPS en el nuevo JS
+            const query = action === 'GET_THERE' ? actionChip.getAttribute(`data-query-${lang}`) : actionChip.getAttribute(`data-query-${lang}`);
+
+            vibrateDevice(); 
+
+            // Siempre ocultar el botón de lista completa al hacer una acción de menú
+            quickActionFullList.classList.add('hidden');
+            lastTotalCount = 0;
+            lastApiQuery = null;
+
+
+            if (action !== 'CATEGORIES' && categoriesVisible) {
+                hideChipGroup(categoryChipsGroup, categoryChips);
+                categoriesVisible = false;
+            }
+            if (action !== 'LANGUAGE' && languageMenuVisible) {
+                hideChipGroup(languageChipsGroup, languageChips);
+                languageMenuVisible = false;
+            }
+            
+            if (notificationModal.classList.contains('show')) {
                 notificationModal.classList.remove('show');
             }
+
+
+            if (action === 'CATEGORIES') {
+                if (categoriesVisible) {
+                    hideChipGroup(categoryChipsGroup, categoryChips);
+                    categoriesVisible = false;
+                } else {
+                    showChipGroupWithWave(categoryChipsGroup, categoryChips);
+                    categoriesVisible = true;
+                }
+            } else if (action === 'LANGUAGE') {
+                if (languageMenuVisible) {
+                    hideChipGroup(languageChipsGroup, languageChips);
+                    languageMenuVisible = false;
+                } else {
+                    showChipGroupWithWave(languageChipsGroup, languageChips);
+                    languageMenuVisible = true;
+                }
+            } else if (action === 'CLEAR_HISTORY') { 
+                clearChatHistory();
+                return;
+            } else {
+                if (query) {
+                    handleSend(query); 
+                    if (categoriesVisible) { hideChipGroup(categoryChipsGroup, categoryChips); categoriesVisible = false; }
+                    if (languageMenuVisible) { hideChipGroup(languageChipsGroup, languageChips); languageMenuVisible = false; }
+                }
+            }
+        }
+        
+        // Función para crear las burbujas de mensaje (User/Model) - CON CORRECCIONES DE URL
+        function createMessageBubble(m) {
+            const w = document.createElement('div');
+            
+            const timeStr = m.timestamp ? formatTime(m.timestamp) : '';
+            const timeSpan = timeStr ? `<span class="timestamp">${timeStr}</span>` : '';
+
+            if (m.role === 'user') { 
+                w.className = 'flex justify-end mb-2'; 
+                w.innerHTML = `
+                    <div class="flex flex-col items-end">
+                        <div class="user-bubble p-3 shadow-md">${m.text}</div>
+                        ${timeSpan}
+                    </div>
+                `; 
+            } 
+            else if (m.role === 'model') {
+                w.className = 'flex flex-col justify-start w-full mb-2';
+                let content = '';
+
+                if (m.isStructured) { 
+                    
+                    const isPlace = m.type === 'place';
+                    const isCategory = m.type === 'category';
+
+                    const entityName = isPlace 
+                        ? (m.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
+                        : (m.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
+                    
+                    // 🛑 CORRECCIÓN CRÍTICA DE URL: Asegura el fallback de URL de Google Maps/Search.
+                    const queryEncoded = encodeURIComponent(entityName + " Nuevo Progreso Tamps");
+                    
+                    let directionsUrl = '#';
+                    let searchUrl = `https://www.google.com/search?q=${queryEncoded}`;
+                    let phoneUrl = null;
+                    let reviewUrl = null;
+                    
+                    if (isPlace) {
+                        // Fallback de URL corregido para Google Maps
+                        directionsUrl = m.mapUrl || `https://www.google.com/maps/search/?api=1&query=${queryEncoded}`;
+                        
+                        phoneUrl = m.placePhone ? `tel:${m.placePhone}` : `javascript:alert('${currentLanguage === 'es' ? 'Número no disponible.' : 'Number unavailable.'}')`;
+                        reviewUrl = m.reviewUrl || directionsUrl; 
+                        
+                    } else if (isCategory) {
+                        // Fallback de URL corregido para Categorías 
+                        directionsUrl = m.mapUrl || `https://www.google.com/maps/search/?api=1&query=${queryEncoded}`;
+                    }
+                    // -------------------------------------------------------------
+                    
+                    // El contenido de la burbuja usa la propiedad 'description' si existe para el texto.
+                    content = `<div class="model-bubble p-3 shadow-md">${m.text || m.description}</div>`;
+                    
+                    let actionsHTML = `
+                        <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition flex-shrink-0">${currentLanguage === 'es' ? 'Ver en Mapa 🗺️' : 'View on Map 🗺️'}</a>
+                    `;
+
+                    if (isPlace) {
+                        const phoneAvailable = !!m.placePhone;
+                        const reviewsAvailable = !!m.reviewUrl;
+                        
+                        // Mostrar Call solo si el backend lo permite
+                        if (phoneAvailable) {
+                            actionsHTML += `
+                                <a href="${phoneUrl}" class="action-btn bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0">
+                                    ${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}
+                                </a>
+                            `;
+                        }
+                        
+                        if (reviewsAvailable) {
+                            actionsHTML += `
+                                <a href="${reviewUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-500 transition flex-shrink-0">
+                                    ${currentLanguage === 'es' ? 'Reseñas ⭐' : 'Reviews ⭐'}
+                                </a>
+                            `;
+                        }
+                    }
+
+                    actionsHTML += `
+                        <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-700 transition flex-shrink-0">${currentLanguage === 'es' ? 'Buscar en Google 🔍' : 'Search on Google 🔍'}</a>
+                    `;
+
+                    const actionsBar = `
+                        <div class="action-bar-container">
+                            <div class="inline-flex space-x-3 p-1">
+                                ${actionsHTML}
+                            </div>
+                        </div>
+                    `;
+                    
+                    w.innerHTML = `
+                        <div class="flex flex-col items-start">
+                            ${content}
+                            ${actionsBar}
+                            ${timeSpan}
+                        </div>
+                    `;
+
+                } else {
+                    content = `<div class="model-bubble p-3 shadow-md">${m.text || ''}</div>`;
+                    w.innerHTML = `
+                        <div class="flex flex-col items-start">
+                            ${content}
+                            ${timeSpan}
+                        </div>
+                    `;
+                }
+            }
+            return w;
+        }
+
+        function renderChat() {
+            if (messageContainer) {
+                messageContainer.innerHTML = '';
+                chatHistory.forEach((m) => { messageContainer.appendChild(createMessageBubble(m)); });
+                scrollToBottom();
+            }
+        }
+
+        // --- CÓDIGO DE CONEXIÓN AL BACKEND ---
+
+        async function getGeminiResponse(userPrompt, chatHistoryForAPI) {
+            
+            // Mapea el historial para enviar
+            const historyForAPI = chatHistoryForAPI.map(m => {
+                // Usa 'description' (para structured) o 'text' (para normal)
+                const textContent = (m.isStructured && m.description) ? m.description : m.text;
+                
+                return {
+                    role: m.role,
+                    parts: [{ text: textContent }]
+                };
+            });
+
+            try {
+                const response = await fetch(BACKEND_URL, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        history: historyForAPI, 
+                        userPrompt: userPrompt, 
+                        currentLanguage: currentLanguage 
+                    }) 
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Error HTTP: ${response.status}. Mensaje: ${errorData.error || 'El servicio de chat falló.'}`);
+                }
+
+                const data = await response.json();
+                // El backend devuelve {responseText, isLocalRecommendation, totalCount, apiQueryForChip}
+                return data; 
+
+            } catch (error) {
+                console.error("Fallo del Proxy o API de Gemini:", error);
+                alertUser(`Error de conexión: ${error.message}.`, 'error');
+                return null;
+            }
+        }
+
+        // --- Lógica Principal del Chatbot (handleSend) ---
+        async function handleSend(userPromptInput = null) {
+            const userPrompt = userPromptInput || inputElement.value.trim();
+            if (!userPrompt) return;
+            
+            hideChipGroup(categoryChipsGroup, categoryChips);
+            categoriesVisible = false;
+            hideChipGroup(languageChipsGroup, languageChips);
+            languageMenuVisible = false;
+
+            // Limpiar el estado del chip de lista completa al iniciar el envío
+            quickActionFullList.classList.add('hidden');
+            lastTotalCount = 0;
+            lastApiQuery = null;
+
+            if (typeof toggleInput === 'function') toggleInput(true);
+            
+            // 1. Agregar mensaje de usuario al historial
+            chatHistory.push({ role: 'user', text: userPrompt, timestamp: new Date() });
+            if (typeof renderChat === 'function') renderChat();
+            inputElement.value = '';
+
+            // Limitar historial enviado a la API para ahorrar tokens
+            const MAX_HISTORY_TO_SEND = 10; 
+            const previousHistory = chatHistory.slice(0, -1); 
+            const startIndex = Math.max(0, previousHistory.length - MAX_HISTORY_TO_SEND);
+            const limitedHistory = previousHistory.slice(startIndex);
+            
+            const responseData = await getGeminiResponse(userPrompt, limitedHistory);
+            
+            if (!responseData) {
+                if (typeof toggleInput === 'function') toggleInput(false);
+                return;
+            }
+            
+            const modelResponseText = responseData.responseText;
+
+            let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date(), isStructured: false };
+            let totalCount = responseData.totalCount || 0; 
+            let apiQuery = responseData.apiQueryForChip || null; 
+            let isLocalRecommendation = responseData.isLocalRecommendation || false;
+
+
+            try {
+                // 1. Manejo de Recomendación Local (isLocalRecommendation)
+                if (isLocalRecommendation === true) {
+                    
+                    finalMessage.text = modelResponseText; 
+                    
+                } 
+                // 2. Manejo de Respuesta Estructurada (Fichas)
+                else {
+                    // Buscamos JSON en el texto (estructura forzada por Gemini)
+                    const jsonStart = modelResponseText.indexOf('{');
+                    const jsonEnd = modelResponseText.lastIndexOf('}');
+                    
+                    if (jsonStart !== -1 && jsonEnd !== -1) {
+                        const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
+                        const parsedJson = JSON.parse(jsonString);
+
+                        if (parsedJson.isStructured === true) {
+                            
+                            // Si es estructurada, extraemos la data para la ficha
+                            const isPlace = parsedJson.type === 'place';
+                            
+                            finalMessage = {
+                                role: 'model',
+                                isStructured: true,
+                                type: parsedJson.type, 
+                                text: parsedJson.description || modelResponseText, 
+                                placeName: isPlace ? parsedJson.placeName : null, 
+                                placePhone: isPlace ? (parsedJson.placePhone || null) : null, 
+                                mapUrl: parsedJson.mapUrl || null,
+                                reviewUrl: isPlace ? (parsedJson.reviewUrl || null) : null,
+                                categoryName: !isPlace ? parsedJson.categoryName : null,
+                                timestamp: finalMessage.timestamp,
+                                // Guardamos la descripción por separado si existe, para el mapeo del historial
+                                description: parsedJson.description || modelResponseText
+                            };
+                        } 
+                    } 
+                    // Si no hay JSON o falla el parseo, se mantiene como texto plano
+                }
+            } catch (e) {
+                console.error("Error al parsear JSON estructurado:", e);
+                finalMessage.text = modelResponseText;
+            }
+
+            // *** LÓGICA DE CHIP DE ACCIÓN RÁPIDA Y ALERTA ***
+            
+            lastTotalCount = 0;
+            lastApiQuery = null;
+
+            if (finalMessage.isStructured) {
+                const isPlace = finalMessage.type === 'place';
+                const entityName = isPlace 
+                    ? (finalMessage.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
+                    : (finalMessage.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
+
+                // El tipo 'reminders' está controlado por el modal de notificaciones
+                const alertText = isPlace 
+                    ? UI_STRINGS[currentLanguage].alertStructured(entityName)
+                    : UI_STRINGS[currentLanguage].alertCategory(entityName);
+
+                if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
+                
+                // Si es una ficha estructurada, no mostramos el botón.
+                quickActionFullList.classList.add('hidden');
+
+            } else if (isLocalRecommendation === true && totalCount > MAX_CHAT_RESULTS && apiQuery) {
+                // Caso de Recomendación Local Forzada con más de 4 resultados
+                
+                lastTotalCount = totalCount;
+                lastApiQuery = apiQuery;
+                
+                // Actualizar el texto del botón con el conteo
+                btnViewAllPlaces.innerHTML = currentLanguage === 'es' 
+                    ? `➡️ Ver todos los ${totalCount} lugares` 
+                    : `➡️ View all ${totalCount} places`;
+
+                // Mostrar el botón de acción rápida
+                quickActionFullList.classList.remove('hidden');
+
+            } else {
+                // Otros casos de texto plano (incluyendo respuestas donde totalCount <= MAX_CHAT_RESULTS)
+                quickActionFullList.classList.add('hidden');
+            }
+            
+            // 4. Agrega el mensaje al historial y guarda
+            chatHistory.push(finalMessage);
+            saveHistory(); 
+            
+            // 5. Renderiza y re-habilita
+            if (typeof renderChat === 'function') renderChat();
+            if (typeof toggleInput === 'function') toggleInput(false);
+        }
+        
+        // --- Event Listeners e Inicio (ACTUALIZADO) ---
+        if (sendButton) sendButton.addEventListener('click', () => handleSend());
+        if (inputElement) inputElement.addEventListener('keypress', function(e) { if (e.key === 'Enter') { handleSend(); } });
+        
+        // Listeners para botones del menú principal (Categorías, Lenguaje, etc.)
+        menuActionChips.forEach(chip => {
+            chip.addEventListener('click', function() {
+                handleMenuAction(this);
+            });
         });
-    }
 
-    // Botones dentro del modal
-    if (btnDiscardChanges) {
-        btnDiscardChanges.addEventListener('click', () => {
-            vibrateDevice();
-            notificationModal.classList.remove('show');
+        // Conexión del nuevo botón flotante superior
+        if (btnClearTop) {
+            btnClearTop.addEventListener('click', function() {
+                handleMenuAction(this); 
+            });
+        }
+
+        // Oculta chips de categoría después de usarlos.
+        categoryChips.forEach(chip => {
+            chip.addEventListener('click', function() {
+                const lang = currentLanguage;
+                // 🛑 AJUSTE CRÍTICO: Las categorías deben mandar una query que fuerce a tu backend a devolver
+                // la estructura de LocalList con la query de búsqueda deseada.
+                const query = this.getAttribute(`data-query-${lang}`);
+                handleSend(query); 
+                hideChipGroup(categoryChipsGroup, categoryChips);
+                categoriesVisible = false;
+            });
         });
-    }
 
-    if (btnApplyChanges) {
-        btnApplyChanges.addEventListener('click', () => {
-            vibrateDevice();
-            notificationPreferences.news = toggleNews.checked;
-            notificationPreferences.reminders = toggleReminders.checked;
-
-            saveNotificationPreferences(); 
-            notificationModal.classList.remove('show');
+        // Oculta chips de idioma después de usarlos (la función setInterfaceLanguage ya lo hace).
+        languageChips.forEach(chip => {
+            chip.addEventListener('click', function() {
+                const lang = this.getAttribute('data-lang');
+                setInterfaceLanguage(lang);
+            });
         });
-    }
 
-    // Evita que el clic dentro del panel cierre el modal
-    if (notificationPanel) {
-        notificationPanel.addEventListener('click', (e) => {
-            e.stopPropagation(); 
+        // NUEVO LISTENER PARA EL BOTÓN "VER TODOS LOS LUGARES" (usa las variables globales)
+        if (btnViewAllPlaces) {
+            btnViewAllPlaces.addEventListener('click', () => {
+                vibrateDevice();
+                
+                quickActionFullList.classList.add('hidden'); 
+
+                if (lastApiQuery) {
+                    
+                    // 🛑 LÓGICA CLAVE: Abre Google Maps/Search usando la query que el backend proporcionó
+                    // (ej: 'Negocios de salud y estética').
+                    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(lastApiQuery + " Nuevo Progreso Tamps")}`;
+
+                    // 2. Abrir la búsqueda en una nueva pestaña/ventana (complementando la lista local)
+                    window.open(searchUrl, '_blank'); 
+                    
+                    alertUser(currentLanguage === 'es' 
+                        ? `Abriendo la lista completa en Google: "${lastApiQuery}"` 
+                        : `Opening the full list on Google: "${lastApiQuery}"`, 
+                    'i', 'news');
+                } else {
+                    alertUser(currentLanguage === 'es' 
+                        ? 'No se encontró la consulta de lugares. Por favor, intenta de nuevo.' 
+                        : 'Place query not found. Please try again.', 
+                    'error');
+                }
+                
+                // Limpiar el estado de las variables globales
+                lastTotalCount = 0;
+                lastApiQuery = null;
+            });
+        }
+
+        // NUEVOS LISTENERS PARA EL PANEL DE NOTIFICACIONES (Modal)
+        if (btnNotifications) {
+            btnNotifications.addEventListener('click', () => {
+                vibrateDevice();
+                loadNotificationPreferences(); 
+                notificationModal.classList.add('show');
+            });
+        }
+
+        // Cerrar el modal al hacer clic fuera del panel (overlay)
+        if (notificationModal) {
+            notificationModal.addEventListener('click', (e) => {
+                if (e.target === notificationModal) { 
+                    notificationModal.classList.remove('show');
+                }
+            });
+        }
+
+        // Botones dentro del modal
+        if (btnDiscardChanges) {
+            btnDiscardChanges.addEventListener('click', () => {
+                vibrateDevice();
+                notificationModal.classList.remove('show');
+            });
+        }
+
+        if (btnApplyChanges) {
+            btnApplyChanges.addEventListener('click', () => {
+                vibrateDevice();
+                notificationPreferences.news = toggleNews.checked;
+                notificationPreferences.reminders = toggleReminders.checked;
+
+                saveNotificationPreferences(); 
+                notificationModal.classList.remove('show');
+            });
+        }
+
+        // Evita que el clic dentro del panel cierre el modal
+        if (notificationPanel) {
+            notificationPanel.addEventListener('click', (e) => {
+                e.stopPropagation(); 
+            });
+        }
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setInterfaceLanguage(currentLanguage); 
+            loadHistory(); 
+            loadNotificationPreferences(); 
+            toggleInput(false); 
         });
-    }
-
-
-    document.addEventListener('DOMContentLoaded', () => {
-        setInterfaceLanguage(currentLanguage); 
-        loadHistory(); 
-        loadNotificationPreferences(); 
-        toggleInput(false); 
-    });
-</script>
+    </script>
 </body>
 </html>
