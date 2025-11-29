@@ -3,11 +3,8 @@ import { Client as PlacesClient } from '@googlemaps/google-maps-services-js';
 
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
-// El límite MAX_CHAT_RESULTS ya no es relevante, pero se mantiene para contexto.
-// const MAX_CHAT_RESULTS = 4; 
 
 // Mapeo de intención de usuario a Categoría (Simplificado)
-// Ya no se usa para filtrar la base de datos local, sino para identificar la Ficha de Categoría.
 const CATEGORY_MAP = {
     'tacos': 'Taquerías y Tacos',
     'taqueria': 'Taquerías y Tacos',
@@ -23,7 +20,7 @@ const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
 const placesClient = new PlacesClient({}); 
 
-// 2. Definimos la Instrucción del Sistema (PROTOCOLO DE RECOMENDACIÓN LOCAL ELIMINADO)
+// 2. Definimos la Instrucción del Sistema (ACTUALIZADA con formato MultiStructured)
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 
@@ -64,12 +61,23 @@ REGLAS DE FORMATO:
      "categoryName": "Nombre de la Categoría, ej: Taquerías en Progreso",
      "description": "Resumen de la categoría en Progreso. Debes incluir una frase como: 'Usa el botón de 'Ver en Mapa' para explorar todas las opciones y elegir el lugar que más te interese. 🗺️'",
      "isStructured": true
-   }`;
+   }
+   
+   // REGLA CLAVE: Si la respuesta requiere MÚLTIPLES FICHAS, debes envolver todas las fichas en un array y añadir la propiedad "isMultiStructured": true.
+   // Ejemplo para múltiples categorías (la respuesta al usuario debe ser el JSON completo, texto conversacional opcional):
+   {
+     "isMultiStructured": true,
+     "response": [
+       { "type": "category", "categoryName": "Dentistas en Progreso", "description": "...", "isStructured": true },
+       { "type": "category", "categoryName": "Oculistas en Progreso", "description": "...", "isStructured": true }
+     ]
+   }
+   
+   // El texto conversacional siempre debe ir ANTES o DESPUÉS de cualquier bloque JSON.`;
 
 
 /**
  * Función que busca el nombre de un lugar en la API de Google Places.
- * (SIN CAMBIOS en esta función)
  * @param {string} query Nombre del lugar a buscar.
  * @returns {object|null} Objeto con detalles del lugar o null si falla.
  */
@@ -176,7 +184,7 @@ export default async function handler(req, res) {
         
         let finalResponseData = { responseText: modelResponseText };
 
-        // Lógica de ENRIQUECIMIENTO con Places API (SIN CAMBIOS)
+        // Lógica de ENRIQUECIMIENTO con Places API (MODIFICADA para Array de Fichas)
         try {
             const jsonStart = modelResponseText.indexOf('{');
             const jsonEnd = modelResponseText.lastIndexOf('}');
@@ -184,64 +192,83 @@ export default async function handler(req, res) {
             if (jsonStart !== -1 && jsonEnd !== -1) {
                 const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
                 const parsedJson = JSON.parse(jsonString);
+                
+                let fichasToProcess = [];
 
-                if (parsedJson.isStructured === true) {
+                // 1. Caso de Múltiples Fichas (Array)
+                if (parsedJson.isMultiStructured === true && Array.isArray(parsedJson.response)) {
+                    fichasToProcess = parsedJson.response;
+                    console.log("Detectado formato MultiStructured. Fichas:", fichasToProcess.length);
+                } 
+                // 2. Caso de Ficha Única
+                else if (parsedJson.isStructured === true) {
+                    fichasToProcess = [parsedJson];
+                }
+
+                if (fichasToProcess.length > 0) {
                     
-                    if (parsedJson.type === 'place' && parsedJson.placeToSearch) {
-                        
-                        const placeNameSearch = parsedJson.placeToSearch.trim();
-                        // Utilizamos el nuevo flag booleano para la regla de salud
-                        const isHealthPlace = parsedJson.isHealthPlace === true; 
+                    const enrichedFichas = [];
+                    
+                    for (const ficha of fichasToProcess) {
+                        let enrichedFicha = { ...ficha };
 
-                        // **** REGLA DE SALUD DINÁMICA: Bloqueo de Enriquecimiento ****
-                        if (isHealthPlace) {
-                            // SI ES SALUD: Bloqueamos el enriquecimiento de Places API (teléfono, reseñas)
-                            console.log(`Regla de Salud Dinámica Aplicada: Bloqueando enriquecimiento Places para ${placeNameSearch}`);
+                        if (ficha.type === 'place' && ficha.placeToSearch) {
                             
-                            // Usamos el nombre del lugar para generar la URL de búsqueda básica en Google Maps/Search.
-                            const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
+                            const placeNameSearch = ficha.placeToSearch.trim();
+                            const isHealthPlace = ficha.isHealthPlace === true; 
 
-                            finalResponseData.responseText = JSON.stringify({
-                                ...parsedJson,
-                                placePhone: null, // Bloqueado
-                                reviewUrl: null,   // Bloqueado
-                                mapUrl: baseMapUrl // URL de búsqueda básica
-                            });
+                            // **** REGLA DE SALUD DINÁMICA: Bloqueo de Enriquecimiento ****
+                            if (isHealthPlace) {
+                                console.log(`Regla de Salud Aplicada: Bloqueando enriquecimiento Places para ${placeNameSearch}`);
+                                const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
 
-                        } else {
-                            // SI NO ES SALUD: Procedemos con el enriquecimiento normal (todos los botones).
-                            const placeData = await getPlaceDetails(placeNameSearch);
+                                enrichedFicha = {
+                                    ...enrichedFicha,
+                                    placePhone: null, 
+                                    reviewUrl: null,   
+                                    mapUrl: baseMapUrl 
+                                };
 
-                            if (placeData) {
-                                // Enriquecemos con datos reales de Places
-                                finalResponseData.responseText = JSON.stringify({
-                                    ...parsedJson,
-                                    placeName: placeData.name,
-                                    placePhone: placeData.phone,
-                                    mapUrl: placeData.mapUrl,
-                                    reviewUrl: placeData.reviewUrl, 
-                                });
                             } else {
-                                // Si falla Places, al menos eliminamos placeToSearch para evitar confusiones
-                                delete parsedJson.placeToSearch;
-                                finalResponseData.responseText = JSON.stringify(parsedJson);
+                                // SI NO ES SALUD: Procedemos con el enriquecimiento normal.
+                                const placeData = await getPlaceDetails(placeNameSearch);
+
+                                if (placeData) {
+                                    enrichedFicha = {
+                                        ...enrichedFicha,
+                                        placeName: placeData.name,
+                                        placePhone: placeData.phone,
+                                        mapUrl: placeData.mapUrl,
+                                        reviewUrl: placeData.reviewUrl, 
+                                    };
+                                } else {
+                                    // Si falla Places
+                                    delete enrichedFicha.placeToSearch;
+                                }
                             }
                         }
-                        // **** FIN DE REGLA DE SALUD DINÁMICA ****
-                        
-                    } else if (parsedJson.type === 'category') {
-                        // Si es una categoría, solo aseguramos que el JSON es válido y lo pasamos.
-                        finalResponseData.responseText = JSON.stringify(parsedJson);
+                        enrichedFichas.push(enrichedFicha);
+                    }
+
+                    // Después de procesar todas las fichas, reconstruir la respuesta final.
+                    if (parsedJson.isMultiStructured === true) {
+                         // Si fue MultiStructured, respondemos con el array completo y la propiedad "isMultiStructured"
+                         finalResponseData.responseText = JSON.stringify({
+                             isMultiStructured: true,
+                             response: enrichedFichas,
+                             // Opcional: El texto conversacional (si el modelo lo incluyó antes del JSON)
+                             conversationText: modelResponseText.replace(jsonString, '').trim() || ''
+                         });
+                    } else {
+                         // Si fue una ficha única, respondemos con la ficha enriquecida directamente.
+                         finalResponseData.responseText = JSON.stringify(enrichedFichas[0]);
                     }
                 }
             }
         } catch (jsonError) {
             console.error("Fallo en el parseo o enriquecimiento del JSON:", jsonError);
-            // Si falla el parseo, la respuesta sigue siendo la original (texto plano)
             finalResponseData.responseText = modelResponseText; 
         }
-
-        // *** LÓGICA DE METADATOS DE CHIP DE ACCIÓN RÁPIDA ELIMINADA ***
 
         // Retornamos la respuesta (enriquecida o original) al frontend
         res.status(200).json(finalResponseData);
