@@ -7,6 +7,7 @@ const MODEL_NAME = "gemini-2.5-flash";
 // const MAX_CHAT_RESULTS = 4; 
 
 // Mapeo de intención de usuario a Categoría (Simplificado)
+// Ya no se usa para filtrar la base de datos local, sino para identificar la Ficha de Categoría.
 const CATEGORY_MAP = {
     'tacos': 'Taquerías y Tacos',
     'taqueria': 'Taquerías y Tacos',
@@ -20,9 +21,9 @@ const CATEGORY_MAP = {
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
-const placesClient = new Client({}); 
+const placesClient = new PlacesClient({}); 
 
-// 2. Definimos la Instrucción del Sistema (PROTOCOLO ACTUALIZADO)
+// 2. Definimos la Instrucción del Sistema (PROTOCOLO DE RECOMENDACIÓN LOCAL ELIMINADO)
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 
@@ -32,21 +33,17 @@ REGLAS DE FORMATO:
 
 ---
 
-### PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES (ACTUALIZADO)
+### PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES
 
-**REGLA CRÍTICA:** Si el usuario pide recomendaciones, sugerencias o un listado de lugares, NUNCA debes listar lugares específicos o dar sugerencias directas.
-
-**REGLA DE RESPUESTA:**
-1. **Si es una sola categoría:** DEBES usar el MODO FICHA DE CATEGORÍA (JSON).
-2. **Si son múltiples categorías (detectadas por el backend):** DEBES usar el **MODO CONVERSACIONAL (Texto Plano)** para la respuesta principal (ej: "Claro, Progreso es conocido por esto y esto... Revisa las categorías específicas que solicitaste a continuación."). **NO** uses NINGÚN JSON estructurado.
+**REGLA CRÍTICA:** Si el usuario pide recomendaciones, sugerencias o un listado de lugares (ej. '4 taquerías', 'dime restaurantes cerca'), DEBES usar el **MODO FICHA DE CATEGORÍA (JSON)** para dar un resumen general de la categoría. NUNCA debes listar lugares específicos o dar sugerencias directas. Tu descripción debe guiar al usuario a usar los botones de acción para que ellos exploren las opciones en el mapa.
 
 ---
 
 3. **MODO FICHA DE LUGAR (JSON):** Úsalo si la solicitud es de un lugar o negocio **específico** (Salud o No Salud). Debe incluir la propiedad 'placeToSearch' con el nombre exacto del lugar.
 
-4. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo para solicitudes de categorías generales O para **CUMPLIR EL PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES** para *una sola categoría*.
+4. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo para solicitudes de categorías generales O para **CUMPLIR EL PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES**.
 
-5. **MODO CONVERSACIONAL (Texto Plano):** Úsalo para preguntas generales, de seguimiento O para CUMPLIR la REGLA DE RESPUESTA (2) para múltiples categorías.
+5. **MODO CONVERSACIONAL (Texto Plano):** Úsalo para preguntas generales o de seguimiento que no requieran una ficha.
 
 6. Los formatos JSON requeridos son:
    
@@ -137,45 +134,16 @@ export default async function handler(req, res) {
         const langText = currentLanguage === 'es' ? 'español' : 'inglés';
         const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
 
-        // LÓGICA DE INTERCEPTACIÓN Y CHIPS DINÁMICOS (ACTUALIZADA)
+        // LÓGICA DE INTERCEPTACIÓN Y PRIORIDAD LOCAL (MODIFICADA para forzar CATEGORY JSON)
         let promptToSend = userPrompt;
-        let chipMetadata = null; 
-        
-        // Patrón genérico para detectar solicitudes de listado/recomendación
-        const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra).*\\s+(\\d+|unos cuantos)?\\s*(taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias|clinica|farmacia|dental|oculista|optica)s?`, 'i');
+
+        // Patrón para detectar solicitudes de listado/recomendación
+        const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra).*\\s+(\\d+|unos cuantos)?\\s*(taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias|clinica|farmacia|dental|optica)s?`, 'i');
         
         const match = userPrompt.match(recommendationPattern);
         
-        // --- LÓGICA PARA MÚLTIPLES CATEGORÍAS (CHIPS DINÁMICOS) ---
-        let categoriesFound = [];
-
-        const userPromptLower = userPrompt.toLowerCase();
-        
-        // Detectar Dentista y Oculista/Optica (o combinaciones similares de salud)
-        if ((userPromptLower.includes('dentista') || userPromptLower.includes('dental')) && 
-            (userPromptLower.includes('oculista') || userPromptLower.includes('optica'))) {
-                
-            categoriesFound = [
-                { label: currentLanguage === 'es' ? "Dentistas 🦷" : "Dentists 🦷", query: currentLanguage === 'es' ? "Categoría Dentistas en Progreso" : "Category Dentists in Progreso" },
-                { label: currentLanguage === 'es' ? "Oculistas 👓" : "Opticians 👓", query: currentLanguage === 'es' ? "Categoría Oculistas en Progreso" : "Category Opticians in Progreso" }
-            ];
-            // Puedes añadir más lógica 'if/else if' aquí para detectar otras combinaciones
-        }
-        
-        if (categoriesFound.length > 1) {
-            // PROTOCOLO DE CHIPS DINÁMICOS ACTIVADO
-            chipMetadata = {
-                isDynamicChips: true,
-                chips: categoriesFound
-            };
-            
-            // Sobrescribir el prompt para forzar un texto conversacional amigable
-            promptToSend = `El usuario ha solicitado información sobre múltiples categorías: ${categoriesFound.map(c => c.label).join(' y ')}. Responde en MODO CONVERSACIONAL con un saludo amigable (ej: "Claro, Progreso es conocido por sus servicios de salud. Revisa las categorías específicas que solicitaste a continuación.") y SÓLO genera texto. NO uses NINGÚN JSON estructurado.`;
-            
-            console.log("PROTOCOLO CHIPS DINÁMICOS ACTIVADO.");
-
-        } else if (match) {
-            // --- LÓGICA PARA UNA SOLA CATEGORÍA (FICHA CATEGORÍA) ---
+        if (match) {
+            // 1. Determinar el nombre de la categoría para el JSON y el prompt
             const categoryKeyRaw = match[3].toLowerCase(); 
             let categoryName = "lugares y negocios"; 
             
@@ -183,14 +151,14 @@ export default async function handler(req, res) {
             else if (categoryKeyRaw.includes('restaurante') || categoryKeyRaw.includes('comer')) categoryName = "Restaurantes y Comida";
             else if (categoryKeyRaw.includes('artesanias') || categoryKeyRaw.includes('souvenirs')) categoryName = "Tiendas de Artesanías y Souvenirs";
             else if (categoryKeyRaw.includes('barbacoa')) categoryName = "Barbacoa y Birria";
-            else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('oculista') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = "Salud y Estética";
+            else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = "Salud y Estética";
             
-            // SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA
+            // 2. SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA
             promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría ${categoryName} en Nuevo Progreso. La descripción debe guiar al usuario a usar los botones de acción ('Ver en Mapa' y 'Buscar en Google') para que ellos decidan qué lugar visitar, cumpliendo con la restricción de no recomendar lugares específicos.`;
             
-            console.log("PROTOCOLO FICHA DE CATEGORÍA ACTIVADO para:", categoryName);
+            console.log("PROTOCOLO CATEGORÍA GENERAL ACTIVADO para:", categoryName);
         }
-        // FIN DE LÓGICA DE INTERCEPTACIÓN
+        // FIN DE LÓGICA DE INTERCEPTACIÓN (MODIFICADA)
 
 
         // Inicializar el chat con el historial y la instrucción de sistema
@@ -202,13 +170,13 @@ export default async function handler(req, res) {
             history: history 
         });
 
-        // Enviamos el nuevo mensaje (original o modificado) al modelo
+        // Enviamos el nuevo mensaje (original o modificado por la redirección a categoría) al modelo
         const result = await chat.sendMessage({ message: promptToSend });
         let modelResponseText = result.text.trim();
         
         let finalResponseData = { responseText: modelResponseText };
 
-        // Lógica de ENRIQUECIMIENTO con Places API
+        // Lógica de ENRIQUECIMIENTO con Places API (SIN CAMBIOS)
         try {
             const jsonStart = modelResponseText.indexOf('{');
             const jsonEnd = modelResponseText.lastIndexOf('}');
@@ -216,29 +184,36 @@ export default async function handler(req, res) {
             if (jsonStart !== -1 && jsonEnd !== -1) {
                 const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
                 const parsedJson = JSON.parse(jsonString);
-                
-                // Si la respuesta de Gemini es un JSON estructurado (lugar o categoría individual)
+
                 if (parsedJson.isStructured === true) {
-                    // ... (La lógica de enriquecimiento con Places API se mantiene igual)
                     
                     if (parsedJson.type === 'place' && parsedJson.placeToSearch) {
                         
                         const placeNameSearch = parsedJson.placeToSearch.trim();
+                        // Utilizamos el nuevo flag booleano para la regla de salud
                         const isHealthPlace = parsedJson.isHealthPlace === true; 
 
                         // **** REGLA DE SALUD DINÁMICA: Bloqueo de Enriquecimiento ****
                         if (isHealthPlace) {
+                            // SI ES SALUD: Bloqueamos el enriquecimiento de Places API (teléfono, reseñas)
                             console.log(`Regla de Salud Dinámica Aplicada: Bloqueando enriquecimiento Places para ${placeNameSearch}`);
+                            
+                            // Usamos el nombre del lugar para generar la URL de búsqueda básica en Google Maps/Search.
                             const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
+
                             finalResponseData.responseText = JSON.stringify({
                                 ...parsedJson,
-                                placePhone: null, 
-                                reviewUrl: null,   
-                                mapUrl: baseMapUrl 
+                                placePhone: null, // Bloqueado
+                                reviewUrl: null,   // Bloqueado
+                                mapUrl: baseMapUrl // URL de búsqueda básica
                             });
+
                         } else {
+                            // SI NO ES SALUD: Procedemos con el enriquecimiento normal (todos los botones).
                             const placeData = await getPlaceDetails(placeNameSearch);
+
                             if (placeData) {
+                                // Enriquecemos con datos reales de Places
                                 finalResponseData.responseText = JSON.stringify({
                                     ...parsedJson,
                                     placeName: placeData.name,
@@ -247,6 +222,7 @@ export default async function handler(req, res) {
                                     reviewUrl: placeData.reviewUrl, 
                                 });
                             } else {
+                                // Si falla Places, al menos eliminamos placeToSearch para evitar confusiones
                                 delete parsedJson.placeToSearch;
                                 finalResponseData.responseText = JSON.stringify(parsedJson);
                             }
@@ -254,22 +230,20 @@ export default async function handler(req, res) {
                         // **** FIN DE REGLA DE SALUD DINÁMICA ****
                         
                     } else if (parsedJson.type === 'category') {
+                        // Si es una categoría, solo aseguramos que el JSON es válido y lo pasamos.
                         finalResponseData.responseText = JSON.stringify(parsedJson);
                     }
                 }
             }
         } catch (jsonError) {
             console.error("Fallo en el parseo o enriquecimiento del JSON:", jsonError);
+            // Si falla el parseo, la respuesta sigue siendo la original (texto plano)
             finalResponseData.responseText = modelResponseText; 
         }
 
-        // --- LÓGICA DE ANEXAR METADATOS DE CHIPS DINÁMICOS ---
-        if (chipMetadata) {
-            // Anexamos el JSON de chips al final del texto conversacional de Gemini
-            finalResponseData.responseText = finalResponseData.responseText.trim() + '\n' + JSON.stringify(chipMetadata);
-        }
-        
-        // Retornamos la respuesta al frontend
+        // *** LÓGICA DE METADATOS DE CHIP DE ACCIÓN RÁPIDA ELIMINADA ***
+
+        // Retornamos la respuesta (enriquecida o original) al frontend
         res.status(200).json(finalResponseData);
 
     } catch (error) {
