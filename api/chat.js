@@ -5,7 +5,7 @@ import path from 'path';
 
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
-const MAX_CHAT_RESULTS = 4; // Límite de resultados a mostrar en el texto plano
+const MAX_CHAT_RESULTS = 4; // Ya no se usa para lista, sino para el conteo total
 
 // Mapeo de intención de usuario a Secciones de JSON y Query de API de Places
 const CATEGORY_MAP = {
@@ -39,16 +39,16 @@ const CATEGORY_MAP = {
         apiQuery: 'Tiendas de Souvenirs Nuevo Progreso'
     },
     
-    // --- NUEVAS ENTRADAS PARA CHIPS Y COBERTURA DE SALUD/ESTÉTICA ---
-    'salud': { // Cubre el chip 'Salud & Estética'
+    // --- ENTRADAS PARA CHIPS Y COBERTURA DE SALUD/ESTÉTICA ---
+    'salud': { 
         sections: ['clinicas_dentales', 'salones_belleza', 'farmacias', 'opticas'], 
         apiQuery: 'Servicios de Salud y Estética en Nuevo Progreso'
     },
-    'estetica': { // Cubre el chip 'Salud & Estética'
+    'estetica': { 
         sections: ['clinicas_dentales', 'salones_belleza', 'farmacias', 'opticas'], 
         apiQuery: 'Servicios de Salud y Estética en Nuevo Progreso'
     },
-    'dental': { // Cubre el chip 'Top 10 Dental'
+    'dental': { 
         sections: ['clinicas_dentales'], 
         apiQuery: 'Clínicas Dentales en Nuevo Progreso'
     },
@@ -60,7 +60,6 @@ const CATEGORY_MAP = {
         sections: ['opticas'],
         apiQuery: 'Ópticas en Nuevo Progreso'
     }
-    // ------------------------------------------------------------------
 };
 
 // 1. Inicializamos los clientes
@@ -81,9 +80,10 @@ REGLAS DE FORMATO:
 ### PROTOCOLO DE RECOMENDACIÓN LOCAL
 
 Si el usuario pide recomendaciones, sugerencias o un listado de lugares (ej. '4 taquerías', 'dime restaurantes cerca'):
-a) **EXCLUSIÓN DE SALUD:** NUNCA incluyas lugares de salud o estética en estas recomendaciones de listado.
+a) **EXCLUSIÓN DE SALUD:** NUNCA incluyas lugares de salud o estética en estas recomendaciones de listado CONVERSACIONAL.
 b) **FORMATO:** Debes usar el MODO CONVERSACIONAL (Texto Plano).
-c) **CIERRE REQUERIDO:** Tu respuesta debe terminar con un mensaje que diga que encontraste 'X' lugares, pero que hay muchísimos más, y que para ver la lista completa, debe usar el botón en la interfaz.
+c) **CONVERSACIÓN INICIAL:** Tu respuesta DEBE mencionar UN EJEMPLO DE LUGAR de la categoría solicitada usando el formato conversacional (ej: "¡Claro! 🌮 Si hablamos de taquerías, Taquería Cruz es famosa por sus tacos de bisteck.").
+d) **CIERRE REQUERIDO:** Tu respuesta debe terminar con un mensaje que diga que encontraste 'X' lugares, pero que hay muchísimos más, y que para ver la lista completa, debe usar el botón en la interfaz.
 
 Ejemplo de Cierre (Español): "Encontré X lugares, ¡pero hay muchísimos más! Para explorar la lista completa, por favor, selecciona el botón 'Ver todos los lugares'."
 
@@ -204,7 +204,7 @@ export default async function handler(req, res) {
         let totalResultsCount = 0;
         let apiQueryForChip = null;
         let isLocalRecommendation = false;
-        let actionButton = null; // NUEVO: Objeto para el botón de acción rápida
+        let actionButton = null; // Objeto para el botón de acción rápida
 
         // Patrón para detectar solicitudes de listado/recomendación
         const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra).*\\s+(\\d+|unos cuantos)?\\s*(taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias|salud|estetica|dental|farmacia|optica)s?`, 'i');
@@ -240,70 +240,52 @@ export default async function handler(req, res) {
                 
                 if (categoryIntent) {
                     
-                    // 3. Filtrar usando las SECCIONES del JSON para obtener TODOS los resultados
-                    // Filtramos SOLO por lugares NO saludables para la lista conversacional
-                    const allMatchingResults = allLocalData.filter(place => 
+                    // 3. Obtener el conteo total (incluyendo salud, para el botón)
+                    const totalFullResults = allLocalData.filter(place => 
+                        categoryIntent.sections.includes(place.Section)
+                    ).length;
+
+                    // 4. Obtener resultados NO saludables (para la conversación de ejemplo)
+                    const nonHealthResults = allLocalData.filter(place => 
                         categoryIntent.sections.includes(place.Section) && place.isHealthPlace === false
                     );
                     
-                    totalResultsCount = allMatchingResults.length;
+                    isLocalRecommendation = true;
+                    apiQueryForChip = categoryIntent.apiQuery;
+                    totalResultsCount = totalFullResults;
                     
-                    // LÓGICA DE RECOMENDACIÓN PARA LUGARES NO SALUDABLES (LISTADO CONVERSACIONAL)
-                    if (totalResultsCount > 0) {
-                        
-                        const recommendationsForGemini = allMatchingResults.slice(0, MAX_CHAT_RESULTS); 
-                        const recommendationList = recommendationsForGemini.map((r, index) => 
-                            `${index + 1}. **${r.Title}:** ${r.Description.trim()}`
-                        ).join('\n');
-                        
-                        const listContext = categoryIntent.apiQuery; 
-
-                        isLocalRecommendation = true;
-                        apiQueryForChip = categoryIntent.apiQuery; 
-
-                        // 4. SOBRESCRIBIMOS el prompt
-                        promptToSend = `El usuario pidió una recomendación de ${listContext}. Nuestra lista local encontró ${totalResultsCount} lugares. Tu respuesta DEBE EMPEZAR con un saludo amigable (ej: "¡Claro que sí! 🌮 Nuevo Progreso tiene..."), y DEBE usar estricta y únicamente la siguiente lista numerada de ${recommendationsForGemini.length} lugares en tu listado de respuesta, sin inventar nombres ni cambiar las descripciones:
-                        
-                        --- LISTA FORZADA Y NUMERADA ---
-                        ${recommendationList}
-                        --- FIN DE LISTA FORZADA ---
-                        
-                        Tu respuesta DEBE TERMINAR con el CIERRE REQUERIDO del protocolo de recomendación local (mencionando que encontraste ${totalResultsCount} lugares y la instrucción de "Ver todos los lugares"). NO uses el formato JSON estructurado.`;
-                        
-                        console.log("PROTOCOLO LOCAL ACTIVADO (NO SALUD). Total encontrados:", totalResultsCount);
+                    let conversationStart = `¡Claro! ☀️ Nuevo Progreso tiene muchísimos lugares excelentes.`;
                     
-                    } else {
-                        // LÓGICA DE PROTOCOLO PARA CATEGORÍAS DE SALUD O LISTADOS VACÍOS (SOLO CHIP)
+                    // LÓGICA CONVERSACIONAL: Intentar dar un ejemplo si existe un lugar NO saludable
+                    if (nonHealthResults.length > 0) {
                         
-                        // Buscamos el conteo TOTAL (incluyendo salud)
-                        const totalFullResults = allLocalData.filter(place => 
-                            categoryIntent.sections.includes(place.Section)
-                        ).length;
-
-                        if (totalFullResults > 0) {
-                            // Si encontramos resultados de salud, forzamos un mensaje que guíe al usuario al chip
-                            isLocalRecommendation = true;
-                            totalResultsCount = totalFullResults;
-                            apiQueryForChip = categoryIntent.apiQuery;
-
-                            // Forzamos un prompt que guíe a Gemini a dar un resumen de la categoría
-                            promptToSend = `El usuario preguntó sobre ${categoryIntent.apiQuery}. Tu respuesta DEBE ser conversacional y DEBE dar un resumen de la categoría, sin mencionar nombres de lugares. Luego, DEBE TERMINAR con el CIERRE REQUERIDO del protocolo de recomendación local mencionando que encontraste ${totalFullResults} lugares. NUNCA listes lugares individuales ni uses el formato JSON estructurado.`;
-
-                            console.log(`PROTOCOLO SALUD/CHIP ACTIVADO. Total encontrados: ${totalFullResults}. Se espera resumen conversacional y chip.`);
-                        }
+                        // Seleccionar un lugar aleatorio para el ejemplo conversacional
+                        const randomIndex = Math.floor(Math.random() * nonHealthResults.length);
+                        const randomPlace = nonHealthResults[randomIndex];
+                        
+                        // Formato del ejemplo a forzar
+                        const forcedExample = `Por ejemplo, te puedo contar sobre **${randomPlace.Title}**: ${randomPlace.Description.trim()}`;
+                        
+                        conversationStart = `¡Claro que sí! 🌮 ${categoryIntent.apiQuery.replace(' en Nuevo Progreso', '').trim()} es un gran atractivo. ${forcedExample}.`;
+                        
+                    } else if (totalFullResults > 0 && categoryIntent.sections.some(s => ['clinicas_dentales', 'salones_belleza', 'farmacias', 'opticas'].includes(s))) {
+                        
+                         // Si solo hay salud, forzamos un resumen general sin mencionar nombres
+                         conversationStart = `¡Claro! 🦷 En la categoría de ${categoryIntent.apiQuery.replace(' en Nuevo Progreso', '').trim()} (Salud y Estética) hay mucha oferta de alta calidad. `;
+                         
                     }
-
-                    // AHORA CONSTRUIMOS EL actionButton SI EL PROTOCOLO SE ACTIVÓ
-                    if (isLocalRecommendation && totalResultsCount > 0) {
-                        actionButton = {
-                            // El frontend debe leer esta etiqueta
-                            type: 'showAll',
-                            // La acción que el frontend debe realizar (abrir una búsqueda de Google)
-                            query: apiQueryForChip, 
-                            // Texto que verá el usuario en el botón
-                            text: `Ver todos los ${totalResultsCount} lugares`
-                        };
-                    }
+                    
+                    // 5. SOBRESCRIBIMOS el prompt para FORZAR el MODO CONVERSACIONAL con el ejemplo y el cierre
+                    
+                    promptToSend = `El usuario pidió una recomendación de ${categoryIntent.apiQuery}. Tu respuesta DEBE EMPEZAR con un saludo y la siguiente frase conversacional, sin inventar nombres ni cambiar la información del ejemplo (si aplica):
+                    
+                    --- FRASE FORZADA ---
+                    ${conversationStart}
+                    --- FIN DE FRASE FORZADA ---
+                    
+                    Tu respuesta DEBE TERMINAR con el CIERRE REQUERIDO del protocolo de recomendación local (mencionando que encontraste ${totalFullResults} lugares y la instrucción de "Ver todos los lugares"). NO uses el formato JSON estructurado.`;
+                    
+                    console.log("PROTOCOLO RECOMENDACIÓN ACTIVADO. Total encontrados:", totalFullResults);
                 }
             }
         }
@@ -345,8 +327,6 @@ export default async function handler(req, res) {
                         if (isHealthPlace) {
                             console.log(`Regla de Salud Dinámica Aplicada: Bloqueando enriquecimiento Places para ${placeNameSearch}`);
                             
-                            // Usamos el nombre del lugar para generar la URL de búsqueda básica en Google Maps/Search.
-                            // Nota: Corregí el template string para ser compatible con la codificación de URL
                             const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
 
                             finalResponseData.responseText = JSON.stringify({
@@ -389,8 +369,13 @@ export default async function handler(req, res) {
             finalResponseData.responseText = modelResponseText; 
         }
 
-        // NUEVA LÓGICA: Añadir el actionButton si existe.
-        if (actionButton) {
+        // AÑADIR EL actionButton SI EL PROTOCOLO FUE ACTIVADO
+        if (isLocalRecommendation && totalResultsCount > 0) {
+            actionButton = {
+                type: 'showAll',
+                query: apiQueryForChip, 
+                text: `Ver todos los ${totalResultsCount} lugares`
+            };
             finalResponseData.actionButton = actionButton;
         }
 
