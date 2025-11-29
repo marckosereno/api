@@ -180,7 +180,7 @@
             color: #4b5563; 
         }
 
-        /* Botón de Notificaciones (SIN CAMBIOS) */
+        /* Botón de Notificaciones */
         #btn-notifications {
             background-color: white;
             color: #4b5563; 
@@ -204,7 +204,7 @@
             color: #000;
         }
 
-        /* Panel de Preferencias (SIN CAMBIOS) */
+        /* Panel de Preferencias */
         .notification-modal-overlay {
             position: fixed;
             top: 0;
@@ -244,7 +244,7 @@
             opacity: 1;
         }
 
-        /* Toggles (Switch) - (SIN CAMBIOS) */
+        /* Toggles (Switch) */
         .toggle-switch {
             position: relative;
             display: inline-block;
@@ -296,7 +296,7 @@
             transform: translateX(20px); 
         }
 
-        /* Info card dentro del panel (SIN CAMBIOS) */
+        /* Info card dentro del panel */
         .info-card-panel {
             background-color: #eff6ff; 
             color: #1e40af; 
@@ -304,7 +304,7 @@
             border-radius: 4px;
             padding: 12px;
             font-size: 0.9rem;
-            display: none;
+            display: flex; /* Cambiado de 'none' a 'flex' para que se vea */
             align-items: flex-start;
             margin-top: 20px;
         }
@@ -334,7 +334,7 @@
         }
 
 
-        /* --- NUEVOS ESTILOS GLASS CHIP (SIN CAMBIOS) --- */
+        /* --- NUEVOS ESTILOS GLASS CHIP --- */
         .glass-chip {
             /* 2. 🎨 FONDO PARA LOS BOTONES (Menu Action Chip) */
             background: linear-gradient(90deg, rgb(226 246 255 / 35%) 0%, #f9fafb 90%) !important; 
@@ -385,6 +385,7 @@
                 <button id="btn-notifications" class="action-chip flex items-center text-sm font-semibold cursor-pointer">🔔</button>
             </div>
         </div>
+        
         <div id="app-alert-container" class="fixed top-0 w-full flex justify-center z-50 pointer-events-none"></div>
 
         <div id="message-container" class="flex-grow overflow-y-auto p-4 flex flex-col"></div>
@@ -538,7 +539,7 @@
     const btnViewAllPlaces = document.getElementById('btn-view-all-places');
 
 
-    // Objeto de Traducción y textos de chips (SIN CAMBIOS)
+    // Objeto de Traducción y textos de chips
     const UI_STRINGS = {
         es: {
             header: "PROGRESO TOUR GUIDE",
@@ -661,7 +662,7 @@
         }
     }
 
-    // --- Funciones de utilidad de tiempo (SIN CAMBIOS) ---
+    // --- Funciones de utilidad de tiempo ---
     function formatTime(date) {
         if (!date) return '';
         let hours = date.getHours();
@@ -974,7 +975,7 @@
         }
     }
 
-    // --- CÓDIGO DE CONEXIÓN AL BACKEND (SIN CAMBIOS) ---
+    // --- CÓDIGO DE CONEXIÓN AL BACKEND ---
 
     async function getGeminiResponse(userPrompt, chatHistoryForAPI) {
         
@@ -1150,7 +1151,7 @@
         if (typeof toggleInput === 'function') toggleInput(false);
     }
     
-    // --- Event Listeners e Inicio (ACTUALIZADO) ---
+    // --- Event Listeners e Inicio ---
     if (sendButton) sendButton.addEventListener('click', () => handleSend());
     if (inputElement) inputElement.addEventListener('keypress', function(e) { if (e.key === 'Enter') { handleSend(); } });
     
