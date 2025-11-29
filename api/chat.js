@@ -219,20 +219,24 @@ export default async function handler(req, res) {
                         // Limitamos a MAX_CHAT_RESULTS para la respuesta conversacional de Gemini
                         const recommendationsForGemini = allMatchingResults.slice(0, MAX_CHAT_RESULTS); 
                         
-                        // Formato de lista para Gemini (Title: Description)
-                        const recommendationList = recommendationsForGemini.map(r => 
-                            `**${r.Title}:** ${r.Description.trim()}`
+                        // New (Nuevo) - Implementación del protocolo de Alineación Forzada
+                        // ---------------------------------------------------------------
+                        // Creamos una lista numerada estricta: 1. **Title:** Description
+                        const recommendationList = recommendationsForGemini.map((r, index) => 
+                            `${index + 1}. **${r.Title}:** ${r.Description.trim()}`
                         ).join('\n');
                         
+                        const listContext = categoryIntent.apiQuery; // Ejemplo: "Taquerías y Tacos en Nuevo Progreso"
+
                         // Si encontramos lugares, activamos el protocolo
                         isLocalRecommendation = true;
                         apiQueryForChip = categoryIntent.apiQuery; // Guardamos la query para el chip
 
                         // 4. SOBRESCRIBIMOS el prompt para FORZAR el MODO CONVERSACIONAL (texto plano)
                         
-                        promptToSend = `El usuario pidió una recomendación de ${categoryIntent.apiQuery}. Nuestra lista local encontró ${totalResultsCount} lugares. Tu respuesta DEBE EMPEZAR con un saludo amigable (ej: "¡Claro que sí! 🌮 Nuevo Progreso tiene..."), y DEBE usar estricta y únicamente los siguientes ${recommendationsForGemini.length} lugares en tu listado de respuesta, sin inventar nombres ni cambiar las descripciones:
+                        promptToSend = `El usuario pidió una recomendación de ${listContext}. Nuestra lista local encontró ${totalResultsCount} lugares. Tu respuesta DEBE EMPEZAR con un saludo amigable (ej: "¡Claro que sí! 🌮 Nuevo Progreso tiene..."), y DEBE usar estricta y únicamente la siguiente lista numerada de ${recommendationsForGemini.length} lugares en tu listado de respuesta, sin inventar nombres ni cambiar las descripciones:
                         
-                        --- LISTA FORZADA DE LUGARES ---
+                        --- LISTA FORZADA Y NUMERADA ---
                         ${recommendationList}
                         --- FIN DE LISTA FORZADA ---
                         
