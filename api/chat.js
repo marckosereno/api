@@ -38,7 +38,6 @@ const CATEGORY_MAP = {
         sections: ['tiendas_artesanias'], 
         apiQuery: 'Tiendas de Souvenirs Nuevo Progreso'
     },
-    // NOTA: Categorías de salud/estética son manejadas en modo JSON.
 };
 
 // 1. Inicializamos los clientes
@@ -197,14 +196,19 @@ export default async function handler(req, res) {
             if (allLocalData.length > 0) {
                 
                 // 2. Determinar la intención del usuario usando el mapa (ej: "taquería" -> "tacos")
-                const categoryKey = match[3].toLowerCase();
+                // Usamos la tercera captura del regex (ej. "taquería")
+                const categoryKeyRaw = match[3].toLowerCase(); 
+                // Mapeamos a la clave de CATEGORY_MAP (ej. 'taqueria' -> 'tacos' si no existe)
+                const categoryKey = categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('tacos') ? 'tacos' : categoryKeyRaw;
+                
                 const categoryIntent = CATEGORY_MAP[categoryKey];
                 
                 if (categoryIntent) {
                     
                     // 3. Filtrar usando las SECCIONES del JSON para obtener TODOS los resultados
+                    // Filtramos por las secciones definidas en CATEGORY_MAP y excluimos los de salud
                     const allMatchingResults = allLocalData.filter(place => 
-                        categoryIntent.sections.includes(place.Section)
+                        categoryIntent.sections.includes(place.Section) && place.isHealthPlace === false
                     );
                     
                     totalResultsCount = allMatchingResults.length;
@@ -214,19 +218,27 @@ export default async function handler(req, res) {
                         
                         // Limitamos a MAX_CHAT_RESULTS para la respuesta conversacional de Gemini
                         const recommendationsForGemini = allMatchingResults.slice(0, MAX_CHAT_RESULTS); 
-                        const recommendationNames = recommendationsForGemini.map(r => r.Title);
+                        
+                        // Formato de lista para Gemini (Title: Description)
+                        const recommendationList = recommendationsForGemini.map(r => 
+                            `**${r.Title}:** ${r.Description.trim()}`
+                        ).join('\n');
                         
                         // Si encontramos lugares, activamos el protocolo
                         isLocalRecommendation = true;
                         apiQueryForChip = categoryIntent.apiQuery; // Guardamos la query para el chip
 
                         // 4. SOBRESCRIBIMOS el prompt para FORZAR el MODO CONVERSACIONAL (texto plano)
-                        const listText = recommendationNames.join(', ');
                         
-                        // Construimos el nuevo prompt de instrucción para Gemini
-                        promptToSend = `El usuario pidió una recomendación de ${categoryKey}. Nuestra lista local encontró ${totalResultsCount} lugares. Usa SOLO ESTOS primeros ${MAX_CHAT_RESULTS} lugares para la respuesta conversacional: ${listText}. Tu respuesta DEBE TERMINAR con el CIERRE REQUERIDO del protocolo de recomendación local (mencionando que encontraste ${totalResultsCount} lugares y la instrucción de "Ver todos los lugares"). NO uses el formato JSON estructurado.`;
+                        promptToSend = `El usuario pidió una recomendación de ${categoryIntent.apiQuery}. Nuestra lista local encontró ${totalResultsCount} lugares. Tu respuesta DEBE EMPEZAR con un saludo amigable (ej: "¡Claro que sí! 🌮 Nuevo Progreso tiene..."), y DEBE usar estricta y únicamente los siguientes ${recommendationsForGemini.length} lugares en tu listado de respuesta, sin inventar nombres ni cambiar las descripciones:
                         
-                        console.log("PROTOCOLO LOCAL ACTIVADO. Total encontrados:", totalResultsCount, "Nuevo prompt a Gemini:", promptToSend);
+                        --- LISTA FORZADA DE LUGARES ---
+                        ${recommendationList}
+                        --- FIN DE LISTA FORZADA ---
+                        
+                        Tu respuesta DEBE TERMINAR con el CIERRE REQUERIDO del protocolo de recomendación local (mencionando que encontraste ${totalResultsCount} lugares y la instrucción de "Ver todos los lugares"). NO uses el formato JSON estructurado.`;
+                        
+                        console.log("PROTOCOLO LOCAL ACTIVADO. Total encontrados:", totalResultsCount);
                     }
                 }
             }
@@ -272,7 +284,6 @@ export default async function handler(req, res) {
                             console.log(`Regla de Salud Dinámica Aplicada: Bloqueando enriquecimiento Places para ${placeNameSearch}`);
                             
                             // Usamos el nombre del lugar para generar la URL de búsqueda básica en Google Maps/Search.
-                            // Nota: El frontend debe manejar la apertura de esta URL.
                             const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
 
                             finalResponseData.responseText = JSON.stringify({
