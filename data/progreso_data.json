@@ -3,486 +3,648 @@
     "Title": "JM Dental Clinic",
     "Section": "clinicas_dentales",
     "Address": "Dirección no disponible",
-    "Description": "Clínica dental en la frontera, conocida por sus servicios generales."
+    "Description": "Clínica dental en la frontera, conocida por sus servicios generales.",
+    "placeCategory": "Clínica Dental",
+    "isHealthPlace": true
   },
   {
     "Title": "JC Dental Clinic",
     "Section": "clinicas_dentales",
     "Address": "Dirección no disponible",
-    "Description": "Centro odontológico completo con especialidades."
+    "Description": "Centro odontológico completo con especialidades.",
+    "placeCategory": "Centro Odontológico",
+    "isHealthPlace": true
   },
   {
     "Title": "Mustre Dental Clinic",
     "Section": "clinicas_dentales",
     "Address": "Dirección no disponible",
-    "Description": "Clínica dental que ofrece servicios de alta calidad."
+    "Description": "Clínica dental que ofrece servicios de alta calidad.",
+    "placeCategory": "Clínica Dental",
+    "isHealthPlace": true
   },
   {
     "Title": "Dental Artistry Dental Center",
     "Section": "clinicas_dentales",
     "Address": "Dirección no disponible",
-    "Description": "Centro especializado en arte y estética dental."
+    "Description": "Centro especializado en arte y estética dental.",
+    "placeCategory": "Centro Dental Estético",
+    "isHealthPlace": true
   },
   {
     "Title": "Alpha Dental Implant Center",
     "Section": "clinicas_dentales",
     "Address": "Dirección no disponible",
-    "Description": "Especialistas en implantes dentales."
+    "Description": "Especialistas en implantes dentales.",
+    "placeCategory": "Centro de Implantes",
+    "isHealthPlace": true
   },
   {
     "Title": "Salazar Dental Center",
     "Section": "clinicas_dentales",
     "Address": "Dirección no disponible",
-    "Description": "Clínica familiar que ofrece una amplia gama de tratamientos."
+    "Description": "Clínica familiar que ofrece una amplia gama de tratamientos.",
+    "placeCategory": "Clínica Dental Familiar",
+    "isHealthPlace": true
   },
   {
     "Title": "Guadalcazar Dental Clinic",
     "Section": "clinicas_dentales",
     "Address": "Dirección no disponible",
-    "Description": "Clínica dental general con experiencia."
+    "Description": "Clínica dental general con experiencia.",
+    "placeCategory": "Clínica Dental General",
+    "isHealthPlace": true
   },
   {
     "Title": "Progreso Smile Dental Center",
     "Section": "clinicas_dentales",
     "Address": "Dirección no disponible",
-    "Description": "Dedicados a mejorar la sonrisa de sus pacientes."
+    "Description": "Dedicados a mejorar la sonrisa de sus pacientes.",
+    "placeCategory": "Centro Dental de Sonrisas",
+    "isHealthPlace": true
   },
   {
     "Title": "Dr. Dominga Cortez (clinica)",
     "Section": "clinicas_dentales",
     "Address": "Dirección no disponible",
-    "Description": "Consultorio y clínica de la Dra. Cortez."
+    "Description": "Consultorio y clínica de la Dra. Cortez.",
+    "placeCategory": "Consultorio Dental",
+    "isHealthPlace": true
   },
   {
     "Title": "Dr. Sandra Bucardo (consultorio)",
     "Section": "clinicas_dentales",
     "Address": "Dirección no disponible",
-    "Description": "Consultorio privado de la Dra. Bucardo."
+    "Description": "Consultorio privado de la Dra. Bucardo.",
+    "placeCategory": "Consultorio Dental",
+    "isHealthPlace": true
   },
   {
     "Title": "Magic Dental Clinic",
     "Section": "clinicas_dentales",
     "Address": "Dirección no disponible",
-    "Description": "Clínica con un enfoque moderno en odontología."
+    "Description": "Clínica con un enfoque moderno en odontología.",
+    "placeCategory": "Clínica Dental",
+    "isHealthPlace": true
   },
   {
     "Title": "Dental DR. Dr. Ivan Diaz",
     "Section": "clinicas_dentales",
     "Address": "Dirección no disponible",
-    "Description": "Consultorio del Dr. Iván Díaz, servicios dentales."
+    "Description": "Consultorio del Dr. Iván Díaz, servicios dentales.",
+    "placeCategory": "Consultorio Dental",
+    "isHealthPlace": true
   },
   {
     "Title": "Taquería Doña Ale",
     "Section": "taquerias_tacos_y_lonches",
     "Address": "Dirección no disponible",
-    "Description": "Tacos y lonches tradicionales."
+    "Description": "Tacos y lonches tradicionales.",
+    "placeCategory": "Taquería",
+    "isHealthPlace": false
   },
   {
     "Title": "Taquería Víctor",
     "Section": "taquerias_tacos_y_lonches",
     "Address": "Dirección no disponible",
-    "Description": "Taquería con amplia variedad de guisos."
+    "Description": "Taquería con amplia variedad de guisos.",
+    "placeCategory": "Taquería",
+    "isHealthPlace": false
   },
   {
     "Title": "Taquería El No Que No",
     "Section": "taquerias_tacos_y_lonches",
     "Address": "Dirección no disponible",
-    "Description": "Conocida por su sabor único en tacos."
+    "Description": "Conocida por su sabor único en tacos.",
+    "placeCategory": "Taquería",
+    "isHealthPlace": false
   },
   {
     "Title": "Iguana House Taqueria (Pavita)",
     "Section": "taquerias_tacos_y_lonches",
     "Address": "Dirección no disponible",
-    "Description": "Taquería especializada en el surtido."
+    "Description": "Taquería especializada en el surtido.",
+    "placeCategory": "Taquería",
+    "isHealthPlace": false
   },
   {
     "Title": "Taquería Don Benny",
     "Section": "taquerias_tacos_y_lonches",
     "Address": "Dirección no disponible",
-    "Description": "Tacos y especialidades de la casa."
+    "Description": "Tacos y especialidades de la casa.",
+    "placeCategory": "Taquería",
+    "isHealthPlace": false
   },
   {
     "Title": "Taquería Serratos",
     "Section": "taquerias_tacos_y_lonches",
     "Address": "Dirección no disponible",
-    "Description": "Un lugar clásico de tacos en Nuevo Progreso."
+    "Description": "Un lugar clásico de tacos en Nuevo Progreso.",
+    "placeCategory": "Taquería",
+    "isHealthPlace": false
   },
   {
     "Title": "Taquería Los Agachados",
     "Section": "taquerias_tacos_y_lonches",
     "Address": "Dirección no disponible",
-    "Description": "Taquería con mesas o servicio rápido."
+    "Description": "Taquería con mesas o servicio rápido.",
+    "placeCategory": "Taquería",
+    "isHealthPlace": false
   },
   {
     "Title": "Taquería Don Chuy",
     "Section": "taquerias_tacos_y_lonches",
     "Address": "Dirección no disponible",
-    "Description": "Especializada en carne asada."
+    "Description": "Especializada en carne asada.",
+    "placeCategory": "Taquería de Asada",
+    "isHealthPlace": false
   },
   {
     "Title": "Lonchería Nuevo Progreso",
     "Section": "taquerias_tacos_y_lonches",
     "Address": "Dirección no disponible",
-    "Description": "Lonches, tortas y jugos frescos."
+    "Description": "Lonches, tortas y jugos frescos.",
+    "placeCategory": "Lonchería",
+    "isHealthPlace": false
   },
   {
     "Title": "Taquería El Güero",
     "Section": "taquerias_tacos_y_lonches",
     "Address": "Dirección no disponible",
-    "Description": "Taquería popular y bien ubicada."
+    "Description": "Taquería popular y bien ubicada.",
+    "placeCategory": "Taquería",
+    "isHealthPlace": false
   },
   {
     "Title": "Taquería El Texitas",
     "Section": "taquerias_tacos_y_lonches",
     "Address": "Dirección no disponible",
-    "Description": "Especializada en comida al estilo texano."
+    "Description": "Especializada en comida al estilo texano.",
+    "placeCategory": "Taquería",
+    "isHealthPlace": false
   },
   {
     "Title": "Taquería La Prima",
     "Section": "taquerias_tacos_y_lonches",
     "Address": "Dirección no disponible",
-    "Description": "Tacos con opciones vegetarianas."
+    "Description": "Tacos con opciones vegetarianas.",
+    "placeCategory": "Taquería",
+    "isHealthPlace": false
   },
   {
     "Title": "Barbacoa El Güero",
     "Section": "tacos_barbacoa",
     "Address": "Dirección no disponible",
-    "Description": "Barbacoa tradicional de res o borrego."
+    "Description": "Barbacoa tradicional de res o borrego.",
+    "placeCategory": "Restaurante de Barbacoa",
+    "isHealthPlace": false
   },
   {
     "Title": "Quesabirrias",
     "Section": "tacos_barbacoa",
     "Address": "Dirección no disponible",
-    "Description": "Birria y quesabirrias jugosas."
+    "Description": "Birria y quesabirrias jugosas.",
+    "placeCategory": "Restaurante de Birria",
+    "isHealthPlace": false
   },
   {
     "Title": "Barbacoa Candelo",
     "Section": "tacos_barbacoa",
     "Address": "Dirección no disponible",
-    "Description": "Famosa por su barbacoa de fin de semana."
+    "Description": "Famosa por su barbacoa de fin de semana.",
+    "placeCategory": "Restaurante de Barbacoa",
+    "isHealthPlace": false
   },
   {
     "Title": "Barbacoa Oceguera 2",
     "Section": "tacos_barbacoa",
     "Address": "Dirección no disponible",
-    "Description": "Segunda sucursal con el mismo sabor."
+    "Description": "Segunda sucursal con el mismo sabor.",
+    "placeCategory": "Restaurante de Barbacoa",
+    "isHealthPlace": false
   },
   {
     "Title": "Taqueria Las Oceguera",
     "Section": "tacos_barbacoa",
     "Address": "Dirección no disponible",
-    "Description": "Especialidad en tacos de barbacoa y guisados."
+    "Description": "Especialidad en tacos de barbacoa y guisados.",
+    "placeCategory": "Taquería de Barbacoa",
+    "isHealthPlace": false
   },
   {
     "Title": "Barbacoa Galerias",
     "Section": "tacos_barbacoa",
     "Address": "Dirección no disponible",
-    "Description": "Barbacoa cerca del centro comercial Galerías."
+    "Description": "Barbacoa cerca del centro comercial Galerías.",
+    "placeCategory": "Restaurante de Barbacoa",
+    "isHealthPlace": false
   },
   {
     "Title": "Arturo's Restaurant",
     "Section": "restaurantes",
     "Address": "Dirección no disponible",
-    "Description": "Restaurante con menú variado y servicio de bar."
+    "Description": "Restaurante con menú variado y servicio de bar.",
+    "placeCategory": "Restaurante Internacional",
+    "isHealthPlace": false
   },
   {
     "Title": "Chuy's Red Snapper",
     "Section": "restaurantes",
     "Address": "Dirección no disponible",
-    "Description": "Famoso por su huachinango (red snapper)."
+    "Description": "Famoso por su huachinango (red snapper).",
+    "placeCategory": "Restaurante de Mariscos",
+    "isHealthPlace": false
   },
   {
     "Title": "Angel’s Restaurant Bar",
     "Section": "restaurantes",
     "Address": "Dirección no disponible",
-    "Description": "Comida mexicana y bebidas."
+    "Description": "Comida mexicana y bebidas.",
+    "placeCategory": "Restaurante y Bar",
+    "isHealthPlace": false
   },
   {
     "Title": "Pancho’s Bar & Restaurant",
     "Section": "restaurantes",
     "Address": "Dirección no disponible",
-    "Description": "Bar y restaurante con ambiente relajado."
+    "Description": "Bar y restaurante con ambiente relajado.",
+    "placeCategory": "Restaurante y Bar",
+    "isHealthPlace": false
   },
   {
     "Title": "Renee's Restaurant & Bakery",
     "Section": "restaurantes",
     "Address": "Dirección no disponible",
-    "Description": "Especializado en repostería y comidas caseras."
+    "Description": "Especializado en repostería y comidas caseras.",
+    "placeCategory": "Restaurante y Panadería",
+    "isHealthPlace": false
   },
   {
     "Title": "Tony’s Bar and Grill",
     "Section": "restaurantes",
     "Address": "Dirección no disponible",
-    "Description": "Parrilla y bar con buena música."
+    "Description": "Parrilla y bar con buena música.",
+    "placeCategory": "Restaurante Parrilla",
+    "isHealthPlace": false
   },
   {
     "Title": "Elsa’s Restaurant",
     "Section": "restaurantes",
     "Address": "Dirección no disponible",
-    "Description": "Cocina regional y desayunos."
+    "Description": "Cocina regional y desayunos.",
+    "placeCategory": "Restaurante Regional",
+    "isHealthPlace": false
   },
   {
     "Title": "Café Sanchez",
     "Section": "restaurantes",
     "Address": "Dirección no disponible",
-    "Description": "Cafetería y lugar de reunión."
+    "Description": "Cafetería y lugar de reunión.",
+    "placeCategory": "Cafetería",
+    "isHealthPlace": false
   },
   {
     "Title": "La Palapa de Nuevo Progreso",
     "Section": "restaurantes",
     "Address": "Dirección no disponible",
-    "Description": "Restaurante con vista a la calle principal."
+    "Description": "Restaurante con vista a la calle principal.",
+    "placeCategory": "Restaurante Mexicano",
+    "isHealthPlace": false
   },
   {
     "Title": "Mariscos Progreso",
     "Section": "restaurantes",
     "Address": "Dirección no disponible",
-    "Description": "Especializado en pescados y mariscos frescos."
+    "Description": "Especializado en pescados y mariscos frescos.",
+    "placeCategory": "Restaurante de Mariscos",
+    "isHealthPlace": false
   },
   {
     "Title": "La Terraza (restaurant)",
     "Section": "restaurantes",
     "Address": "Dirección no disponible",
-    "Description": "Comida internacional y terraza con ambiente."
+    "Description": "Comida internacional y terraza con ambiente.",
+    "placeCategory": "Restaurante Internacional",
+    "isHealthPlace": false
   },
   {
     "Title": "Cocina Real",
     "Section": "restaurantes",
     "Address": "Dirección no disponible",
-    "Description": "Comida casera y tradicional mexicana."
+    "Description": "Comida casera y tradicional mexicana.",
+    "placeCategory": "Restaurante Casero",
+    "isHealthPlace": false
   },
   {
     "Title": "Estetica Modelo",
     "Section": "salones_belleza",
     "Address": "Dirección no disponible",
-    "Description": "Estética con servicios de corte y peinado."
+    "Description": "Estética con servicios de corte y peinado.",
+    "placeCategory": "Estética",
+    "isHealthPlace": true
   },
   {
     "Title": "Angie's Beauty Salon",
     "Section": "salones_belleza",
     "Address": "Dirección no disponible",
-    "Description": "Salón de belleza completo."
+    "Description": "Salón de belleza completo.",
+    "placeCategory": "Salón de Belleza",
+    "isHealthPlace": true
   },
   {
     "Title": "Glorias Barber Shop",
     "Section": "salones_belleza",
     "Address": "Dirección no disponible",
-    "Description": "Barbería clásica para caballeros."
+    "Description": "Barbería clásica para caballeros.",
+    "placeCategory": "Barbería",
+    "isHealthPlace": true
   },
   {
     "Title": "Erika's Beauty Salon",
     "Section": "salones_belleza",
     "Address": "Dirección no disponible",
-    "Description": "Servicios de coloración y tratamientos capilares."
+    "Description": "Servicios de coloración y tratamientos capilares.",
+    "placeCategory": "Salón de Belleza",
+    "isHealthPlace": true
   },
   {
     "Title": "Bellas Beauty Salon",
     "Section": "salones_belleza",
     "Address": "Dirección no disponible",
-    "Description": "Salón enfocado en servicios de uñas y cabello."
+    "Description": "Salón enfocado en servicios de uñas y cabello.",
+    "placeCategory": "Salón de Belleza y Uñas",
+    "isHealthPlace": true
   },
   {
     "Title": "Almitas Spa",
     "Section": "salones_belleza",
     "Address": "Dirección no disponible",
-    "Description": "Spa y salón de belleza con masajes."
+    "Description": "Spa y salón de belleza con masajes.",
+    "placeCategory": "Spa y Salón",
+    "isHealthPlace": true
   },
   {
     "Title": "Peluquería Gerson",
     "Section": "salones_belleza",
     "Address": "Dirección no disponible",
-    "Description": "Peluquería tradicional con experiencia."
+    "Description": "Peluquería tradicional con experiencia.",
+    "placeCategory": "Peluquería",
+    "isHealthPlace": true
   },
   {
     "Title": "Peluquería Marin",
     "Section": "salones_belleza",
     "Address": "Dirección no disponible",
-    "Description": "Servicios de corte para toda la familia."
+    "Description": "Servicios de corte para toda la familia.",
+    "placeCategory": "Peluquería",
+    "isHealthPlace": true
   },
   {
     "Title": "Peluquería Palmolive",
     "Section": "salones_belleza",
     "Address": "Dirección no disponible",
-    "Description": "Peluquería con productos de calidad."
+    "Description": "Peluquería con productos de calidad.",
+    "placeCategory": "Peluquería",
+    "isHealthPlace": true
   },
   {
     "Title": "Salón de Belleza Renova",
     "Section": "salones_belleza",
     "Address": "Dirección no disponible",
-    "Description": "Renovación de imagen y tratamientos de belleza."
+    "Description": "Renovación de imagen y tratamientos de belleza.",
+    "placeCategory": "Salón de Belleza",
+    "isHealthPlace": true
   },
   {
     "Title": "Estética Mary",
     "Section": "salones_belleza",
     "Address": "Dirección no disponible",
-    "Description": "Estética con especialidad en maquillaje."
+    "Description": "Estética con especialidad en maquillaje.",
+    "placeCategory": "Estética y Maquillaje",
+    "isHealthPlace": true
   },
   {
     "Title": "Charly's by Galerias (artesanías)",
     "Section": "tiendas_artesanias",
     "Address": "Dirección no disponible",
-    "Description": "Tienda de souvenirs y artesanías cerca de Galerías."
+    "Description": "Tienda de souvenirs y artesanías cerca de Galerías.",
+    "placeCategory": "Tienda de Artesanías",
+    "isHealthPlace": false
   },
   {
     "Title": "El Disco Super Center (artesanías y souvenirs)",
     "Section": "tiendas_artesanias",
     "Address": "Dirección no disponible",
-    "Description": "Gran tienda con artesanías y otros productos."
+    "Description": "Gran tienda con artesanías y otros productos.",
+    "placeCategory": "Tienda de Regalos",
+    "isHealthPlace": false
   },
   {
     "Title": "Mercado Faro (puestos de artesanías)",
     "Section": "tiendas_artesanias",
     "Address": "Dirección no disponible",
-    "Description": "Mercado con una variedad de puestos de artesanías locales."
+    "Description": "Mercado con una variedad de puestos de artesanías locales.",
+    "placeCategory": "Mercado de Artesanías",
+    "isHealthPlace": false
   },
   {
     "Title": "Papelería y Novedades Chihd",
     "Section": "tiendas_artesanias",
     "Address": "Dirección no disponible",
-    "Description": "Papelería y venta de artículos novedosos."
+    "Description": "Papelería y venta de artículos novedosos.",
+    "placeCategory": "Papelería y Novedades",
+    "isHealthPlace": false
   },
   {
     "Title": "Mi Lindo Oaxaca (souvenirs)",
     "Section": "tiendas_artesanias",
     "Address": "Dirección no disponible",
-    "Description": "Especializada en productos y souvenirs de Oaxaca."
+    "Description": "Especializada en productos y souvenirs de Oaxaca.",
+    "placeCategory": "Tienda de Souvenirs",
+    "isHealthPlace": false
   },
   {
     "Title": "Tienda de Artesanías Shaddai",
     "Section": "tiendas_artesanias",
     "Address": "Dirección no disponible",
-    "Description": "Artesanías hechas a mano y regalos."
+    "Description": "Artesanías hechas a mano y regalos.",
+    "placeCategory": "Tienda de Artesanías",
+    "isHealthPlace": false
   },
   {
     "Title": "Galerías",
     "Section": "tiendas_artesanias",
     "Address": "Dirección no disponible",
-    "Description": "Centro comercial con varias tiendas y servicios."
+    "Description": "Centro comercial con varias tiendas y servicios.",
+    "placeCategory": "Centro Comercial",
+    "isHealthPlace": false
   },
   {
     "Title": "Canada Store",
     "Section": "tiendas_artesanias",
     "Address": "Dirección no disponible",
-    "Description": "Tienda con productos importados."
+    "Description": "Tienda con productos importados.",
+    "placeCategory": "Tienda de Productos Importados",
+    "isHealthPlace": false
   },
   {
     "Title": "Panchos",
     "Section": "tiendas_artesanias",
     "Address": "Dirección no disponible",
-    "Description": "Tienda variada con artículos populares."
+    "Description": "Tienda variada con artículos populares.",
+    "placeCategory": "Tienda Variada",
+    "isHealthPlace": false
   },
   {
     "Title": "La catrina",
     "Section": "tiendas_artesanias",
     "Address": "Dirección no disponible",
-    "Description": "Tienda temática de artesanías mexicanas."
+    "Description": "Tienda temática de artesanías mexicanas.",
+    "placeCategory": "Tienda de Artesanías",
+    "isHealthPlace": false
   },
   {
     "Title": "Kokopelli",
     "Section": "tiendas_artesanias",
     "Address": "Dirección no disponible",
-    "Description": "Tienda de regalos y artesanías originales."
+    "Description": "Tienda de regalos y artesanías originales.",
+    "placeCategory": "Tienda de Regalos",
+    "isHealthPlace": false
   },
   {
     "Title": "Farmacia Economy",
     "Section": "farmacias",
     "Address": "Dirección no disponible",
-    "Description": "Farmacia con precios económicos."
+    "Description": "Farmacia con precios económicos.",
+    "placeCategory": "Farmacia",
+    "isHealthPlace": true
   },
   {
     "Title": "Pancho's Pharmacy",
     "Section": "farmacias",
     "Address": "Dirección no disponible",
-    "Description": "Farmacia de servicio completo."
+    "Description": "Farmacia de servicio completo.",
+    "placeCategory": "Farmacia",
+    "isHealthPlace": true
   },
   {
     "Title": "Farmacias Benavides (sucursal local)",
     "Section": "farmacias",
     "Address": "Dirección no disponible",
-    "Description": "Cadena de farmacias reconocida en México."
+    "Description": "Cadena de farmacias reconocida en México.",
+    "placeCategory": "Farmacia",
+    "isHealthPlace": true
   },
   {
     "Title": "Progreso Pharmacy",
     "Section": "farmacias",
     "Address": "Dirección no disponible",
-    "Description": "Farmacia local enfocada en la atención al turista."
+    "Description": "Farmacia local enfocada en la atención al turista.",
+    "placeCategory": "Farmacia",
+    "isHealthPlace": true
   },
   {
     "Title": "Farmacia Linda",
     "Section": "farmacias",
     "Address": "Dirección no disponible",
-    "Description": "Farmacia pequeña con atención personalizada."
+    "Description": "Farmacia pequeña con atención personalizada.",
+    "placeCategory": "Farmacia",
+    "isHealthPlace": true
   },
   {
     "Title": "Farmacia Centro Médico",
     "Section": "farmacias",
     "Address": "Dirección no disponible",
-    "Description": "Ubicada cerca del área de consultorios médicos."
+    "Description": "Ubicada cerca del área de consultorios médicos.",
+    "placeCategory": "Farmacia",
+    "isHealthPlace": true
   },
   {
     "Title": "Farmacias de Nuevo Progreso (grupo local)",
     "Section": "farmacias",
     "Address": "Dirección no disponible",
-    "Description": "Grupo de farmacias con varias ubicaciones en la ciudad."
+    "Description": "Grupo de farmacias con varias ubicaciones en la ciudad.",
+    "placeCategory": "Farmacia",
+    "isHealthPlace": true
   },
   {
     "Title": "Farmacia US",
     "Section": "farmacias",
     "Address": "Dirección no disponible",
-    "Description": "Especializada en productos que provienen del lado americano."
+    "Description": "Especializada en productos que provienen del lado americano.",
+    "placeCategory": "Farmacia",
+    "isHealthPlace": true
   },
   {
     "Title": "Farmacia Roma",
     "Section": "farmacias",
     "Address": "Dirección no disponible",
-    "Description": "Farmacia con servicio a domicilio."
+    "Description": "Farmacia con servicio a domicilio.",
+    "placeCategory": "Farmacia",
+    "isHealthPlace": true
   },
   {
     "Title": "Farmacia All Most Free",
     "Section": "farmacias",
     "Address": "Dirección no disponible",
-    "Description": "Conocida por ofrecer descuentos."
+    "Description": "Conocida por ofrecer descuentos.",
+    "placeCategory": "Farmacia",
+    "isHealthPlace": true
   },
   {
     "Title": "Farmacia Similares",
     "Section": "farmacias",
     "Address": "Dirección no disponible",
-    "Description": "Cadena de farmacias con medicamentos genéricos."
+    "Description": "Cadena de farmacias con medicamentos genéricos.",
+    "placeCategory": "Farmacia",
+    "isHealthPlace": true
   },
   {
     "Title": "Farmacia Queen",
     "Section": "farmacias",
     "Address": "Dirección no disponible",
-    "Description": "Farmacia con venta de medicamentos especializados."
+    "Description": "Farmacia con venta de medicamentos especializados.",
+    "placeCategory": "Farmacia",
+    "isHealthPlace": true
   },
   {
     "Title": "Óptica Progreso",
     "Section": "opticas",
     "Address": "Dirección no disponible",
-    "Description": "Óptica con examen de la vista y lentes."
+    "Description": "Óptica con examen de la vista y lentes.",
+    "placeCategory": "Óptica",
+    "isHealthPlace": true
   },
   {
     "Title": "Óptica Las Flores",
     "Section": "opticas",
     "Address": "Dirección no disponible",
-    "Description": "Óptica con amplia selección de armazones."
+    "Description": "Óptica con amplia selección de armazones.",
+    "placeCategory": "Óptica",
+    "isHealthPlace": true
   },
   {
     "Title": "Vision Center Progreso",
     "Section": "opticas",
     "Address": "Dirección no disponible",
-    "Description": "Centro de visión con especialistas."
+    "Description": "Centro de visión con especialistas.",
+    "placeCategory": "Centro de Visión",
+    "isHealthPlace": true
   },
   {
     "Title": "Laboratorio de Lentes Progreso",
     "Section": "opticas",
     "Address": "Dirección no disponible",
-    "Description": "Laboratorio para la fabricación de lentes."
+    "Description": "Laboratorio para la fabricación de lentes.",
+    "placeCategory": "Laboratorio de Lentes",
+    "isHealthPlace": true
   },
   {
     "Title": "Óptica La Plaza",
     "Section": "opticas",
     "Address": "Dirección no disponible",
-    "Description": "Ubicada convenientemente cerca de la plaza central."
+    "Description": "Ubicada convenientemente cerca de la plaza central.",
+    "placeCategory": "Óptica",
+    "isHealthPlace": true
   }
 ]
