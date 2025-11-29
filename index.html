@@ -31,19 +31,6 @@
         .action-btn { white-space: nowrap }
         .chip-group-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
         
-        /* Estilo de la barra de chat ANTERIOR */
-        /* .map-search-bar {
-            background-color: white; 
-            border-radius: 20px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
-            border: 1px solid #e5e7eb;
-            display: flex;
-            align-items: center;
-            padding: 4px; 
-            width: 100%; 
-            box-sizing: border-box; 
-        } */
-        
         /* Estilo de la barra de chat NUEVO (GLASSMOPRHISM) */
         .map-search-bar {
             background-color: #ffffffb8; /* Fondo blanco con 72% de opacidad (Glassmorphism) */
@@ -408,6 +395,12 @@
         
         <div class="bottom-action-area flex-shrink-0 flex flex-col space-y-2">
             
+            <div id="quick-action-full-list" class="px-4 pt-0 pb-2 hidden">
+                <div id="btn-view-all-places" class="action-chip flex items-center p-3 rounded-xl text-lg font-bold cursor-pointer transition glass-chip justify-center">
+                    ➡️ Ver todos los lugares
+                </div>
+            </div>
+            
             <div id="quick-replies-container" class="quick-replies-container flex-shrink-0 flex flex-col space-y-2">
                 
                 <div id="category-chips-group" class="chip-group-scroll hidden">
@@ -534,6 +527,11 @@
     const btnDiscardChanges = document.getElementById('btn-discard-changes');
     const btnApplyChanges = document.getElementById('btn-apply-changes');
 
+    // NUEVAS REFERENCIAS PARA EL BOTÓN DE ACCIÓN RÁPIDA "VER TODOS LOS LUGARES"
+    const quickActionFullList = document.getElementById('quick-action-full-list');
+    const btnViewAllPlaces = document.getElementById('btn-view-all-places');
+
+
     // Objeto de Traducción y textos de chips (SIN CAMBIOS)
     const UI_STRINGS = {
         es: {
@@ -600,6 +598,8 @@
         alertUser(currentLanguage === 'es' ? '¡Conversación eliminada! Empecemos de cero. 👋' : 'Conversation cleared! Let\'s start fresh. 👋', 'i', 'news');
         
         scrollToBottom();
+        // OCULTAR BOTÓN DE ACCIÓN RÁPIDA AL LIMPIAR
+        quickActionFullList.classList.add('hidden');
     }
     
     function loadHistory() {
@@ -799,6 +799,10 @@
         const query = actionChip.getAttribute(`data-query-${lang}`);
 
         vibrateDevice(); 
+
+        // Siempre ocultar el botón de lista completa al hacer una acción de menú
+        quickActionFullList.classList.add('hidden');
+
 
         if (action !== 'CATEGORIES' && categoriesVisible) {
             hideChipGroup(categoryChipsGroup, categoryChips);
@@ -1008,6 +1012,9 @@
         hideChipGroup(languageChipsGroup, languageChips);
         languageMenuVisible = false;
 
+        // Ocultar el botón al enviar un nuevo prompt
+        quickActionFullList.classList.add('hidden');
+
         if (typeof toggleInput === 'function') toggleInput(true);
         
         chatHistory.push({ role: 'user', text: userPrompt, timestamp: new Date() });
@@ -1021,7 +1028,7 @@
         
         let modelResponseText = await getGeminiResponse(userPrompt, limitedHistory);
         
-        let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date() };
+        let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date(), isStructured: false };
 
         try {
             const jsonStart = modelResponseText.indexOf('{');
@@ -1032,6 +1039,7 @@
                 const parsedJson = JSON.parse(jsonString);
 
                 if (parsedJson.isStructured === true) {
+                    // Si es estructurada, es una ficha de lugar/categoría
                     
                     if (parsedJson.type === 'place') {
                         finalMessage = {
@@ -1075,6 +1083,13 @@
                 : UI_STRINGS[currentLanguage].alertCategory(entityName);
 
             if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
+            
+            // Si es una respuesta estructurada, **no** mostramos el botón de acción rápida de lista completa.
+
+        } else {
+            // Si es una respuesta de texto plano, asumimos que podría ser una recomendación
+            // basada en la base de datos local y MOSTRAMOS el botón de acción rápida.
+            quickActionFullList.classList.remove('hidden');
         }
 
         saveHistory(); 
@@ -1119,6 +1134,15 @@
             setInterfaceLanguage(lang);
         });
     });
+
+    // NUEVO LISTENER PARA EL BOTÓN "VER TODOS LOS LUGARES"
+    if (btnViewAllPlaces) {
+        btnViewAllPlaces.addEventListener('click', () => {
+            vibrateDevice();
+            // TODO: Añadir aquí la lógica para dirigir al usuario a la lista completa
+            alertUser('Funcionalidad para **Ver todos los lugares** en desarrollo. Aquí se integrará la lista de Google Places.', 'i', 'news');
+        });
+    }
 
     // NUEVOS LISTENERS PARA EL PANEL DE NOTIFICACIONES
     if (btnNotifications) {
