@@ -5,6 +5,41 @@ import path from 'path';
 
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
+const MAX_CHAT_RESULTS = 4; // Límite de resultados a mostrar en el texto plano
+
+// Mapeo de intención de usuario a Secciones de JSON y Query de API de Places
+const CATEGORY_MAP = {
+    // Patrón de Búsqueda -> { Secciones JSON, Query API de Places }
+    'tacos': {
+        sections: ['taquerias_tacos_y_lonches', 'tacos_barbacoa'], 
+        apiQuery: 'Taquerías y Tacos en Nuevo Progreso'
+    },
+    'taqueria': {
+        sections: ['taquerias_tacos_y_lonches', 'tacos_barbacoa'], 
+        apiQuery: 'Taquerías y Tacos en Nuevo Progreso'
+    },
+    'barbacoa': {
+        sections: ['tacos_barbacoa'], 
+        apiQuery: 'Barbacoa y Birria Nuevo Progreso'
+    },
+    'restaurante': {
+        sections: ['restaurantes'], 
+        apiQuery: 'Restaurantes en Nuevo Progreso'
+    },
+    'comer': {
+        sections: ['restaurantes'], 
+        apiQuery: 'Comida en Nuevo Progreso'
+    },
+    'artesanias': {
+        sections: ['tiendas_artesanias'], 
+        apiQuery: 'Tiendas de Artesanías Nuevo Progreso'
+    },
+    'souvenirs': {
+        sections: ['tiendas_artesanias'], 
+        apiQuery: 'Tiendas de Souvenirs Nuevo Progreso'
+    }
+    // NOTA: Categorías de salud/estética son manejadas en modo JSON.
+};
 
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
@@ -12,7 +47,6 @@ const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
 const placesClient = new PlacesClient({}); 
 
 // 2. Definimos la Instrucción del Sistema MODIFICADA
-// Se añaden reglas para la recomendación local y exclusión de salud.
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 
@@ -61,40 +95,19 @@ Ejemplo de Cierre (Español): "Encontré X lugares, ¡pero hay muchísimos más!
    }`;
 
 /**
- * Carga y devuelve los datos de progreso, filtrando los de salud.
- * @returns {Array<object>} Lista de lugares no relacionados con salud.
+ * Carga y devuelve los datos de progreso COMPLETO.
+ * @returns {Array<object>} Lista de todos los lugares.
  */
 async function getProgresoData() {
     try {
         const filePath = path.join(process.cwd(), 'progreso_data.json');
         const fileContent = await fs.readFile(filePath, 'utf-8');
-        const data = JSON.parse(fileContent);
-
-        // Filtro estricto de lugares relacionados con la salud para las recomendaciones
-        return data.filter(place => 
-            !place.isHealthPlace && 
-            !['Óptica', 'Farmacia', 'Clínica', 'Dentista', 'Estética', 'Spa', 'Salud'].some(category => place.placeCategory.includes(category))
-        );
+        // El JSON debe ser un array de objetos
+        return JSON.parse(fileContent); 
     } catch (e) {
         console.error("Error al cargar o parsear progreso_data.json:", e);
         return [];
     }
-}
-
-/**
- * Busca lugares en la data local que coincidan con la categoría solicitada.
- * @param {string} category Categoría a buscar (ej: "taquería", "restaurante").
- * @param {number} count Número máximo de resultados.
- * @param {Array<object>} localData Datos locales filtrados (sin salud).
- * @returns {Array<object>} Lugares encontrados.
- */
-function findLocalRecommendations(category, count, localData) {
-    const matchingPlaces = localData.filter(place => 
-        place.placeCategory.toLowerCase().includes(category.toLowerCase()) || 
-        place.placeName.toLowerCase().includes(category.toLowerCase())
-    );
-    // Devuelve los primeros 'count' o todos si hay menos
-    return matchingPlaces.slice(0, count);
 }
 
 
@@ -166,38 +179,55 @@ export default async function handler(req, res) {
 
         // LÓGICA DE INTERCEPTACIÓN Y PRIORIDAD LOCAL
         let promptToSend = userPrompt;
+        let totalResultsCount = 0;
+        let apiQueryForChip = null;
+        let isLocalRecommendation = false;
 
-        // Patrón para detectar solicitudes de listado/recomendación (ej: "4 taquerías", "dame restaurantes")
-        // No es perfecto, pero ayuda a identificar intenciones de listado.
-        const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero).*\\s+(\\d+|unos cuantos)?\\s*(taquería|restaurante|tienda|bar|lugar|farmacia|óptica)s?`, 'i');
+
+        // Patrón para detectar solicitudes de listado/recomendación
+        const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra).*\\s+(\\d+|unos cuantos)?\\s*(taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias)s?`, 'i');
         
         const match = userPrompt.match(recommendationPattern);
         
         if (match) {
             
-            // 1. Intentamos leer la data local (sin salud)
-            const localData = await getProgresoData();
+            // 1. Intentamos leer la data local COMPLETA
+            const allLocalData = await getProgresoData();
             
-            if (localData.length > 0) {
-                // 2. Extraemos el conteo y la categoría
-                const countMatch = match[2];
-                const count = countMatch ? (isNaN(parseInt(countMatch)) ? 4 : parseInt(countMatch)) : 4; // Si dice "unos cuantos" o nada, usamos 4
-                const category = match[3] || 'lugar';
-
-                // 3. Buscamos en la data local (ya filtrada de salud)
-                const recommendations = findLocalRecommendations(category, count, localData);
-                const recommendationNames = recommendations.map(r => r.placeName);
+            if (allLocalData.length > 0) {
                 
-                if (recommendationNames.length > 0) {
+                // 2. Determinar la intención del usuario usando el mapa (ej: "taquería" -> "tacos")
+                const categoryKey = match[3].toLowerCase();
+                const categoryIntent = CATEGORY_MAP[categoryKey];
+                
+                if (categoryIntent) {
                     
-                    // 4. SOBRESCRIBIMOS el prompt para FORZAR el MODO CONVERSACIONAL (texto plano)
-                    const listText = recommendationNames.join(', ');
-                    const foundCount = recommendationNames.length;
+                    // 3. Filtrar usando las SECCIONES del JSON para obtener TODOS los resultados
+                    const allMatchingResults = allLocalData.filter(place => 
+                        categoryIntent.sections.includes(place.Section)
+                    );
                     
-                    // Construimos el nuevo prompt de instrucción para Gemini
-                    promptToSend = `El usuario pidió una recomendación de ${count} lugares (${category}). Nuestra lista local ya pre-filtrada de salud encontró ${foundCount} lugares: ${listText}. Genera una respuesta AMIGABLE en modo conversacional (TEXTO PLANO) usando estos lugares. Tu respuesta DEBE TERMINAR con el cierre del protocolo de recomendación local (mencionando que encontraste ${foundCount} lugares y la instrucción de "Ver todos los lugares"). NO uses el formato JSON estructurado.`;
+                    totalResultsCount = allMatchingResults.length;
                     
-                    console.log("PROTOCOLO LOCAL ACTIVADO. Nuevo prompt a Gemini:", promptToSend);
+                    // Si encontramos resultados, aplicamos el protocolo de recomendación
+                    if (totalResultsCount > 0) {
+                        
+                        // Limitamos a MAX_CHAT_RESULTS para la respuesta conversacional de Gemini
+                        const recommendationsForGemini = allMatchingResults.slice(0, MAX_CHAT_RESULTS); 
+                        const recommendationNames = recommendationsForGemini.map(r => r.Title);
+                        
+                        // Si encontramos lugares, activamos el protocolo
+                        isLocalRecommendation = true;
+                        apiQueryForChip = categoryIntent.apiQuery; // Guardamos la query para el chip
+
+                        // 4. SOBRESCRIBIMOS el prompt para FORZAR el MODO CONVERSACIONAL (texto plano)
+                        const listText = recommendationNames.join(', ');
+                        
+                        // Construimos el nuevo prompt de instrucción para Gemini
+                        promptToSend = `El usuario pidió una recomendación de ${categoryKey}. Nuestra lista local encontró ${totalResultsCount} lugares. Usa SOLO ESTOS primeros ${MAX_CHAT_RESULTS} lugares para la respuesta conversacional: ${listText}. Tu respuesta DEBE TERMINAR con el CIERRE REQUERIDO del protocolo de recomendación local (mencionando que encontraste ${totalResultsCount} lugares y la instrucción de "Ver todos los lugares"). NO uses el formato JSON estructurado.`;
+                        
+                        console.log("PROTOCOLO LOCAL ACTIVADO. Total encontrados:", totalResultsCount, "Nuevo prompt a Gemini:", promptToSend);
+                    }
                 }
             }
         }
@@ -243,7 +273,7 @@ export default async function handler(req, res) {
                             
                             // Aseguramos que los campos sensibles estén nulos para que el frontend los ignore
                             // Usamos el nombre del lugar para generar la URL de búsqueda básica en Google Maps/Search.
-                            const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
+                            const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=$${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
 
                             finalResponseData.responseText = JSON.stringify({
                                 ...parsedJson,
@@ -281,7 +311,24 @@ export default async function handler(req, res) {
             }
         } catch (jsonError) {
             console.error("Fallo en el parseo o enriquecimiento del JSON:", jsonError);
-            finalResponseData.responseText = modelResponseText;
+            // Si falla el parseo, la respuesta sigue siendo la original (texto plano)
+            finalResponseData.responseText = modelResponseText; 
+        }
+
+        // LÓGICA DE ANEXAR METADATOS DE RECOMENDACIÓN LOCAL AL FINAL DE LA RESPUESTA
+        // Esto solo ocurre si el protocolo fue activado (isLocalRecommendation = true) 
+        // y la respuesta final NO es JSON estructurado (es texto plano de Gemini)
+        if (isLocalRecommendation && !finalResponseData.responseText.includes('"isStructured": true')) {
+             if (totalResultsCount > MAX_CHAT_RESULTS) {
+                // Si el conteo total excede el límite (4), anexamos los metadatos para el frontend
+                const metaData = {
+                    isLocalRecommendation: true,
+                    totalCount: totalResultsCount,
+                    apiQueryForChip: apiQueryForChip
+                };
+                // Anexamos el JSON al final del texto de Gemini
+                finalResponseData.responseText = finalResponseData.responseText.trim() + '\n' + JSON.stringify(metaData);
+            }
         }
 
         // Retornamos la respuesta (enriquecida o original) al frontend
