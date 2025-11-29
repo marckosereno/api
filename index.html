@@ -1111,7 +1111,7 @@
         let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date(), isStructured: false };
         let totalCount = 0; 
         let apiQuery = null; 
-        let dynamicChipsData = null; // NUEVO: Para guardar los datos de los chips
+        let dynamicChipsData = null; // Para guardar los datos de los chips
 
         try {
             const jsonStart = modelResponseText.indexOf('{');
@@ -1121,65 +1121,94 @@
                 const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
                 const parsedJson = JSON.parse(jsonString);
 
-                // *** INICIO DE LA LÓGICA DE PROCESAMIENTO DE RESPUESTA ***
+                // *** INICIO DE LA LÓGICA DE PROCESAMIENTO DE RESPUESTA (ACTUALIZADA) ***
+                
+                let fichasParaMostrar = [];
+                // Separar el texto conversacional del JSON
+                let conversationText = modelResponseText.replace(jsonString, '').trim();
 
-                // 1. Manejo de Respuesta Estructurada (Fichas)
-                if (parsedJson.isStructured === true) {
-                    
-                    if (parsedJson.type === 'place') {
-                        finalMessage = {
-                            role: 'model',
-                            isStructured: true,
-                            type: parsedJson.type, 
-                            text: parsedJson.description || modelResponseText, 
-                            placeName: parsedJson.placeName, 
-                            placePhone: parsedJson.placePhone || null, 
-                            mapUrl: parsedJson.mapUrl || null,
-                            reviewUrl: parsedJson.reviewUrl || null,
-                            timestamp: finalMessage.timestamp
-                        };
-                    } else if (parsedJson.type === 'category') {
-                        finalMessage = {
-                            role: 'model',
-                            isStructured: true,
-                            type: parsedJson.type, 
-                            text: parsedJson.description || modelResponseText, 
-                            categoryName: parsedJson.categoryName,
-                            timestamp: finalMessage.timestamp
-                        };
-                    }
+                // 1. Manejo de Múltiples Fichas (NUEVO)
+                if (parsedJson.isMultiStructured === true && Array.isArray(parsedJson.response)) {
+                    fichasParaMostrar = parsedJson.response;
+                    if (parsedJson.conversationText) conversationText = parsedJson.conversationText;
                 } 
-                
-                // 2. Manejo de Chips Dinámicos (NUEVA LÓGICA)
-                else if (parsedJson.isDynamicChips === true) {
-                    dynamicChipsData = parsedJson.chips;
-                    
-                    // Aseguramos que solo el texto conversacional se muestre en la burbuja
-                    finalMessage.text = modelResponseText.replace(jsonString, '').trim();
-                    if (finalMessage.text.length < 5) finalMessage.text = modelResponseText;
-                }
-                
+                // 2. Manejo de Respuesta Estructurada Única
+                else if (parsedJson.isStructured === true) {
+                    fichasParaMostrar = [parsedJson];
+                } 
                 // 3. Manejo de Recomendación Local (Texto Plano Forzado con metadatos)
                 else if (parsedJson.isLocalRecommendation === true) {
-                    // Si es una recomendación local forzada (que Gemini respondió como texto plano)
                     totalCount = parsedJson.totalCount || 0;
                     apiQuery = parsedJson.apiQueryForChip || null;
                     
-                    // Aseguramos que el texto plano sea el que Gemini generó (eliminando el JSON de los metadatos)
-                    finalMessage.text = modelResponseText.replace(jsonString, '').trim();
+                    // Solo mantenemos el texto conversacional
+                    finalMessage.text = conversationText;
                     if (finalMessage.text.length < 5) finalMessage.text = modelResponseText;
                 }
+                
+                // 4. Manejo de Chips Dinámicos
+                else if (parsedJson.isDynamicChips === true) {
+                    dynamicChipsData = parsedJson.chips;
+                    finalMessage.text = conversationText;
+                    if (finalMessage.text.length < 5) finalMessage.text = modelResponseText;
+                }
+                
+                // Procesar Fichas (si hay una o varias)
+                if (fichasParaMostrar.length > 0) {
+                    // Si hay fichas, el primer mensaje es el texto conversacional (si existe)
+                    if (conversationText.length > 0) {
+                        chatHistory.push({ role: 'model', text: conversationText, timestamp: new Date(), isStructured: false });
+                    }
+                    
+                    // Insertar cada ficha como un mensaje separado
+                    fichasParaMostrar.forEach(ficha => {
+                        chatHistory.push({ 
+                            role: 'model', 
+                            isStructured: true,
+                            type: ficha.type, 
+                            text: ficha.description || ficha.text, 
+                            placeName: ficha.placeName, 
+                            placePhone: ficha.placePhone || null, 
+                            mapUrl: ficha.mapUrl || null,
+                            reviewUrl: ficha.reviewUrl || null,
+                            categoryName: ficha.categoryName || null,
+                            timestamp: new Date()
+                        });
+                        
+                        // Disparar la alerta (solo para la primera ficha para evitar spam)
+                        if (fichasParaMostrar.indexOf(ficha) === 0) {
+                           const isPlace = ficha.type === 'place';
+                           const entityName = isPlace 
+                                ? (ficha.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
+                                : (ficha.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
+
+                           const alertText = isPlace 
+                               ? UI_STRINGS[currentLanguage].alertStructured(entityName)
+                               : UI_STRINGS[currentLanguage].alertCategory(entityName);
+                           
+                           if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
+                        }
+                    });
+
+                    // Como ya pusheamos todos los mensajes, salimos del resto de la función.
+                    saveHistory(); 
+                    if (typeof renderChat === 'function') renderChat();
+                    if (typeof toggleInput === 'function') toggleInput(false);
+                    return; // 🛑 FINALIZA la ejecución de handleSend
+                }
+                
+                // Si no hay fichas, el finalMessage ya tiene el texto plano.
+
             }
         } catch (e) {
-            console.error("Error al parsear JSON estructurado o de chip:", e);
+            console.error("Error al parsear JSON estructurado, de chip o array:", e);
+            // Si hay error de parseo, cae a texto plano (modelResponseText)
             finalMessage.text = modelResponseText;
         }
 
         // *** FIN DE LA LÓGICA DE PROCESAMIENTO DE RESPUESTA ***
 
-        // chatHistory.push(finalMessage); // 🛑 LÍNEA COMENTADA/ELIMINADA PARA CORREGIR LA DUPLICACIÓN
-        
-        chatHistory.push(finalMessage); // <-- Dejamos solo esta línea (la que estaba original en tu código)
+        chatHistory.push(finalMessage); // <- Esta es la línea que antes estaba duplicada y ahora está corregida.
         
         // --- LÓGICA DE ACTIVACIÓN DE CHIPS Y ALERTA ---
         
@@ -1193,7 +1222,7 @@
             quickActionFullList.classList.add('hidden'); // Asegurar que el otro chip esté oculto
             
         } else if (finalMessage.isStructured) {
-            // Caso de FICHA ESTRUCTURADA
+            // Caso de FICHA ESTRUCTURADA (SOLO SI LLEGÓ UNA AQUÍ, si no, ya salió antes)
             const isPlace = finalMessage.type === 'place';
             const entityName = isPlace 
                 ? (finalMessage.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
