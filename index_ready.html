@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progreso Tour Guide</title>
+<link href="https://fonts.cdnfonts.com/css/avenir" rel="stylesheet">
+         <link href="https://db.onlinewebfonts.com/c/ddadf4e5d67469bf2fb13ca47ac078ba?family=FH+Oscar+Test+Medium" rel="stylesheet">       
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        /* Estilos base */
+        html, body { 
+            font-family:FH Oscar Test Medium; 
+            height: 100%; 
+            margin: 0; 
+            padding: 0; 
+            /* Fondo sutil para que el Glassmorphism funcione */
+            background: linear-gradient(179deg, rgb(224 235 251 / 4%) 0%, #eff6ff 100% 60%);
+        }
+        .chat-window { 
+            height: 100%; 
+            width: 100vw; 
+            display: flex; 
+            flex-direction: column; 
+            background-color: transparent; 
+            overflow: hidden 
+        }
+        .user-bubble { border-radius: 18px 18px 0 18px; max-width: 90% }
+        .model-bubble { border-radius: 18px 18px 18px 0; max-width: 90%;padding-left:8px;backgroud-color: rgb(140 154 178/6%); }
+        .action-bar-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 10px; padding-bottom: 5px }
+        .action-btn { white-space: nowrap }
+        .chip-group-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+        
+        /* Estilo de la barra de chat NUEVO (GLASSMOPRHISM) */
+        .map-search-bar {
+            background-color: #ffffffb8; /* Fondo blanco con 72% de opacidad (Glassmorphism) */
+            border-radius: 20px;
+            box-shadow: 1px 2px 2px 2px #000, 0 2px 4px -2px rgba(0, 0, 0, 0.06); /* Sombra personalizada */
+            border: 1px solid #e5e7eb; /* Mantenemos el borde para definición */
+            display: flex;
+            align-items: center;
+            padding: 4px; 
+            width: 100%; 
+            box-sizing: border-box; 
+        }
+        
+        .map-input {
+            flex-grow: 1;
+            padding: 0.75rem 0.75rem; 
+            color: #9ca3af;
+            font-size: 1.125rem;
+            background: transparent;
+            border: none;
+            min-width: 0; 
+            outline: none !important;
+            box-shadow: none !important;
+        }
+        .go-button {
+            background-color: black;
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 15px;
+            padding: 0.5rem 1rem; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: hover:opacity-90 disabled:opacity-50;
+            flex-shrink: 0;
+            min-width: 60px;
+            height: 44px;
+            box-sizing: border-box;
+            margin-right: 4px;
+            outline: none !important;
+        }
+        .go-button svg {
+            margin-right: 0.25rem;
+            width: 1.25rem; 
+            height: 1.25rem;
+            fill: currentColor;
+        }
+
+        /* --- Eliminación de Efecto Celeste/Ring/Highlight en TODOS los botones y chips --- */
+        
+        /* 1. Para navegadores basados en Webkit (Chrome, Safari, Android) */
+        * {
+            -webkit-tap-highlight-color: transparent !important; 
+        }
+        
+        /* 2. Asegura la eliminación del outline/ring en estados focus/active */
+        .action-chip, .category-chip, .language-chip, .go-button, .map-input {
+            outline: none !important;
+            box-shadow: none !important;
+            --tw-ring-color: transparent !important;
+        }
+        .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active, .go-button:focus, .go-button:active {
+            outline: none !important;
+            box-shadow: none !important;
+            --tw-ring-color: transparent !important;
+        }
+        .hover\:bg-gray-300:active {
+            background-color: #d1d5db; 
+        }
+        
+        /* --- Efecto Ola y Transición para los Chips --- */
+        .category-chip, .language-chip {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+        }
+        .visible-chip {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Estilo para el Timestamp */
+        .timestamp {
+            font-size: 0.7rem; 
+            color: #9ca3af; 
+            margin-top: 2px;
+        }
+
+        /* AJUSTE CRÍTICO PARA EL NUEVO HEADER FLOTANTE */
+        #message-container {
+            padding-top: 6rem; 
+        }
+        #btn-clear-top {
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+            outline: none !important;
+        }
+
+        /* NUEVOS ESTILOS PARA LA TARJETA DE NOTIFICACIÓN */
+        .notification-card {
+            background-color: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.05);
+            color: #1f2937; 
+            padding: 12px 16px;
+            max-width: 90%;
+            min-width: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 10px; 
+            transform: translateY(-100%);
+            transition: transform 0.4s ease-out, opacity 0.4s ease-out;
+            opacity: 0;
+        }
+
+        .notification-card.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .notification-card .message-content {
+            flex-grow: 1;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            line-height:16px;
+        }
+
+        .notification-card .close-btn {
+            background: none;
+            border: none;
+            color: #9ca3af; 
+            font-size: 1.2rem;
+            cursor: pointer;
+            margin-left: 15px;
+            padding: 0;
+            outline: none;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+        
+        .notification-card .close-btn:active {
+            color: #4b5563; 
+        }
+
+        /* Botón de Notificaciones (SIN CAMBIOS) */
+        #btn-notifications {
+            background-color: white;
+            color: #4b5563; 
+            border: 1px solid #d1d5db; 
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+            outline: none !important;
+            padding: 8px 12px; 
+            border-radius: 9999px; 
+            font-size: 1.1rem; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+        }
+        #btn-notifications:hover {
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        #btn-notifications:active {
+            background-color: #e5e7eb;
+            color: #000;
+        }
+
+        /* Panel de Preferencias (SIN CAMBIOS) */
+        .notification-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100; 
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+        }
+
+        .notification-modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .notification-panel {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2), 0 5px 10px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 400px; 
+            transform: translateY(20px); 
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+            opacity: 0;
+            padding: 20px;
+            pointer-events: auto; 
+        }
+
+        .notification-modal-overlay.show .notification-panel {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Toggles (Switch) - (SIN CAMBIOS) */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 40px; 
+            height: 20px; 
+            flex-shrink: 0;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc; 
+            transition: .4s;
+            border-radius: 20px; 
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px; 
+            width: 16px; 
+            left: 2px; 
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2); 
+        }
+
+        input:checked + .slider {
+            background-color: #2563eb; 
+        }
+
+        input:focus + .slider {
+            box-shadow: 0 0 1px #2563eb;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px); 
+        }
+
+        /* Info card dentro del panel (SIN CAMBIOS) */
+        .info-card-panel {
+            background-color: #eff6ff; 
+            color: #1e40af; 
+            border-left: 4px solid #3b82f6; 
+            border-radius: 4px;
+            padding: 12px;
+            font-size: 0.9rem;
+            display: none;
+            align-items: flex-start;
+            margin-top: 20px;
+        }
+        .info-card-panel span {
+            margin-right: 8px;
+            font-size: 1.1rem;
+        }
+        
+        /* --- CAMBIOS SOLICITADOS EN CSS --- */
+        
+        /* NUEVO: ESTILO PARA EL CONTENEDOR INFERIOR COMPLETO (Quick Replies + Chat Bar) */
+        .bottom-action-area {
+            border-top: 1px solid #e5e7eb;
+            background: linear-gradient(90deg, rgba(196, 228, 242, 0.35) 0%, #eff6ff 40%, #eff6ff 100%);
+            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
+            z-index: 10;
+            padding-bottom: 0; /* Ajustamos con los p-4 internos */
+        }
+
+        /* 1. 🎨 FONDO PARA EL QUICK REPLIES CONTAINER (Adaptado para usar el fondo del padre) */
+        #quick-replies-container {
+            border-top: none; /* El padre (bottom-action-area) ya tiene un borde superior */
+            background: transparent; /* Fondo transparente para que use el del padre */
+            padding: 0.5rem; 
+            box-shadow: none; /* La sombra la maneja el padre */
+            z-index: 10;
+        }
+
+
+        /* --- NUEVOS ESTILOS GLASS CHIP (SIN CAMBIOS) --- */
+        .glass-chip {
+            /* 2. 🎨 FONDO PARA LOS BOTONES (Menu Action Chip) */
+            background: linear-gradient(90deg, rgb(226 246 255 / 35%) 0%, #f9fafb 90%) !important; 
+            
+            backdrop-filter: blur(8px); 
+            -webkit-backdrop-filter: blur(8px);
+            
+            border: 1px solid rgba(255, 255, 255, 0.8) !important; 
+            
+            box-shadow: 
+                inset 0 1px 0 rgba(255, 255, 255, 0.9),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+            
+            color: #1f2937 !important; 
+            
+            transition: all 0.2s ease-in-out;
+        }
+
+        .glass-chip:hover {
+            background: linear-gradient(90deg, rgb(226 246 255 / 50%) 0%, #ffffff 100%) !important;
+            box-shadow: 
+                0 2px 4px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 1),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        .glass-chip:active {
+            background: rgb(226 246 255 / 80%) !important;
+            box-shadow: none !important; 
+        }
+
+        /* Anular el fondo gris de Tailwind en los chips de menú principales */
+        #menu-actions .menu-action-chip {
+            background-color: transparent !important;
+        }
+        
+    </style>
+    <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
+</head>
+<body>
+    <div id="chat-window" class="chat-window h-screen w-full"> 
+        
+        <div class="fixed top-0 left-0 w-full z-50 p-4 pt-6 flex justify-between bg-transparent">
+            <div id="top-action-bar-left" class="flex items-center space-x-3">
+                <div id="btn-clear-top" class="action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-white text-red-700 cursor-pointer transition hover:bg-gray-100 shadow-md border border-red-300" data-action="CLEAR_HISTORY">❌ Borrar Chat</div>
+            </div>
+            <div id="top-action-bar-right" class="flex items-center space-x-3">
+                <button id="btn-notifications" class="action-chip flex items-center text-sm font-semibold cursor-pointer">🔔</button>
+            </div>
+        </div>
+        <div id="app-alert-container" class="fixed top-0 w-full flex justify-center z-50 pointer-events-none"></div>
+
+        <div id="message-container" class="flex-grow overflow-y-auto p-4 flex flex-col"></div>
+
+        <div id="loading-indicator" class="flex justify-start hidden p-4 pl-1 flex-shrink-0" style="margin-left:-42px;margin-bottom:-22px;">
+            <dotlottie-wc src="https://lottie.host/65b2d1fc-9840-476c-867e-6236ce234b38/SwsGK4ZVOj.lottie" style="width: 150px; height:" autoplay loop></dotlottie-wc>
+        </div>
+        
+        <div class="bottom-action-area flex-shrink-0 flex flex-col space-y-2">
+            
+            <div id="quick-action-full-list" class="px-4 pt-0 pb-2 hidden">
+                <div id="btn-view-all-places" class="action-chip flex items-center p-3 rounded-xl text-lg font-bold cursor-pointer transition glass-chip justify-center">
+                    ➡️ Ver todos los lugares
+                </div>
+            </div>
+            
+            <div id="quick-replies-container" class="quick-replies-container flex-shrink-0 flex flex-col space-y-2">
+                
+                <div id="category-chips-group" class="chip-group-scroll hidden">
+                    <div id="category-chips-list" class="inline-flex space-x-3 pb-3 border-b border-gray-200"> 
+                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-green-500 bg-green-50 text-green-700 cursor-pointer transition hover:bg-green-100" data-query-es="Dime sobre la Categoría Salud y Estética en Progreso" data-query-en="Tell me about the Health and Beauty Category in Progreso">🏥 Salud & Estética</div>
+                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-blue-500 bg-blue-50 text-blue-700 cursor-pointer transition hover:bg-blue-100" data-query-es="Dime sobre la Categoría Compras y Tiendas en Progreso" data-query-en="Tell me about the Shopping and Stores Category in Progreso">🛍️ Compras</div>
+                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-purple-500 bg-purple-50 text-purple-700 cursor-pointer transition hover:bg-purple-100" data-query-es="Dime sobre la Categoría Entretenimiento y Atracciones en Progreso" data-query-en="Tell me about the Entertainment and Attractions Category in Progreso">🎺 Entretenimiento</div>
+                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-yellow-500 bg-yellow-50 text-yellow-700 cursor-pointer transition hover:bg-yellow-100" data-query-es="Top 10 Dentistas en Progreso" data-query-en="Top 10 Dentists in Progreso">🦷 Top 10 Dental</div>
+                    </div>
+                </div>
+
+                <div id="language-chips-group" class="chip-group-scroll hidden">
+                    <div class="inline-flex space-x-3 pb-3 border-b border-gray-200"> 
+                        <div class="language-chip flex items-center p-2 rounded-full text-sm font-semibold border border-gray-400 bg-white text-gray-800 cursor-pointer transition hover:bg-gray-100" data-lang="es">🇲🇽 Español</div>
+                        <div class="language-chip flex items-center p-2 rounded-full text-sm font-semibold border border-gray-400 bg-white text-gray-800 cursor-pointer transition hover:bg-gray-100" data-lang="en">🇺🇸 English</div>
+                    </div>
+                </div>
+                
+                <div id="menu-actions" class="chip-group-scroll">
+                    <div class="inline-flex space-x-3 pt-2">
+                        <div id="btn-categorias" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="CATEGORIES">📂 Categorías</div>
+                        <div id="btn-lenguaje" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="LANGUAGE">🌐 Lenguaje</div>
+                        <div id="btn-comollegar" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="GET_THERE" data-query-es="Dime cómo llegar a Progreso, Tamaulipas." data-query-en="Tell me how to get to Progreso, Tamaulipas.">📍 Cómo Llegar</div>
+                        <div id="btn-info" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="INFO" data-query-es="Información general sobre Nuevo Progreso." data-query-en="General information about Nuevo Progreso.">ℹ️ Info</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-4 flex-shrink-0 pt-2"> 
+                <div class="map-search-bar w-full">
+                    <input type="text" id="user-input" class="map-input focus:outline-none focus:ring-0" placeholder="Ask the map">
+                    
+                    <button id="go-button" class="go-button transition hover:opacity-90 disabled:opacity-50">
+                        <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 122.88 122.88" class="h-5 w-5"><g><path class="st0" d="M62.43,122.88h-1.98c0-16.15-6.04-30.27-18.11-42.34C30.27,68.47,16.16,62.43,0,62.43v-1.98 c16.16,0,30.27-6.04,42.34-18.14C54.41,30.21,60.45,16.1,60.45,0h1.98c0,16.15,6.04,30.27,18.11,42.34 c12.07,12.07,26.18,18.11,42.34,18.11v1.98c-16.15,0-30.27,6.04-42.34,18.11C68.47,92.61,62.43,106.72,62.43,122.88L62.43,122.88z"/></g></svg>
+                        <span id="go-text">Ir</span> 
+                    </button>
+                </div>
+            </div>
+        </div>
+        </div>
+    
+    <div id="notification-preferences-modal" class="notification-modal-overlay">
+        <div class="notification-panel">
+            <h3 class="text-xl font-bold mb-2 text-gray-900">Preferencias de Notificaciones</h3>
+            <p class="text-sm text-gray-600 mb-6">Elige qué notificaciones quieres recibir.</p>
+
+            <div class="space-y-4">
+                
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="font-semibold text-gray-800">Noticias de Interfaz</p>
+                        <p class="text-sm text-gray-500">Alertas de cambios de idioma, historial y otros eventos de la aplicación. (Recomendado)</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-news" checked data-pref="news">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="font-semibold text-gray-800">Alertas de Ficha</p>
+                        <p class="text-sm text-gray-500">Notificaciones de confirmación cuando se muestra información de una ficha de lugar o categoría.</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-reminders" checked data-pref="reminders">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-between opacity-50 cursor-not-allowed">
+                    <div>
+                        <p class="font-semibold text-gray-800">Promociones y Ofertas</p>
+                        <p class="text-sm text-gray-500">Recibe notificaciones sobre promociones especiales. (Próximamente)</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-promotions" disabled data-pref="promotions">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="info-card-panel">
+                <span>ℹ️</span> Recuerda que las **alertas de error** (❌) siempre se mostrarán, independientemente de tus preferencias, para garantizar la usabilidad.
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-8">
+                <button id="btn-discard-changes" class="py-2 px-4 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition">Descartar</button>
+                <button id="btn-apply-changes" class="py-2 px-4 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition">Aplicar Cambios</button>
+            </div>
+        </div>
+    </div>
+    <script>
+    // --- BLOQUE JAVASCRIPT: SETUP Y UTILIDADES ---
+    
+    // **NOTA: Debe coincidir con el endpoint de Vercel/backend**
+    const BACKEND_URL = "/api/chat"; 
+    const MAX_CHAT_RESULTS = 4; // Límite de resultados mostrado en texto plano (DEBE COINCIDIR CON CHAT.JS)
+    
+    let chatHistory = [];
+    let currentLanguage = 'es'; 
+    let categoriesVisible = false; 
+    let languageMenuVisible = false; 
+    
+    // VARIABLES GLOBALES PARA EL PROTOCOLO DE RECOMENDACIÓN LOCAL
+    let lastTotalCount = 0; // Para guardar el conteo total de la última recomendación
+    let lastApiQuery = null; // Para guardar el query de Places para el chip
+
+
+    // Referencias a Elementos del DOM
+    const inputElement = document.getElementById('user-input');
+    const sendButton = document.getElementById('go-button'); 
+    const messageContainer = document.getElementById('message-container');
+    const loadingIndicator = document.getElementById('loading-indicator');
+    const appAlertContainer = document.getElementById('app-alert-container');
+    const categoryChipsGroup = document.getElementById('category-chips-group');
+    const languageChipsGroup = document.getElementById('language-chips-group');
+    const categoryChips = document.querySelectorAll('#category-chips-group .category-chip');
+    const languageChips = document.querySelectorAll('#language-chips-group .language-chip');
+    const menuActionChips = document.querySelectorAll('#menu-actions .menu-action-chip');
+    const btnClearTop = document.getElementById('btn-clear-top'); 
+    
+    // NUEVAS REFERENCIAS A ELEMENTOS DEL DOM para el panel de notificaciones
+    const btnNotifications = document.getElementById('btn-notifications');
+    const notificationModal = document.getElementById('notification-preferences-modal');
+    const notificationPanel = document.querySelector('#notification-preferences-modal .notification-panel');
+    const toggleNews = document.getElementById('toggle-news');
+    const toggleReminders = document.getElementById('toggle-reminders');
+    const togglePromotions = document.getElementById('toggle-promotions'); 
+    const btnDiscardChanges = document.getElementById('btn-discard-changes');
+    const btnApplyChanges = document.getElementById('btn-apply-changes');
+
+    // NUEVAS REFERENCIAS PARA EL BOTÓN DE ACCIÓN RÁPIDA "VER TODOS LOS LUGARES"
+    const quickActionFullList = document.getElementById('quick-action-full-list');
+    const btnViewAllPlaces = document.getElementById('btn-view-all-places');
+
+
+    // Objeto de Traducción y textos de chips (SIN CAMBIOS)
+    const UI_STRINGS = {
+        es: {
+            header: "PROGRESO TOUR GUIDE",
+            placeholder: "Pregúntale al mapa",
+            goButton: "Ir",
+            categories: "📂 Categorías",
+            language: "🌐 Lenguaje",
+            getThere: "📍 Cómo Llegar",
+            info: "ℹ️ Info",
+            alertStructured: (name) => `¡Ficha verificada de ${name}!`,
+            alertCategory: (name) => `Resumen de la categoría ${name}.`,
+            chipHealth: "🏥 Salud & Estética",
+            chipShopping: "🛍️ Compras",
+            chipEntertainment: "🎺 Entretenimiento",
+            chipDental: "🦷 Top 10 Dental",
+        },
+        en: {
+            header: "PROGRESO TOUR GUIDE",
+            placeholder: "Ask the map",
+            goButton: "Go",
+            categories: "📂 Categories",
+            language: "🌐 Language",
+            getThere: "📍 How to get there",
+            info: "ℹ️ Info",
+            alertStructured: (name) => `Verified card for ${name}!`,
+            alertCategory: (name) => `Summary for ${name} category.`,
+            chipHealth: "🏥 Health & Beauty",
+            chipShopping: "🛍️ Shopping",
+            chipEntertainment: "🎺 Entertainment",
+            chipDental: "🦷 Top 10 Dental",
+        }
+    };
+
+    // Estado inicial de las preferencias de notificación
+    let notificationPreferences = {
+        news: true,      // Alertas de interfaz, historial, etc.
+        reminders: true, // Alertas estructuradas (fichas de lugar/categoría)
+        promotions: false
+    };
+
+
+    // Inicialización del estado
+    if (inputElement) inputElement.disabled = false;
+    if (sendButton) sendButton.disabled = false;
+
+    // --- Funciones de PERSISTENCIA y CONTROL DE CHAT ---
+    
+    function saveHistory() {
+        try {
+            localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+        } catch (e) {
+            console.error("Error al guardar el historial en localStorage", e);
+        }
+    }
+
+    function clearChatHistory() {
+        vibrateDevice();
+        chatHistory = []; 
+        localStorage.removeItem('chatHistory'); 
+        
+        if (messageContainer) messageContainer.innerHTML = ''; 
+        // ALERTA DE CLEAR HISTORY USA 'news'
+        alertUser(currentLanguage === 'es' ? '¡Conversación eliminada! Empecemos de cero. 👋' : 'Conversation cleared! Let\'s start fresh. 👋', 'i', 'news');
+        
+        scrollToBottom();
+        // OCULTAR BOTÓN DE ACCIÓN RÁPIDA AL LIMPIAR
+        quickActionFullList.classList.add('hidden');
+        lastTotalCount = 0;
+        lastApiQuery = null;
+    }
+    
+    function loadHistory() {
+        // Inicializa chatHistory como array vacío si no se encuentra o es inválido
+        let loaded = false;
+        try {
+            const savedHistory = localStorage.getItem('chatHistory');
+            if (savedHistory) {
+                const loadedHistory = JSON.parse(savedHistory);
+                if (Array.isArray(loadedHistory) && loadedHistory.length > 0) {
+                    chatHistory = loadedHistory; 
+                    renderChat(); 
+                    scrollToBottom();
+                    loaded = true;
+                }
+            }
+        } catch (e) {
+            console.error("Error al cargar o parsear el historial de localStorage", e);
+            // Si hay un error de parseo, aseguramos que el historial esté vacío
+            chatHistory = []; 
+        }
+        // 3. ⚠️ CORRECCIÓN DE ERROR CLAVE: Asegurar que chatHistory esté listo.
+        if (!loaded) {
+            chatHistory = []; 
+        }
+        return loaded;
+    }
+
+    // NUEVAS FUNCIONES PARA LA PERSISTENCIA DE NOTIFICACIONES
+    function saveNotificationPreferences() {
+        try {
+            localStorage.setItem('notificationPreferences', JSON.stringify(notificationPreferences));
+            alertUser('Preferencias de notificaciones guardadas. ✅', 'i', 'news');
+        } catch (e) {
+            console.error("Error al guardar las preferencias de notificación:", e);
+        }
+    }
+
+    function loadNotificationPreferences() {
+        try {
+            const savedPrefs = localStorage.getItem('notificationPreferences');
+            if (savedPrefs) {
+                notificationPreferences = JSON.parse(savedPrefs);
+            }
+            // Aplicar el estado guardado a los toggles del modal
+            if (toggleNews) toggleNews.checked = notificationPreferences.news;
+            if (toggleReminders) toggleReminders.checked = notificationPreferences.reminders;
+            // No aplicamos 'promotions' ya que está deshabilitado
+        } catch (e) {
+            console.error("Error al cargar las preferencias de notificación:", e);
+        }
+    }
+
+    // --- Funciones de utilidad de tiempo (SIN CAMBIOS) ---
+    function formatTime(date) {
+        if (!date) return '';
+        let hours = date.getHours();
+        const minutes = date.getMinutes();
+        const ampm = hours >= 12 ? 'pm' : 'am';
+        hours = hours % 12;
+        hours = hours ? hours : 12; 
+        const minutesStr = minutes < 10 ? '0'+minutes : minutes;
+        return hours + ':' + minutesStr + ' ' + ampm;
+    }
+
+    // FUNCIÓN DE ALERTA MEJORADA CON CONTROL DE PREFERENCIAS
+    function alertUser(m, t='i', preferenceType = 'news') {
+        
+        // 🛑 NUEVO: Si no es un error y la preferencia está desactivada, salir.
+        if (t !== 'error' && !notificationPreferences[preferenceType]) {
+            console.log(`Notificación de tipo "${preferenceType}" deshabilitada por el usuario. Mensaje: ${m}`);
+            return; 
+        }
+
+        // --- MODO DE LIMPIEZA INMEDIATA PARA EVITAR ACUMULACIÓN ---
+        if (appAlertContainer) {
+            // Elimina inmediatamente cualquier alerta existente en el contenedor
+            const existingAlert = appAlertContainer.querySelector('.notification-card');
+            if (existingAlert) {
+                existingAlert.remove(); 
+            }
+        }
+        // --------------------------------------------------------
+        
+        // Función auxiliar para esconder la alerta (con animación)
+        const hideAlert = (alertElement) => {
+            if (!alertElement || !alertElement.parentNode) return;
+            alertElement.classList.remove('show');
+            alertElement.style.opacity = '0';
+            // Espera a que termine la transición (400ms) antes de eliminar del DOM
+            setTimeout(() => {
+                if (alertElement.parentNode) alertElement.remove();
+            }, 400); 
+        };
+
+        const a = document.createElement('div');
+        const icon = (t === 'error') 
+            ? '❌' 
+            : (t === 'i' ? 'ℹ️' : '✅'); 
+
+        a.className = 'notification-card opacity-0 pointer-events-auto';
+        a.innerHTML = `
+            <div class="message-content">
+                <span class="mr-2">${icon}</span> 
+                <span>${m}</span>
+            </div>
+            <button class="close-btn" aria-label="Cerrar notificación">×</button>
+        `;
+
+        if (appAlertContainer) appAlertContainer.appendChild(a);
+
+        setTimeout(() => {
+            a.classList.add('show');
+            a.style.opacity = '1';
+        }, 10); 
+
+        const closeButton = a.querySelector('.close-btn');
+        closeButton.addEventListener('click', () => {
+            hideAlert(a);
+        });
+        
+        setTimeout(() => {
+            hideAlert(a);
+        }, 4000);
+    }
+    
+    function scrollToBottom() { 
+        if (messageContainer) messageContainer.scrollTop = messageContainer.scrollHeight; 
+    }
+    
+    function toggleInput(d) {
+        if (inputElement) inputElement.disabled = d;
+        if (sendButton) sendButton.disabled = d;
+        if (loadingIndicator) loadingIndicator.classList.toggle('hidden', !d);
+        if (inputElement) inputElement.placeholder = d ? "" : UI_STRINGS[currentLanguage].placeholder;
+    }
+
+    // --- FUNCIONES DE INTERACCIÓN ---
+
+    function vibrateDevice() {
+        if ("vibrate" in navigator) {
+            navigator.vibrate(100); 
+        }
+    }
+    
+    function hideChipGroup(groupElement, chipElements) {
+        groupElement.classList.add('hidden');
+        chipElements.forEach(chip => {
+            chip.classList.remove('visible-chip');
+        });
+    }
+
+    function showChipGroupWithWave(groupElement, chipElements) {
+        groupElement.classList.remove('hidden');
+        chipElements.forEach((chip, index) => {
+            chip.style.transition = 'none';
+            chip.classList.remove('visible-chip');
+
+            void chip.offsetWidth; 
+
+            setTimeout(() => {
+                chip.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+                chip.classList.add('visible-chip');
+            }, index * 100); 
+        });
+    }
+
+    function setInterfaceLanguage(lang) {
+        const langChanged = currentLanguage !== lang;
+        currentLanguage = lang;
+        const strings = UI_STRINGS[lang];
+        
+        hideChipGroup(languageChipsGroup, languageChips);
+        languageMenuVisible = false;
+
+        inputElement.placeholder = strings.placeholder;
+        document.getElementById('go-text').textContent = strings.goButton; 
+
+        document.getElementById('btn-categorias').textContent = strings.categories;
+        document.getElementById('btn-lenguaje').textContent = strings.language;
+        document.getElementById('btn-comollegar').textContent = strings.getThere;
+        document.getElementById('btn-info').textContent = strings.info;
+
+        const categoryChipTexts = [strings.chipHealth, strings.chipShopping, strings.chipEntertainment, strings.chipDental];
+        categoryChips.forEach((chip, index) => {
+            chip.textContent = categoryChipTexts[index];
+        });
+
+        if (langChanged) {
+            alertUser(`Interfaz y conversación cambiadas a ${lang === 'es' ? 'Español' : 'English'}`, 'i', 'news');
+        }
+    }
+
+    function handleMenuAction(actionChip) {
+        const action = actionChip.getAttribute('data-action');
+        const lang = currentLanguage;
+        const query = actionChip.getAttribute(`data-query-${lang}`);
+
+        vibrateDevice(); 
+
+        // Siempre ocultar el botón de lista completa al hacer una acción de menú
+        quickActionFullList.classList.add('hidden');
+        lastTotalCount = 0;
+        lastApiQuery = null;
+
+
+        if (action !== 'CATEGORIES' && categoriesVisible) {
+            hideChipGroup(categoryChipsGroup, categoryChips);
+            categoriesVisible = false;
+        }
+        if (action !== 'LANGUAGE' && languageMenuVisible) {
+            hideChipGroup(languageChipsGroup, languageChips);
+            languageMenuVisible = false;
+        }
+        
+        if (notificationModal.classList.contains('show')) {
+            notificationModal.classList.remove('show');
+        }
+
+
+        if (action === 'CATEGORIES') {
+            if (categoriesVisible) {
+                hideChipGroup(categoryChipsGroup, categoryChips);
+                categoriesVisible = false;
+            } else {
+                showChipGroupWithWave(categoryChipsGroup, categoryChips);
+                categoriesVisible = true;
+            }
+        } else if (action === 'LANGUAGE') {
+            if (languageMenuVisible) {
+                hideChipGroup(languageChipsGroup, languageChips);
+                languageMenuVisible = false;
+            } else {
+                showChipGroupWithWave(languageChipsGroup, languageChips);
+                languageMenuVisible = true;
+            }
+        } else if (action === 'CLEAR_HISTORY') { 
+            clearChatHistory();
+            return;
+        } else {
+            if (query) {
+                handleSend(query); 
+                if (categoriesVisible) { hideChipGroup(categoryChipsGroup, categoryChips); categoriesVisible = false; }
+                if (languageMenuVisible) { hideChipGroup(languageChipsGroup, languageChips); languageMenuVisible = false; }
+            }
+        }
+    }
+    
+    // Función para crear las burbujas de mensaje (User/Model)
+    function createMessageBubble(m) {
+        const w = document.createElement('div');
+        
+        const timeStr = m.timestamp ? formatTime(m.timestamp) : '';
+        const timeSpan = timeStr ? `<span class="timestamp">${timeStr}</span>` : '';
+
+        if (m.role === 'user') { 
+            w.className = 'flex justify-end mb-2'; 
+            w.innerHTML = `
+                <div class="flex flex-col items-end">
+                    <div class="user-bubble bg-black text-white p-3 shadow-md">${m.text}</div>
+                    ${timeSpan}
+                </div>
+            `; 
+        } 
+        else if (m.role === 'model') {
+            w.className = 'flex flex-col justify-start w-full mb-2';
+            let content = '';
+
+            if (m.isStructured) { 
+                
+                const isPlace = m.type === 'place';
+                const isCategory = m.type === 'category';
+
+                const entityName = isPlace 
+                    ? (m.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
+                    : (m.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
+                
+                let directionsUrl = '#';
+                let searchUrl = '#';
+                let phoneUrl = null;
+                let reviewUrl = null;
+                
+                if (isPlace) {
+                    const query = encodeURIComponent(entityName + " Nuevo Progreso Tamps");
+                    // Aquí se espera que el backend haya insertado la URL correcta o la URL de búsqueda básica.
+                    directionsUrl = m.mapUrl || `https://www.google.com/maps/search/?api=1&query=${query}`;
+                    
+                    searchUrl = `https://www.google.com/search?q=${query}`;
+                    phoneUrl = m.placePhone ? `tel:${m.placePhone}` : `javascript:alert('${currentLanguage === 'es' ? 'Número no disponible.' : 'Number unavailable.'}')`;
+                    reviewUrl = m.reviewUrl || directionsUrl; 
+                    
+                } else if (isCategory) {
+                    const query = encodeURIComponent(entityName + " Nuevo Progreso Tamps");
+                    directionsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
+                    searchUrl = `https://www.google.com/search?q=${query}`;
+                }
+                
+                content = `<div class="model-bubble text-gray-800 p-3 shadow-md">${m.text || m.description}</div>`;
+                
+                let actionsHTML = `
+                    <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Ver en Mapa 🗺️' : 'View on Map 🗺️'}</a>
+                `;
+
+                if (isPlace) {
+                    const phoneAvailable = !!m.placePhone;
+                    const reviewsAvailable = !!m.reviewUrl;
+                    
+                    // REGLA CRÍTICA DE SALUD EN EL FRONTEND: Si el backend bloqueó placePhone, no se muestra.
+                    if (phoneAvailable) {
+                        actionsHTML += `
+                            <a href="${phoneUrl}" class="action-btn bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">
+                                ${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}
+                            </a>
+                        `;
+                    }
+                    
+                    if (reviewsAvailable) {
+                        actionsHTML += `
+                            <a href="${reviewUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-500 transition flex-shrink-0 text-sm">
+                                ${currentLanguage === 'es' ? 'Reseñas ⭐' : 'Reviews ⭐'}
+                            </a>
+                        `;
+                    }
+                }
+
+                actionsHTML += `
+                    <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-700 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Buscar en Google 🔍' : 'Search on Google 🔍'}</a>
+                `;
+
+                const actionsBar = `
+                    <div class="action-bar-container">
+                        <div class="inline-flex space-x-3 p-1">
+                            ${actionsHTML}
+                        </div>
+                    </div>
+                `;
+                
+                w.innerHTML = `
+                    <div class="flex flex-col items-start">
+                        ${content}
+                        ${actionsBar}
+                        ${timeSpan}
+                    </div>
+                `;
+
+            } else {
+                content = `<div class="model-bubble text-gray-800 p-3 shadow-md">${m.text || ''}</div>`;
+                w.innerHTML = `
+                    <div class="flex flex-col items-start">
+                        ${content}
+                        ${timeSpan}
+                    </div>
+                `;
+            }
+        }
+        return w;
+    }
+
+    function renderChat() {
+        if (messageContainer) {
+            messageContainer.innerHTML = '';
+            chatHistory.forEach((m) => { messageContainer.appendChild(createMessageBubble(m)); });
+            scrollToBottom();
+        }
+    }
+
+    // --- CÓDIGO DE CONEXIÓN AL BACKEND (SIN CAMBIOS) ---
+
+    async function getGeminiResponse(userPrompt, chatHistoryForAPI) {
+        
+        const historyForAPI = chatHistoryForAPI.map(m => {
+            const textContent = m.isStructured && m.description ? m.description : m.text;
+            
+            return {
+                role: m.role,
+                parts: [{ text: textContent }]
+            };
+        });
+
+        try {
+            const response = await fetch(BACKEND_URL, { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    history: historyForAPI, 
+                    userPrompt: userPrompt, 
+                    currentLanguage: currentLanguage
+                }) 
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Error HTTP: ${response.status}. Mensaje: ${errorData.message || 'El servicio de chat falló.'}`);
+            }
+
+            const data = await response.json();
+            return data.responseText; 
+
+        } catch (error) {
+            console.error("Fallo del Proxy o API de Gemini:", error);
+            // ALERTA DE ERROR USA 'error' (SIEMPRE SE MUESTRA)
+            alertUser(`Error de conexión: ${error.message}.`, 'error');
+            return null;
+        }
+    }
+
+    // --- Lógica Principal del Chatbot (handleSend) ---
+    async function handleSend(userPromptInput = null) {
+        const userPrompt = userPromptInput || inputElement.value.trim();
+        if (!userPrompt) return;
+        
+        hideChipGroup(categoryChipsGroup, categoryChips);
+        categoriesVisible = false;
+        hideChipGroup(languageChipsGroup, languageChips);
+        languageMenuVisible = false;
+
+        // Limpiar el estado del chip de lista completa al iniciar el envío
+        quickActionFullList.classList.add('hidden');
+        lastTotalCount = 0;
+        lastApiQuery = null;
+
+        if (typeof toggleInput === 'function') toggleInput(true);
+        
+        chatHistory.push({ role: 'user', text: userPrompt, timestamp: new Date() });
+        if (typeof renderChat === 'function') renderChat();
+        inputElement.value = '';
+
+        const MAX_HISTORY_TO_SEND = 10; 
+        const previousHistory = chatHistory.slice(0, -1); 
+        const startIndex = Math.max(0, previousHistory.length - MAX_HISTORY_TO_SEND);
+        const limitedHistory = previousHistory.slice(startIndex);
+        
+        let modelResponseText = await getGeminiResponse(userPrompt, limitedHistory);
+        
+        let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date(), isStructured: false };
+        let totalCount = 0; // Inicializar para la lógica de abajo
+        let apiQuery = null; // Inicializar para la lógica de abajo
+
+        try {
+            const jsonStart = modelResponseText.indexOf('{');
+            const jsonEnd = modelResponseText.lastIndexOf('}');
+            
+            if (jsonStart !== -1 && jsonEnd !== -1) {
+                const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
+                const parsedJson = JSON.parse(jsonString);
+
+                // *** INICIO DE LA LÓGICA DE PROCESAMIENTO DE RESPUESTA ***
+
+                // 1. Manejo de Respuesta Estructurada (Fichas)
+                if (parsedJson.isStructured === true) {
+                    
+                    if (parsedJson.type === 'place') {
+                        finalMessage = {
+                            role: 'model',
+                            isStructured: true,
+                            type: parsedJson.type, 
+                            text: parsedJson.description || modelResponseText, 
+                            placeName: parsedJson.placeName, 
+                            placePhone: parsedJson.placePhone || null, 
+                            mapUrl: parsedJson.mapUrl || null,
+                            reviewUrl: parsedJson.reviewUrl || null,
+                            timestamp: finalMessage.timestamp
+                        };
+                    } else if (parsedJson.type === 'category') {
+                        finalMessage = {
+                            role: 'model',
+                            isStructured: true,
+                            type: parsedJson.type, 
+                            text: parsedJson.description || modelResponseText, 
+                            categoryName: parsedJson.categoryName,
+                            timestamp: finalMessage.timestamp
+                        };
+                    }
+                } 
+                
+                // 2. Manejo de Recomendación Local (Texto Plano Forzado con metadatos)
+                else if (parsedJson.isLocalRecommendation === true) {
+                    // Si es una recomendación local forzada (que Gemini respondió como texto plano)
+                    totalCount = parsedJson.totalCount || 0;
+                    apiQuery = parsedJson.apiQueryForChip || null;
+                    
+                    // Aseguramos que el texto plano sea el que Gemini generó (eliminando el JSON de los metadatos)
+                    finalMessage.text = modelResponseText.replace(jsonString, '').trim();
+                    if (finalMessage.text.length < 5) finalMessage.text = modelResponseText;
+                }
+            }
+        } catch (e) {
+            console.error("Error al parsear JSON estructurado o de recomendación:", e);
+            finalMessage.text = modelResponseText;
+        }
+
+        // *** FIN DE LA LÓGICA DE PROCESAMIENTO DE RESPUESTA ***
+
+        chatHistory.push(finalMessage);
+        
+        // --- LÓGICA DE CHIP DE ACCIÓN RÁPIDA Y ALERTA ---
+        
+        // Limpiamos los estados de las variables globales antes de reasignar
+        lastTotalCount = 0;
+        lastApiQuery = null;
+
+        if (finalMessage.isStructured) {
+            const isPlace = finalMessage.type === 'place';
+            const entityName = isPlace 
+                ? (finalMessage.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
+                : (finalMessage.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
+
+            const alertText = isPlace 
+                ? UI_STRINGS[currentLanguage].alertStructured(entityName)
+                : UI_STRINGS[currentLanguage].alertCategory(entityName);
+
+            if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
+            
+            // Si es una ficha estructurada, no mostramos el botón.
+            quickActionFullList.classList.add('hidden');
+
+        } else if (totalCount > MAX_CHAT_RESULTS && apiQuery) {
+            // Caso de Recomendación Local Forzada (Texto Plano) con más de 4 resultados
+            
+            // Guardar en las variables globales para el listener del botón
+            lastTotalCount = totalCount;
+            lastApiQuery = apiQuery;
+            
+            // Actualizar el texto del botón con el conteo
+            btnViewAllPlaces.innerHTML = currentLanguage === 'es' 
+                ? `➡️ Ver todos los ${totalCount} lugares` 
+                : `➡️ View all ${totalCount} places`;
+
+            // Mostrar el botón de acción rápida
+            quickActionFullList.classList.remove('hidden');
+
+        } else {
+            // Otros casos de texto plano (ej. preguntas generales, menos de 4 resultados, o error)
+            quickActionFullList.classList.add('hidden');
+        }
+        
+        saveHistory(); 
+        
+        if (typeof renderChat === 'function') renderChat();
+        if (typeof toggleInput === 'function') toggleInput(false);
+    }
+    
+    // --- Event Listeners e Inicio (ACTUALIZADO) ---
+    if (sendButton) sendButton.addEventListener('click', () => handleSend());
+    if (inputElement) inputElement.addEventListener('keypress', function(e) { if (e.key === 'Enter') { handleSend(); } });
+    
+    // Listeners para botones del menú principal (Categorías, Lenguaje, etc.)
+    menuActionChips.forEach(chip => {
+        chip.addEventListener('click', function() {
+            handleMenuAction(this);
+        });
+    });
+
+    // Conexión del nuevo botón flotante superior
+    if (btnClearTop) {
+        btnClearTop.addEventListener('click', function() {
+            handleMenuAction(this); 
+        });
+    }
+
+    // Oculta chips de categoría después de usarlos.
+    categoryChips.forEach(chip => {
+        chip.addEventListener('click', function() {
+            const lang = currentLanguage;
+            const query = this.getAttribute(`data-query-${lang}`);
+            handleSend(query); 
+            hideChipGroup(categoryChipsGroup, categoryChips);
+            categoriesVisible = false;
+        });
+    });
+
+    // Oculta chips de idioma después de usarlos (la función setInterfaceLanguage ya lo hace).
+    languageChips.forEach(chip => {
+        chip.addEventListener('click', function() {
+            const lang = this.getAttribute('data-lang');
+            setInterfaceLanguage(lang);
+        });
+    });
+
+    // NUEVO LISTENER PARA EL BOTÓN "VER TODOS LOS LUGARES" (usa las variables globales)
+    if (btnViewAllPlaces) {
+        btnViewAllPlaces.addEventListener('click', () => {
+            vibrateDevice();
+            
+            // Ocultar después de hacer clic, independientemente del éxito.
+            quickActionFullList.classList.add('hidden'); 
+
+            if (lastApiQuery) {
+                
+                // 🛑 LÓGICA DUAL: El botón usa la consulta API completa para buscar en Google (Local + Genérica).
+                
+                // 1. Codificar el query completo (ej: 'Taquerías y Tacos en Nuevo Progreso')
+                const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(lastApiQuery + " Nuevo Progreso Tamps")}`;
+
+                // 2. Abrir la búsqueda en una nueva pestaña/ventana (complementando la lista local)
+                window.open(searchUrl, '_blank'); 
+                
+                alertUser(currentLanguage === 'es' 
+                    ? `Abriendo la lista completa en Google: "${lastApiQuery}"` 
+                    : `Opening the full list on Google: "${lastApiQuery}"`, 
+                'i', 'news');
+            } else {
+                alertUser(currentLanguage === 'es' 
+                    ? 'No se encontró la consulta de lugares. Por favor, intenta de nuevo.' 
+                    : 'Place query not found. Please try again.', 
+                'error');
+            }
+            
+            // Limpiar el estado de las variables globales
+            lastTotalCount = 0;
+            lastApiQuery = null;
+        });
+    }
+
+    // NUEVOS LISTENERS PARA EL PANEL DE NOTIFICACIONES
+    if (btnNotifications) {
+        btnNotifications.addEventListener('click', () => {
+            vibrateDevice();
+            loadNotificationPreferences(); // Cargar preferencias al abrir el modal
+            notificationModal.classList.add('show');
+        });
+    }
+
+    // Cerrar el modal al hacer clic fuera del panel (overlay)
+    if (notificationModal) {
+        notificationModal.addEventListener('click', (e) => {
+            if (e.target === notificationModal) { 
+                notificationModal.classList.remove('show');
+            }
+        });
+    }
+
+    // Botones dentro del modal
+    if (btnDiscardChanges) {
+        btnDiscardChanges.addEventListener('click', () => {
+            vibrateDevice();
+            notificationModal.classList.remove('show');
+            // No guarda, simplemente cierra
+        });
+    }
+
+    if (btnApplyChanges) {
+        btnApplyChanges.addEventListener('click', () => {
+            vibrateDevice();
+            // Actualizar el objeto `notificationPreferences` con el estado actual de los toggles
+            notificationPreferences.news = toggleNews.checked;
+            notificationPreferences.reminders = toggleReminders.checked;
+            // promotions se mantiene en false ya que está deshabilitado
+
+            saveNotificationPreferences(); 
+            notificationModal.classList.remove('show');
+        });
+    }
+
+    // Evita que el clic dentro del panel cierre el modal
+    if (notificationPanel) {
+        notificationPanel.addEventListener('click', (e) => {
+            e.stopPropagation(); 
+        });
+    }
+
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Establece el idioma por defecto y actualiza la interfaz (sin disparar alerta)
+        setInterfaceLanguage(currentLanguage); 
+        
+        // Carga el historial o asegura que chatHistory es []
+        loadHistory(); 
+        
+        // Cargar preferencias de notificación
+        loadNotificationPreferences(); 
+        
+        // 4. ⚠️ CORRECCIÓN DE ERROR ADICIONAL: Desbloquear la entrada por si acaso
+        toggleInput(false); 
+    });
+</script>
+<script type="module" src="/js/ui.js"></script>
+</body>
+</html>
