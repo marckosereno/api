@@ -1,11 +1,666 @@
 import { GoogleGenAI } from '@google/genai';
 import { Client as PlacesClient } from '@googlemaps/google-maps-services-js';
-import * as fs from 'fs/promises';
-import path from 'path';
+// import * as fs from 'fs/promises'; // Eliminamos la dependencia de fs
+// import path from 'path'; // Eliminamos la dependencia de path
 
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
-const MAX_CHAT_RESULTS = 4; // Ya no se usa para lista, sino para el conteo total
+const MAX_CHAT_RESULTS = 4; // Límite de resultados a mostrar en el texto plano
+
+// =========================================================================
+// ⚠️ CAMBIO CLAVE: TU LISTA DE LUGARES AHORA ES LA FUENTE DE DATOS PRINCIPAL
+// La he incrustado directamente en el código para asegurar que Gemini NO invente.
+// =========================================================================
+const PROGRESO_DATA = [
+    {
+        "Title": "JM Dental Clinic",
+        "Section": "clinicas_dentales",
+        "Address": "Dirección no disponible",
+        "Description": "Clínica dental en la frontera, conocida por sus servicios generales.",
+        "placeCategory": "Clínica Dental",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "JC Dental Clinic",
+        "Section": "clinicas_dentales",
+        "Address": "Dirección no disponible",
+        "Description": "Centro odontológico completo con especialidades.",
+        "placeCategory": "Centro Odontológico",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Mustre Dental Clinic",
+        "Section": "clinicas_dentales",
+        "Address": "Dirección no disponible",
+        "Description": "Clínica dental que ofrece servicios de alta calidad.",
+        "placeCategory": "Clínica Dental",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Dental Artistry Dental Center",
+        "Section": "clinicas_dentales",
+        "Address": "Dirección no disponible",
+        "Description": "Centro especializado en arte y estética dental.",
+        "placeCategory": "Centro Dental Estético",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Alpha Dental Implant Center",
+        "Section": "clinicas_dentales",
+        "Address": "Dirección no disponible",
+        "Description": "Especialistas en implantes dentales.",
+        "placeCategory": "Centro de Implantes",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Salazar Dental Center",
+        "Section": "clinicas_dentales",
+        "Address": "Dirección no disponible",
+        "Description": "Clínica familiar que ofrece una amplia gama de tratamientos.",
+        "placeCategory": "Clínica Dental Familiar",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Guadalcazar Dental Clinic",
+        "Section": "clinicas_dentales",
+        "Address": "Dirección no disponible",
+        "Description": "Clínica dental general con experiencia.",
+        "placeCategory": "Clínica Dental General",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Progreso Smile Dental Center",
+        "Section": "clinicas_dentales",
+        "Address": "Dirección no disponible",
+        "Description": "Dedicados a mejorar la sonrisa de sus pacientes.",
+        "placeCategory": "Centro Dental de Sonrisas",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Dr. Dominga Cortez (clinica)",
+        "Section": "clinicas_dentales",
+        "Address": "Dirección no disponible",
+        "Description": "Consultorio y clínica de la Dra. Cortez.",
+        "placeCategory": "Consultorio Dental",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Dr. Sandra Bucardo (consultorio)",
+        "Section": "clinicas_dentales",
+        "Address": "Dirección no disponible",
+        "Description": "Consultorio privado de la Dra. Bucardo.",
+        "placeCategory": "Consultorio Dental",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Magic Dental Clinic",
+        "Section": "clinicas_dentales",
+        "Address": "Dirección no disponible",
+        "Description": "Clínica con un enfoque moderno en odontología.",
+        "placeCategory": "Clínica Dental",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Dental DR. Dr. Ivan Diaz",
+        "Section": "clinicas_dentales",
+        "Address": "Dirección no disponible",
+        "Description": "Consultorio del Dr. Iván Díaz, servicios dentales.",
+        "placeCategory": "Consultorio Dental",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Taquería Doña Ale",
+        "Section": "taquerias_tacos_y_lonches",
+        "Address": "Dirección no disponible",
+        "Description": "Tacos y lonches tradicionales.",
+        "placeCategory": "Taquería",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Taquería Víctor",
+        "Section": "taquerias_tacos_y_lonches",
+        "Address": "Dirección no disponible",
+        "Description": "Taquería con amplia variedad de guisos.",
+        "placeCategory": "Taquería",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Taquería El No Que No",
+        "Section": "taquerias_tacos_y_lonches",
+        "Address": "Dirección no disponible",
+        "Description": "Conocida por su sabor único en tacos.",
+        "placeCategory": "Taquería",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Iguana House Taqueria (Pavita)",
+        "Section": "taquerias_tacos_y_lonches",
+        "Address": "Dirección no disponible",
+        "Description": "Taquería especializada en el surtido.",
+        "placeCategory": "Taquería",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Taquería Don Benny",
+        "Section": "taquerias_tacos_y_lonches",
+        "Address": "Dirección no disponible",
+        "Description": "Tacos y especialidades de la casa.",
+        "placeCategory": "Taquería",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Taquería Serratos",
+        "Section": "taquerias_tacos_y_lonches",
+        "Address": "Dirección no disponible",
+        "Description": "Un lugar clásico de tacos en Nuevo Progreso.",
+        "placeCategory": "Taquería",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Taquería Los Agachados",
+        "Section": "taquerias_tacos_y_lonches",
+        "Address": "Dirección no disponible",
+        "Description": "Taquería con mesas o servicio rápido.",
+        "placeCategory": "Taquería",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Taquería Don Chuy",
+        "Section": "taquerias_tacos_y_lonches",
+        "Address": "Dirección no disponible",
+        "Description": "Especializada en carne asada.",
+        "placeCategory": "Taquería de Asada",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Lonchería Nuevo Progreso",
+        "Section": "taquerias_tacos_y_lonches",
+        "Address": "Dirección no disponible",
+        "Description": "Lonches, tortas y jugos frescos.",
+        "placeCategory": "Lonchería",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Taquería El Güero",
+        "Section": "taquerias_tacos_y_lonches",
+        "Address": "Dirección no disponible",
+        "Description": "Taquería popular y bien ubicada.",
+        "placeCategory": "Taquería",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Taquería El Texitas",
+        "Section": "taquerias_tacos_y_lonches",
+        "Address": "Dirección no disponible",
+        "Description": "Especializada en comida al estilo texano.",
+        "placeCategory": "Taquería",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Taquería La Prima",
+        "Section": "taquerias_tacos_y_lonches",
+        "Address": "Dirección no disponible",
+        "Description": "Tacos con opciones vegetarianas.",
+        "placeCategory": "Taquería",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Barbacoa El Güero",
+        "Section": "tacos_barbacoa",
+        "Address": "Dirección no disponible",
+        "Description": "Barbacoa tradicional de res o borrego.",
+        "placeCategory": "Restaurante de Barbacoa",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Quesabirrias",
+        "Section": "tacos_barbacoa",
+        "Address": "Dirección no disponible",
+        "Description": "Birria y quesabirrias jugosas.",
+        "placeCategory": "Restaurante de Birria",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Barbacoa Candelo",
+        "Section": "tacos_barbacoa",
+        "Address": "Dirección no disponible",
+        "Description": "Famosa por su barbacoa de fin de semana.",
+        "placeCategory": "Restaurante de Barbacoa",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Barbacoa Oceguera 2",
+        "Section": "tacos_barbacoa",
+        "Address": "Dirección no disponible",
+        "Description": "Segunda sucursal con el mismo sabor.",
+        "placeCategory": "Restaurante de Barbacoa",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Taqueria Las Oceguera",
+        "Section": "tacos_barbacoa",
+        "Address": "Dirección no disponible",
+        "Description": "Especialidad en tacos de barbacoa y guisados.",
+        "placeCategory": "Taquería de Barbacoa",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Barbacoa Galerias",
+        "Section": "tacos_barbacoa",
+        "Address": "Dirección no disponible",
+        "Description": "Barbacoa cerca del centro comercial Galerías.",
+        "placeCategory": "Restaurante de Barbacoa",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Arturo's Restaurant",
+        "Section": "restaurantes",
+        "Address": "Dirección no disponible",
+        "Description": "Restaurante con menú variado y servicio de bar.",
+        "placeCategory": "Restaurante Internacional",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Chuy's Red Snapper",
+        "Section": "restaurantes",
+        "Address": "Dirección no disponible",
+        "Description": "Famoso por su huachinango (red snapper).",
+        "placeCategory": "Restaurante de Mariscos",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Angel’s Restaurant Bar",
+        "Section": "restaurantes",
+        "Address": "Dirección no disponible",
+        "Description": "Comida mexicana y bebidas.",
+        "placeCategory": "Restaurante y Bar",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Pancho’s Bar & Restaurant",
+        "Section": "restaurantes",
+        "Address": "Dirección no disponible",
+        "Description": "Bar y restaurante con ambiente relajado.",
+        "placeCategory": "Restaurante y Bar",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Renee's Restaurant & Bakery",
+        "Section": "restaurantes",
+        "Address": "Dirección no disponible",
+        "Description": "Especializado en repostería y comidas caseras.",
+        "placeCategory": "Restaurante y Panadería",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Tony’s Bar and Grill",
+        "Section": "restaurantes",
+        "Address": "Dirección no disponible",
+        "Description": "Parrilla y bar con buena música.",
+        "placeCategory": "Restaurante Parrilla",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Elsa’s Restaurant",
+        "Section": "restaurantes",
+        "Address": "Dirección no disponible",
+        "Description": "Cocina regional y desayunos.",
+        "placeCategory": "Restaurante Regional",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Café Sanchez",
+        "Section": "restaurantes",
+        "Address": "Dirección no disponible",
+        "Description": "Cafetería y lugar de reunión.",
+        "placeCategory": "Cafetería",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "La Palapa de Nuevo Progreso",
+        "Section": "restaurantes",
+        "Address": "Dirección no disponible",
+        "Description": "Restaurante con vista a la calle principal.",
+        "placeCategory": "Restaurante Mexicano",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Mariscos Progreso",
+        "Section": "restaurantes",
+        "Address": "Dirección no disponible",
+        "Description": "Especializado en pescados y mariscos frescos.",
+        "placeCategory": "Restaurante de Mariscos",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "La Terraza (restaurant)",
+        "Section": "restaurantes",
+        "Address": "Dirección no disponible",
+        "Description": "Comida internacional y terraza con ambiente.",
+        "placeCategory": "Restaurante Internacional",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Cocina Real",
+        "Section": "restaurantes",
+        "Address": "Dirección no disponible",
+        "Description": "Comida casera y tradicional mexicana.",
+        "placeCategory": "Restaurante Casero",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Estetica Modelo",
+        "Section": "salones_belleza",
+        "Address": "Dirección no disponible",
+        "Description": "Estética con servicios de corte y peinado.",
+        "placeCategory": "Estética",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Angie's Beauty Salon",
+        "Section": "salones_belleza",
+        "Address": "Dirección no disponible",
+        "Description": "Salón de belleza completo.",
+        "placeCategory": "Salón de Belleza",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Glorias Barber Shop",
+        "Section": "salones_belleza",
+        "Address": "Dirección no disponible",
+        "Description": "Barbería clásica para caballeros.",
+        "placeCategory": "Barbería",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Erika's Beauty Salon",
+        "Section": "salones_belleza",
+        "Address": "Dirección no disponible",
+        "Description": "Servicios de coloración y tratamientos capilares.",
+        "placeCategory": "Salón de Belleza",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Bellas Beauty Salon",
+        "Section": "salones_belleza",
+        "Address": "Dirección no disponible",
+        "Description": "Salón enfocado en servicios de uñas y cabello.",
+        "placeCategory": "Salón de Belleza y Uñas",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Almitas Spa",
+        "Section": "salones_belleza",
+        "Address": "Dirección no disponible",
+        "Description": "Spa y salón de belleza con masajes.",
+        "placeCategory": "Spa y Salón",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Peluquería Gerson",
+        "Section": "salones_belleza",
+        "Address": "Dirección no disponible",
+        "Description": "Peluquería tradicional con experiencia.",
+        "placeCategory": "Peluquería",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Peluquería Marin",
+        "Section": "salones_belleza",
+        "Address": "Dirección no disponible",
+        "Description": "Servicios de corte para toda la familia.",
+        "placeCategory": "Peluquería",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Peluquería Palmolive",
+        "Section": "salones_belleza",
+        "Address": "Dirección no disponible",
+        "Description": "Peluquería con productos de calidad.",
+        "placeCategory": "Peluquería",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Salón de Belleza Renova",
+        "Section": "salones_belleza",
+        "Address": "Dirección no disponible",
+        "Description": "Renovación de imagen y tratamientos de belleza.",
+        "placeCategory": "Salón de Belleza",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Estética Mary",
+        "Section": "salones_belleza",
+        "Address": "Dirección no disponible",
+        "Description": "Estética con especialidad en maquillaje.",
+        "placeCategory": "Estética y Maquillaje",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Charly's by Galerias (artesanías)",
+        "Section": "tiendas_artesanias",
+        "Address": "Dirección no disponible",
+        "Description": "Tienda de souvenirs y artesanías cerca de Galerías.",
+        "placeCategory": "Tienda de Artesanías",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "El Disco Super Center (artesanías y souvenirs)",
+        "Section": "tiendas_artesanias",
+        "Address": "Dirección no disponible",
+        "Description": "Gran tienda con artesanías y otros productos.",
+        "placeCategory": "Tienda de Regalos",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Mercado Faro (puestos de artesanías)",
+        "Section": "tiendas_artesanias",
+        "Address": "Dirección no disponible",
+        "Description": "Mercado con una variedad de puestos de artesanías locales.",
+        "placeCategory": "Mercado de Artesanías",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Papelería y Novedades Chihd",
+        "Section": "tiendas_artesanias",
+        "Address": "Dirección no disponible",
+        "Description": "Papelería y venta de artículos novedosos.",
+        "placeCategory": "Papelería y Novedades",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Mi Lindo Oaxaca (souvenirs)",
+        "Section": "tiendas_artesanias",
+        "Address": "Dirección no disponible",
+        "Description": "Especializada en productos y souvenirs de Oaxaca.",
+        "placeCategory": "Tienda de Souvenirs",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Tienda de Artesanías Shaddai",
+        "Section": "tiendas_artesanias",
+        "Address": "Dirección no disponible",
+        "Description": "Artesanías hechas a mano y regalos.",
+        "placeCategory": "Tienda de Artesanías",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Galerías",
+        "Section": "tiendas_artesanias",
+        "Address": "Dirección no disponible",
+        "Description": "Centro comercial con varias tiendas y servicios.",
+        "placeCategory": "Centro Comercial",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Canada Store",
+        "Section": "tiendas_artesanias",
+        "Address": "Dirección no disponible",
+        "Description": "Tienda con productos importados.",
+        "placeCategory": "Tienda de Productos Importados",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Panchos",
+        "Section": "tiendas_artesanias",
+        "Address": "Dirección no disponible",
+        "Description": "Tienda variada con artículos populares.",
+        "placeCategory": "Tienda Variada",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "La catrina",
+        "Section": "tiendas_artesanias",
+        "Address": "Dirección no disponible",
+        "Description": "Tienda temática de artesanías mexicanas.",
+        "placeCategory": "Tienda de Artesanías",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Kokopelli",
+        "Section": "tiendas_artesanias",
+        "Address": "Dirección no disponible",
+        "Description": "Tienda de regalos y artesanías originales.",
+        "placeCategory": "Tienda de Regalos",
+        "isHealthPlace": false
+    },
+    {
+        "Title": "Farmacia Economy",
+        "Section": "farmacias",
+        "Address": "Dirección no disponible",
+        "Description": "Farmacia con precios económicos.",
+        "placeCategory": "Farmacia",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Pancho's Pharmacy",
+        "Section": "farmacias",
+        "Address": "Dirección no disponible",
+        "Description": "Farmacia de servicio completo.",
+        "placeCategory": "Farmacia",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Farmacias Benavides (sucursal local)",
+        "Section": "farmacias",
+        "Address": "Dirección no disponible",
+        "Description": "Cadena de farmacias reconocida en México.",
+        "placeCategory": "Farmacia",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Progreso Pharmacy",
+        "Section": "farmacias",
+        "Address": "Dirección no disponible",
+        "Description": "Farmacia local enfocada en la atención al turista.",
+        "placeCategory": "Farmacia",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Farmacia Linda",
+        "Section": "farmacias",
+        "Address": "Dirección no disponible",
+        "Description": "Farmacia pequeña con atención personalizada.",
+        "placeCategory": "Farmacia",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Farmacia Centro Médico",
+        "Section": "farmacias",
+        "Address": "Dirección no disponible",
+        "Description": "Ubicada cerca del área de consultorios médicos.",
+        "placeCategory": "Farmacia",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Farmacias de Nuevo Progreso (grupo local)",
+        "Section": "farmacias",
+        "Address": "Dirección no disponible",
+        "Description": "Grupo de farmacias con varias ubicaciones en la ciudad.",
+        "placeCategory": "Farmacia",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Farmacia US",
+        "Section": "farmacias",
+        "Address": "Dirección no disponible",
+        "Description": "Especializada en productos que provienen del lado americano.",
+        "placeCategory": "Farmacia",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Farmacia Roma",
+        "Section": "farmacias",
+        "Address": "Dirección no disponible",
+        "Description": "Farmacia con servicio a domicilio.",
+        "placeCategory": "Farmacia",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Farmacia All Most Free",
+        "Section": "farmacias",
+        "Address": "Dirección no disponible",
+        "Description": "Conocida por ofrecer descuentos.",
+        "placeCategory": "Farmacia",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Farmacia Similares",
+        "Section": "farmacias",
+        "Address": "Dirección no disponible",
+        "Description": "Cadena de farmacias con medicamentos genéricos.",
+        "placeCategory": "Farmacia",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Farmacia Queen",
+        "Section": "farmacias",
+        "Address": "Dirección no disponible",
+        "Description": "Farmacia con venta de medicamentos especializados.",
+        "placeCategory": "Farmacia",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Óptica Progreso",
+        "Section": "opticas",
+        "Address": "Dirección no disponible",
+        "Description": "Óptica con examen de la vista y lentes.",
+        "placeCategory": "Óptica",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Óptica Las Flores",
+        "Section": "opticas",
+        "Address": "Dirección no disponible",
+        "Description": "Óptica con amplia selección de armazones.",
+        "placeCategory": "Óptica",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Vision Center Progreso",
+        "Section": "opticas",
+        "Address": "Dirección no disponible",
+        "Description": "Centro de visión con especialistas.",
+        "placeCategory": "Centro de Visión",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Laboratorio de Lentes Progreso",
+        "Section": "opticas",
+        "Address": "Dirección no disponible",
+        "Description": "Laboratorio para la fabricación de lentes.",
+        "placeCategory": "Laboratorio de Lentes",
+        "isHealthPlace": true
+    },
+    {
+        "Title": "Óptica La Plaza",
+        "Section": "opticas",
+        "Address": "Dirección no disponible",
+        "Description": "Ubicada convenientemente cerca de la plaza central.",
+        "placeCategory": "Óptica",
+        "isHealthPlace": true
+    }
+];
 
 // Mapeo de intención de usuario a Secciones de JSON y Query de API de Places
 const CATEGORY_MAP = {
@@ -27,363 +682,319 @@ const CATEGORY_MAP = {
         apiQuery: 'Restaurantes en Nuevo Progreso'
     },
     'comer': {
-        sections: ['restaurantes'], 
+        sections: ['restaurantes', 'taquerias_tacos_y_lonches'], // Ampliado para incluir lonches y tacos
         apiQuery: 'Comida en Nuevo Progreso'
     },
     'artesanias': {
         sections: ['tiendas_artesanias'], 
-        apiQuery: 'Tiendas de Artesanías Nuevo Progreso'
+        apiQuery: 'Tiendas de Artesanías y Souvenirs en Nuevo Progreso'
     },
     'souvenirs': {
         sections: ['tiendas_artesanias'], 
-        apiQuery: 'Tiendas de Souvenirs Nuevo Progreso'
+        apiQuery: 'Tiendas de Artesanías y Souvenirs en Nuevo Progreso'
     },
-    
-    // --- ENTRADAS PARA CHIPS Y COBERTURA DE SALUD/ESTÉTICA ---
-    'salud': { 
-        sections: ['clinicas_dentales', 'salones_belleza', 'farmacias', 'opticas'], 
-        apiQuery: 'Servicios de Salud y Estética en Nuevo Progreso'
-    },
-    'estetica': { 
-        sections: ['clinicas_dentales', 'salones_belleza', 'farmacias', 'opticas'], 
-        apiQuery: 'Servicios de Salud y Estética en Nuevo Progreso'
-    },
-    'dental': { 
+    'clinica dental': {
         sections: ['clinicas_dentales'], 
-        apiQuery: 'Clínicas Dentales en Nuevo Progreso'
+        apiQuery: 'Clínicas Dentales Nuevo Progreso'
+    },
+    'dentista': {
+        sections: ['clinicas_dentales'], 
+        apiQuery: 'Clínicas Dentales Nuevo Progreso'
     },
     'farmacia': {
-        sections: ['farmacias'],
+        sections: ['farmacias'], 
         apiQuery: 'Farmacias en Nuevo Progreso'
     },
+    'belleza': {
+        sections: ['salones_belleza'], 
+        apiQuery: 'Salones de Belleza y Peluquerías Nuevo Progreso'
+    },
+    'peluqueria': {
+        sections: ['salones_belleza'], 
+        apiQuery: 'Peluquerías y Barberías Nuevo Progreso'
+    },
     'optica': {
-        sections: ['opticas'],
+        sections: ['opticas'], 
         apiQuery: 'Ópticas en Nuevo Progreso'
-    }
+    },
+    // Añadir más categorías según sea necesario
 };
 
-// 1. Inicializamos los clientes
-const ai = new GoogleGenAI({});
-const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
-const placesClient = new PlacesClient({}); 
-
-// 2. Definimos la Instrucción del Sistema MODIFICADA
-const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
-Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
-
-REGLAS DE FORMATO:
-1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 📍, ☀️) al inicio o final de tus respuestas o descripciones para hacerlas más amigables y atractivas.
-2. **REGLA CRÍTICA DE SALUD Y PRIVACIDAD:** Para cualquier lugar o categoría relacionado con la salud (clínicas, farmacias, ópticas, etc.), DEBES establecer el campo "isHealthPlace" en "true". NUNCA debes incluir precios, dar recomendaciones directas, o proporcionar detalles de contacto en la descripción. El servidor se encargará de limitar los botones de acción solo a "Ver en Mapa" y "Buscar en Google" para garantizar el cumplimiento.
-
----
-
-### PROTOCOLO DE RECOMENDACIÓN LOCAL
-
-Si el usuario pide recomendaciones, sugerencias o un listado de lugares (ej. '4 taquerías', 'dime restaurantes cerca'):
-a) **EXCLUSIÓN DE SALUD:** NUNCA incluyas lugares de salud o estética en estas recomendaciones de listado CONVERSACIONAL.
-b) **FORMATO:** Debes usar el MODO CONVERSACIONAL (Texto Plano).
-c) **CONVERSACIÓN INICIAL:** Tu respuesta DEBE mencionar UN EJEMPLO DE LUGAR de la categoría solicitada usando el formato conversacional (ej: "¡Claro! 🌮 Si hablamos de taquerías, Taquería Cruz es famosa por sus tacos de bisteck.").
-d) **CIERRE REQUERIDO:** Tu respuesta debe terminar con un mensaje que diga que encontraste 'X' lugares, pero que hay muchísimos más, y que para ver la lista completa, debe usar el botón en la interfaz.
-
-Ejemplo de Cierre (Español): "Encontré X lugares, ¡pero hay muchísimos más! Para explorar la lista completa, por favor, selecciona el botón 'Ver todos los lugares'."
-
----
-
-3. **MODO FICHA DE LUGAR (JSON):** Úsalo si la solicitud es de un lugar o negocio específico (Salud o No Salud). Debe incluir la propiedad 'placeToSearch' con el nombre exacto del lugar.
-
-4. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo para solicitudes de categorías generales (Salud o No Salud).
-
-5. **MODO CONVERSACIONAL (Texto Plano):** Úsalo para preguntas generales, de seguimiento O para CUMPLIR EL PROTOCOLO DE RECOMENDACIÓN LOCAL.
-
-6. Los formatos JSON requeridos son:
-   
-   // Formato para LUGAR ESPECÍFICO (Salud o No Salud)
-   {
-     "type": "place", 
-     "placeName": "Nombre del Lugar", 
-     "placeToSearch": "Nombre Exacto a buscar en Places API, ej: JM Dental Clinic", 
-     "placeCategory": "Clasificación general del lugar, ej: Clínica Dental, Restaurante",
-     "isHealthPlace": true/false, 
-     "description": "Descripción corta de no más de 3 oraciones.",
-     "isStructured": true
-   }
-   
-   // Formato para CATEGORÍA GENERAL
-   {
-     "type": "category", 
-     "categoryName": "Nombre de la Categoría, ej: Farmacias en Progreso",
-     "description": "Resumen de la categoría en Progreso, finaliza con: 'Aquí te muestro todo lo relacionado a esta categoría.'",
-     "isStructured": true
-   }`;
 
 /**
- * Carga y devuelve los datos de progreso COMPLETO.
- * @returns {Array<object>} Lista de todos los lugares.
+ * ⚠️ CAMBIO CLAVE: Esta función ya no lee de un archivo.
+ * Simplemente devuelve el array de datos locales incrustado arriba (PROGRESO_DATA).
  */
 async function getProgresoData() {
-    try {
-        const filePath = path.join(process.cwd(), 'progreso_data.json');
-        const fileContent = await fs.readFile(filePath, 'utf-8');
-        // El JSON debe ser un array de objetos
-        return JSON.parse(fileContent); 
-    } catch (e) {
-        console.error("Error al cargar o parsear progreso_data.json:", e);
-        return [];
-    }
+    // Si necesitas volver a usar el archivo, descomenta el código de abajo
+    /*
+    const filePath = path.join(process.cwd(), 'progreso_data.json');
+    const data = await fs.readFile(filePath, 'utf8');
+    return JSON.parse(data);
+    */
+
+    // Retornamos el array de datos incrustados.
+    return PROGRESO_DATA;
 }
 
 
-/**
- * Función que busca el nombre de un lugar en la API de Google Places.
- * @param {string} query Nombre del lugar a buscar.
- * @returns {object|null} Objeto con detalles del lugar o null si falla.
- */
-async function getPlaceDetails(query) {
-    if (!placesApiKey) {
-        console.error("GOOGLE_PLACES_API_KEY no definida.");
-        return null;
-    }
-    
-    // 1. Buscar el place_id
-    try {
-        const findPlaceResponse = await placesClient.findPlaceFromText({
-            params: {
-                key: placesApiKey,
-                input: query + ", Nuevo Progreso Tamps, México",
-                inputtype: 'textquery',
-                fields: ['place_id']
-            }
-        });
+// Expresión regular para detectar peticiones de listados (ej: 'dime 4 taquerias')
+const recommendationPattern = /dime|dame|muéstrame|quiero|lista|recomiéndame|conozco|lugares|top/i;
+// Expresión para limpiar el JSON incrustado de la respuesta de Gemini
+const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
 
-        const placeId = findPlaceResponse.data.candidates?.[0]?.place_id;
-        
-        if (!placeId) {
-            console.log("No se encontró un place_id para la consulta:", query);
-            return null;
-        }
+// --- Inicialización de APIs ---
+const ai = new GoogleGenAI({});
+const placesClient = new PlacesClient({});
+// -----------------------------
 
-        // 2. Obtener los detalles del lugar (teléfono, URL, reseñas)
-        const detailsResponse = await placesClient.placeDetails({
-            params: {
-                key: placesApiKey,
-                place_id: placeId,
-                fields: ['name', 'formatted_phone_number', 'url', 'reviews'] 
-            }
-        });
 
-        const place = detailsResponse.data.result;
-        
-        return {
-            name: place.name,
-            phone: place.formatted_phone_number || null,
-            mapUrl: place.url || null,
-            reviewUrl: place.url || null 
-        };
+// --- Instrucción Principal del Sistema para Gemini ---
+// CLAVE: Define el comportamiento, tono y formato de salida JSON.
+const BASE_SYSTEM_INSTRUCTION = `Eres Progreso Tour Guide, un asistente virtual amable y experto en la ciudad fronteriza de Nuevo Progreso, Tamaulipas.
+Tu objetivo es ayudar a los usuarios con información específica de la ciudad, siempre en español.
 
-    } catch (e) {
-        console.error("Error al llamar a Google Places API:", e.response ? e.response.data : e.message);
-        return null;
-    }
+Reglas CLAVE:
+1. Siempre debes verificar si la consulta del usuario se refiere a un lugar de SALUD (ej. clínica dental, farmacia, estética).
+2. Si la consulta es sobre SALUD, la propiedad "isHealthPlace" en tu respuesta JSON debe ser OBLIGATORIAMENTE 'true'. Si no es de salud, debe ser 'false'.
+3. **Formato de Respuesta:** Para la mayoría de las respuestas (especialmente recomendaciones de lugares específicos), debes responder ÚNICAMENTE con una estructura JSON siguiendo este esquema. NO DEBE HABER TEXTO ADICIONAL FUERA DEL JSON si respondes con JSON.
+
+ESQUEMA JSON:
+{
+    "Title": "El título que elijas para el lugar",
+    "Description": "Descripción amable y concisa del lugar.",
+    "placeCategory": "Categoría del lugar (ej. Taquería, Restaurante de Mariscos, Tienda de Artesanías)",
+    "isStructured": true,
+    "isHealthPlace": [true/false], // OBLIGATORIO: true si es salud (dental, farmacia, salón), false si es comida/tienda
+    "mapUrl": "https://support.google.com/maps/answer/3094088?hl=es", 
+    "reviewUrl": "https://support.google.com/business/thread/157698752/rese%C3%91as-falsa-es-obvio-pero-google-pasa-de-todo?hl=es",
+    "placePhone": "[Número de teléfono, puedes dejarlo nulo si es recomendación local forzada]"
 }
 
+4. Si la consulta es general (ej. 'Hola', '¿Cómo estás?'), responde con texto plano y un tono amigable, sin usar el formato JSON.
+5. El tono debe ser siempre servicial y conciso.`;
+// ----------------------------------------------------
 
+
+// --- Manejador de la API ---
 export default async function handler(req, res) {
+    // Solo permitimos peticiones POST
     if (req.method !== 'POST') {
-        return res.status(405).json({ message: 'Método no permitido' });
+        return res.status(405).json({ message: 'Method Not Allowed' });
     }
 
+    // El frontend espera 'history' (array) y 'userPrompt' (string)
+    const { history, userPrompt } = req.body;
+    if (!userPrompt || !Array.isArray(history)) {
+        return res.status(400).json({ message: 'Invalid request payload' });
+    }
+
+    // Bandera para saber si activamos el protocolo de recomendación local
+    let isLocalRecommendation = false; 
+    let finalUserPrompt = userPrompt;
+    let totalResultsCount = 0;
+    let apiQueryForChip = '';
+
     try {
-        const { history = [], userPrompt, currentLanguage } = req.body;
-        
-        // Configuramos el idioma
-        const langText = currentLanguage === 'es' ? 'español' : 'inglés';
-        const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
+        // =========================================================================
+        // 1. PROTOCOLO DE RECOMENDACIÓN LOCAL (Fuerza el uso de la lista)
+        // =========================================================================
 
-        // LÓGICA DE INTERCEPTACIÓN Y PRIORIDAD LOCAL
-        let promptToSend = userPrompt;
-        let totalResultsCount = 0;
-        let apiQueryForChip = null;
-        let isLocalRecommendation = false;
-        let actionButton = null; // Objeto para el botón de acción rápida
-
-        // Patrón para detectar solicitudes de listado/recomendación
-        const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra).*\\s+(\\d+|unos cuantos)?\\s*(taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias|salud|estetica|dental|farmacia|optica)s?`, 'i');
-        
-        const match = userPrompt.match(recommendationPattern);
-        
-        if (match) {
-            
-            // 1. Intentamos leer la data local COMPLETA
-            const allLocalData = await getProgresoData();
-            
-            if (allLocalData.length > 0) {
-                
-                // 2. Determinar la intención del usuario usando el mapa
-                const categoryKeyRaw = match[3].toLowerCase(); 
-                
-                let categoryKey;
-                if (categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('tacos')) {
-                    categoryKey = 'tacos';
-                } else if (categoryKeyRaw.includes('estetica') || categoryKeyRaw.includes('salud')) {
-                    categoryKey = 'salud'; 
-                } else if (categoryKeyRaw.includes('dental')) {
-                    categoryKey = 'dental';
-                } else if (categoryKeyRaw.includes('farmacia')) {
-                    categoryKey = 'farmacia';
-                } else if (categoryKeyRaw.includes('optica')) {
-                    categoryKey = 'optica';
-                } else {
-                    categoryKey = categoryKeyRaw;
-                }
-                
-                const categoryIntent = CATEGORY_MAP[categoryKey];
-                
-                if (categoryIntent) {
-                    
-                    // 3. Obtener el conteo total (incluyendo salud, para el botón)
-                    const totalFullResults = allLocalData.filter(place => 
-                        categoryIntent.sections.includes(place.Section)
-                    ).length;
-
-                    // 4. Obtener resultados NO saludables (para la conversación de ejemplo)
-                    const nonHealthResults = allLocalData.filter(place => 
-                        categoryIntent.sections.includes(place.Section) && place.isHealthPlace === false
-                    );
-                    
-                    isLocalRecommendation = true;
-                    apiQueryForChip = categoryIntent.apiQuery;
-                    totalResultsCount = totalFullResults;
-                    
-                    let conversationStart = `¡Claro! ☀️ Nuevo Progreso tiene muchísimos lugares excelentes.`;
-                    
-                    // LÓGICA CONVERSACIONAL: Intentar dar un ejemplo si existe un lugar NO saludable
-                    if (nonHealthResults.length > 0) {
-                        
-                        // Seleccionar un lugar aleatorio para el ejemplo conversacional
-                        const randomIndex = Math.floor(Math.random() * nonHealthResults.length);
-                        const randomPlace = nonHealthResults[randomIndex];
-                        
-                        // Formato del ejemplo a forzar
-                        const forcedExample = `Por ejemplo, te puedo contar sobre **${randomPlace.Title}**: ${randomPlace.Description.trim()}`;
-                        
-                        conversationStart = `¡Claro que sí! 🌮 ${categoryIntent.apiQuery.replace(' en Nuevo Progreso', '').trim()} es un gran atractivo. ${forcedExample}.`;
-                        
-                    } else if (totalFullResults > 0 && categoryIntent.sections.some(s => ['clinicas_dentales', 'salones_belleza', 'farmacias', 'opticas'].includes(s))) {
-                        
-                         // Si solo hay salud, forzamos un resumen general sin mencionar nombres
-                         conversationStart = `¡Claro! 🦷 En la categoría de ${categoryIntent.apiQuery.replace(' en Nuevo Progreso', '').trim()} (Salud y Estética) hay mucha oferta de alta calidad. `;
-                         
-                    }
-                    
-                    // 5. SOBRESCRIBIMOS el prompt para FORZAR el MODO CONVERSACIONAL con el ejemplo y el cierre
-                    
-                    promptToSend = `El usuario pidió una recomendación de ${categoryIntent.apiQuery}. Tu respuesta DEBE EMPEZAR con un saludo y la siguiente frase conversacional, sin inventar nombres ni cambiar la información del ejemplo (si aplica):
-                    
-                    --- FRASE FORZADA ---
-                    ${conversationStart}
-                    --- FIN DE FRASE FORZADA ---
-                    
-                    Tu respuesta DEBE TERMINAR con el CIERRE REQUERIDO del protocolo de recomendación local (mencionando que encontraste ${totalFullResults} lugares y la instrucción de "Ver todos los lugares"). NO uses el formato JSON estructurado.`;
-                    
-                    console.log("PROTOCOLO RECOMENDACIÓN ACTIVADO. Total encontrados:", totalFullResults);
-                }
+        // a. Intentar identificar la categoría
+        let categoryKey = null;
+        for (const key in CATEGORY_MAP) {
+            // Busca la clave de la categoría en el prompt del usuario
+            if (userPrompt.toLowerCase().includes(key)) {
+                categoryKey = key;
+                break;
             }
         }
-        // FIN DE LÓGICA DE INTERCEPTACIÓN Y PRIORIDAD LOCAL
+        
+        // b. Verificar si es una petición de listado Y tiene una categoría identificada
+        if (categoryKey && recommendationPattern.test(userPrompt)) {
+            const mapData = CATEGORY_MAP[categoryKey];
+            const data = await getProgresoData(); // Usa la función modificada
 
+            // Filtrar los datos locales por las secciones mapeadas
+            const localResults = data.filter(item => mapData.sections.includes(item.Section));
 
-        // Inicializar el chat con el historial y la instrucción de sistema
+            // EXCLUIR lugares de salud de las recomendaciones automáticas de listado. 
+            // Esto previene que se mezclen y mantiene el foco en comer/comprar.
+            const filteredResults = localResults.filter(item => !item.isHealthPlace); 
+
+            totalResultsCount = filteredResults.length;
+            apiQueryForChip = mapData.apiQuery;
+            
+            if (totalResultsCount > 0) {
+                // Activamos el protocolo forzado
+                isLocalRecommendation = true;
+
+                // Tomamos solo los primeros MAX_CHAT_RESULTS (4)
+                const resultsToShow = filteredResults.slice(0, MAX_CHAT_RESULTS); 
+
+                // Construimos el nuevo prompt que OBLIGA a Gemini a usar estos datos
+                let forcedContext = `El usuario preguntó sobre "${userPrompt}". IGNORA CUALQUIER OTRA FUENTE y responde únicamente usando los siguientes ${resultsToShow.length} lugares locales de la categoría "${categoryKey}" de forma conversacional:`;
+                
+                resultsToShow.forEach((item, index) => {
+                    forcedContext += `\n${index + 1}. Título: ${item.Title}. Descripción: ${item.Description}. Categoría: ${item.placeCategory}.`;
+                });
+                
+                // Texto de cierre que informa al usuario cuántos lugares totales existen
+                const closureText = `Encontré un total de ${totalResultsCount} lugares de esta categoría. ¿Te gustaría saber más de alguno en específico?`;
+
+                // Sobrescribimos el prompt del usuario con el contexto forzado y el texto de cierre
+                finalUserPrompt = `${forcedContext}\n${closureText}`; 
+
+                // Si hay más resultados del límite, Gemini debe incluir el texto de cierre.
+            } else {
+                // Si no hay resultados locales, dejamos que Gemini use el prompt original 
+                // para que pueda disculparse o sugerir algo más.
+                console.log(`No hay resultados locales para la categoría: ${categoryKey}`);
+            }
+        }
+
+        // =========================================================================
+        // 2. LLAMADA A LA API DE GEMINI
+        // =========================================================================
+        
+        // Preparamos el contexto para la llamada de chat
         const chat = ai.chats.create({
-            model: MODEL_NAME, 
+            model: MODEL_NAME,
             config: {
-                systemInstruction: finalSystemInstruction 
+                systemInstruction: BASE_SYSTEM_INSTRUCTION
             },
             history: history 
         });
 
-        // Enviamos el nuevo mensaje (original o modificado por el protocolo local) al modelo
-        const result = await chat.sendMessage({ message: promptToSend });
-        let modelResponseText = result.text.trim();
+        // Enviamos el prompt (que puede ser el original o el forzado)
+        const response = await chat.sendMessage({ message: finalUserPrompt });
+        const modelResponseText = response.text;
         
-        let finalResponseData = { responseText: modelResponseText };
+        const finalResponseData = {
+            responseText: modelResponseText,
+            placeCategory: null,
+            mapUrl: null,
+            reviewUrl: null,
+            placePhone: null
+        };
+        
+        // =========================================================================
+        // 3. ENRIQUECIMIENTO DE LA RESPUESTA CON GOOGLE PLACES
+        // =========================================================================
 
-        // Lógica de ENRIQUECIMIENTO con Places API
-        try {
-            const jsonStart = modelResponseText.indexOf('{');
-            const jsonEnd = modelResponseText.lastIndexOf('}');
+        const match = modelResponseText.match(jsonRegex);
+        let placeTitle = null;
+        let placeCategory = null;
+        let isHealthPlace = false;
+        
+        if (match) {
+            // Se encontró JSON, la respuesta es estructurada (isStructured: true)
+            const jsonString = match[1];
+            const parsedJson = JSON.parse(jsonString);
             
-            if (jsonStart !== -1 && jsonEnd !== -1) {
-                const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
-                const parsedJson = JSON.parse(jsonString);
+            // Extraer datos clave del JSON
+            placeTitle = parsedJson.Title;
+            placeCategory = parsedJson.placeCategory;
+            isHealthPlace = parsedJson.isHealthPlace || false; // Asegurar que es false si no existe
+            
+            // Actualizar la estructura de respuesta final
+            finalResponseData.placeCategory = placeCategory;
 
-                if (parsedJson.isStructured === true) {
+            // Lógica de seguridad para lugares de salud
+            if (isHealthPlace) {
+                // ⚠️ REGLA DE PRIVACIDAD: Si es un lugar de salud, NO buscamos teléfono ni reseñas.
+                finalResponseData.responseText = modelResponseText.replace(jsonString, '').trim();
+                finalResponseData.responseText = finalResponseData.responseText.trim() + '\n' + JSON.stringify({ ...parsedJson, placePhone: null, reviewUrl: null, mapUrl: null });
+                console.log(`Seguridad aplicada: Datos de contacto bloqueados para ${placeTitle}.`);
+            } else if (placeTitle) {
+                // Si NO es de salud, y tenemos un título, buscamos más detalles.
+                console.log(`Buscando detalles de Google Places para: ${placeTitle}`);
+                
+                // Usamos el cliente de Places (asume que Places API está configurada)
+                const placesResponse = await placesClient.findPlaceFromText({
+                    params: {
+                        input: `${placeTitle} Nuevo Progreso`,
+                        inputtype: 'textquery',
+                        fields: ['place_id', 'formatted_address', 'name', 'rating', 'user_ratings_total'],
+                        key: process.env.GOOGLE_PLACES_API_KEY, 
+                    },
+                    timeout: 2000,
+                });
+
+                if (placesResponse.data.candidates.length > 0) {
+                    const place = placesResponse.data.candidates[0];
                     
-                    if (parsedJson.type === 'place' && parsedJson.placeToSearch) {
-                        
-                        const placeNameSearch = parsedJson.placeToSearch.trim();
-                        const isHealthPlace = parsedJson.isHealthPlace === true; 
+                    // Buscar detalles específicos (teléfono, URL, etc.)
+                    const detailsResponse = await placesClient.getDetails({
+                        params: {
+                            place_id: place.place_id,
+                            fields: ['url', 'website', 'formatted_phone_number'],
+                            key: process.env.GOOGLE_PLACES_API_KEY, 
+                        },
+                        timeout: 2000,
+                    });
 
-                        // **** REGLA DE SALUD DINÁMICA: Bloqueo de Enriquecimiento ****
-                        if (isHealthPlace) {
-                            console.log(`Regla de Salud Dinámica Aplicada: Bloqueando enriquecimiento Places para ${placeNameSearch}`);
-                            
-                            const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
+                    const details = detailsResponse.data.result;
 
-                            finalResponseData.responseText = JSON.stringify({
-                                ...parsedJson,
-                                placePhone: null, // Bloqueado
-                                reviewUrl: null,   // Bloqueado
-                                mapUrl: baseMapUrl // URL de búsqueda básica
-                            });
+                    // Construcción de URLs
+                    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeTitle)}&query_place_id=${place.place_id}`;
+                    const reviewsUrl = details.url || mapsUrl; // Usar la URL de Maps si no hay otra
 
-                        } else {
-                            // SI NO ES SALUD: Procedemos con el enriquecimiento normal (todos los botones).
-                            const placeData = await getPlaceDetails(placeNameSearch);
+                    // Actualizar la respuesta final
+                    finalResponseData.mapUrl = mapsUrl;
+                    finalResponseData.reviewUrl = reviewsUrl;
+                    finalResponseData.placePhone = details.formatted_phone_number || null;
 
-                            if (placeData) {
-                                // Enriquecemos con datos reales de Places
-                                finalResponseData.responseText = JSON.stringify({
-                                    ...parsedJson,
-                                    placeName: placeData.name,
-                                    placePhone: placeData.phone,
-                                    mapUrl: placeData.mapUrl,
-                                    reviewUrl: placeData.reviewUrl, 
-                                });
-                            } else {
-                                // Si falla Places, al menos eliminamos placeToSearch para evitar confusiones
-                                delete parsedJson.placeToSearch;
-                                finalResponseData.responseText = JSON.stringify(parsedJson);
-                            }
-                        }
-                        // **** FIN DE REGLA DE SALUD DINÁMICA ****
-                        
-                    } else if (parsedJson.type === 'category') {
-                        // Si es una categoría, solo aseguramos que el JSON es válido y lo pasamos.
-                        finalResponseData.responseText = JSON.stringify(parsedJson);
-                    }
+                    // Reconstruir el JSON para el frontend con los datos enriquecidos
+                    const enrichedJson = {
+                        ...parsedJson,
+                        mapUrl: finalResponseData.mapUrl,
+                        reviewUrl: finalResponseData.reviewUrl,
+                        placePhone: finalResponseData.placePhone,
+                    };
+
+                    // Reemplazar el JSON original en el texto de Gemini con el enriquecido
+                    const cleanedResponseText = modelResponseText.replace(jsonString, '').trim();
+                    finalResponseData.responseText = cleanedResponseText + '\n' + JSON.stringify(enrichedJson);
+                } else {
+                    // Si falla el place search, volvemos al JSON original (solo limpiamos el JSON de los backticks)
+                    finalResponseData.responseText = modelResponseText.replace(jsonString, '').trim() + '\n' + JSON.stringify(parsedJson);
+                    console.log(`No se encontraron candidatos de Places API para: ${placeTitle}`);
                 }
+            } else {
+                 // Si falla el parseo o no hay título, la respuesta sigue siendo la original (texto plano)
+                 finalResponseData.responseText = modelResponseText.replace(jsonString, '').trim();
+                 finalResponseData.responseText = finalResponseData.responseText.trim() + '\n' + JSON.stringify(parsedJson);
             }
-        } catch (jsonError) {
-            console.error("Fallo en el parseo o enriquecimiento del JSON:", jsonError);
+        } else {
+            // Si no hay match (es texto plano), se usa la respuesta tal cual
             // Si falla el parseo, la respuesta sigue siendo la original (texto plano)
             finalResponseData.responseText = modelResponseText; 
         }
 
-        // AÑADIR EL actionButton SI EL PROTOCOLO FUE ACTIVADO
-        if (isLocalRecommendation && totalResultsCount > 0) {
-            actionButton = {
-                type: 'showAll',
-                query: apiQueryForChip, 
-                text: `Ver todos los ${totalResultsCount} lugares`
-            };
-            finalResponseData.actionButton = actionButton;
+        // =========================================================================
+        // 4. LÓGICA DE ANEXAR METADATOS DE RECOMENDACIÓN LOCAL AL FINAL DE LA RESPUESTA
+        // Esto solo ocurre si el protocolo fue activado (isLocalRecommendation = true) 
+        // y la respuesta final NO es JSON estructurado (es texto plano de Gemini, el listado)
+        // =========================================================================
+        if (isLocalRecommendation && !finalResponseData.responseText.includes('"isStructured": true')) {
+             if (totalResultsCount > MAX_CHAT_RESULTS) {
+                // Si el conteo total excede el límite (4), anexamos los metadatos para el frontend
+                const metaData = {
+                    isLocalRecommendation: true,
+                    totalCount: totalResultsCount,
+                    apiQueryForChip: apiQueryForChip // CLAVE para el botón "Ver todos"
+                };
+                // Anexamos el JSON al final del texto de Gemini
+                finalResponseData.responseText = finalResponseData.responseText.trim() + '\n' + JSON.stringify(metaData);
+            }
         }
 
         // Retornamos la respuesta (enriquecida o original) al frontend
         res.status(200).json(finalResponseData);
 
     } catch (error) {
-        console.error("Error en la API de Gemini:", error);
+        console.error("Error en la API de Gemini o en el procesamiento:", error);
         res.status(500).json({ 
             error: true, 
             message: "Fallo al obtener respuesta de Gemini: " + error.message
