@@ -2,255 +2,344 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Progreso Tour Guide</title>
-<link href="https://fonts.cdnfonts.com/css/avenir" rel="stylesheet">
-         <link href="https://db.onlinewebfonts.com/c/ddadf4e5d67469bf2fb13ca47ac078ba?family=FH+Oscar+Test+Medium" rel="stylesheet">       
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Progreso Tour Guide Chatbot</title>
+    
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    
     <style>
-        /* Estilos base */
-        html, body { 
-            font-family:FH Oscar Test Medium; 
-            height: 100%; 
-            margin: 0; 
-            padding: 0; 
-            /* Fondo sutil para que el Glassmorphism funcione */
-            background: linear-gradient(179deg, rgb(224 235 251 / 4%) 0%, #eff6ff 100% 60%);
+        /* --- ESTILOS BASE Y LAYOUT --- */
+        body, html {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            background-color: #f7f7f7;
+            font-family: Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent; /* Elimina el resplandor azul en móviles */
         }
-        .chat-window { 
-            height: 100%; 
-            width: 100vw; 
-            display: flex; 
-            flex-direction: column; 
-            background-color: transparent; 
-            overflow: hidden 
-        }
-        .user-bubble { border-radius: 18px 18px 0 18px; max-width: 90% }
-        .model-bubble { border-radius: 18px 18px 18px 0; max-width: 90%;padding-left:8px;backgroud-color: rgb(140 154 178/6%); }
-        .action-bar-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 10px; padding-bottom: 5px }
-        .action-btn { white-space: nowrap }
-        .chip-group-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
-        
-        /* Estilo de la barra de chat NUEVO (GLASSMOPRHISM) */
-        .map-search-bar {
-            background-color: #ffffffb8; /* Fondo blanco con 72% de opacidad (Glassmorphism) */
-            border-radius: 20px;
-            box-shadow: 1px 2px 2px 2px #000, 0 2px 4px -2px rgba(0, 0, 0, 0.06); /* Sombra personalizada */
-            border: 1px solid #e5e7eb; /* Mantenemos el borde para definición */
+        #app {
             display: flex;
-            align-items: center;
-            padding: 4px; 
-            width: 100%; 
-            box-sizing: border-box; 
+            flex-direction: column;
+            height: 100vh;
+            max-width: 600px; /* Ancho máximo para el chat */
+            margin: 0 auto;
+            border-left: 1px solid #eee;
+            border-right: 1px solid #eee;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+            background-color: #fff;
+        }
+
+        /* --- HEADER Y BOTONES DE ACCIÓN --- */
+        #header {
+            background-color: #000;
+            color: #fff;
+            padding: 1rem 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: bold;
+        }
+        .menu-action-chip {
+            background-color: #333;
+            color: #fff;
+            border-radius: 9999px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            white-space: nowrap;
+        }
+        .menu-action-chip:hover {
+            background-color: #555;
         }
         
-        .map-input {
-            flex-grow: 1;
-            padding: 0.75rem 0.75rem; 
-            color: #9ca3af;
-            font-size: 1.125rem;
-            background: transparent;
-            border: none;
-            min-width: 0; 
-            outline: none !important;
-            box-shadow: none !important;
-        }
-        .go-button {
-            background-color: black;
-            color: white;
-            font-size: 1rem;
-            font-weight: bold;
-            border-radius: 15px;
-            padding: 0.5rem 1rem; 
+        /* Botón de limpiar historial */
+        #btn-clear-top {
+            background-color: #f00;
+            color: #fff;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: hover:opacity-90 disabled:opacity-50;
-            flex-shrink: 0;
-            min-width: 60px;
-            height: 44px;
-            box-sizing: border-box;
-            margin-right: 4px;
-            outline: none !important;
+            font-size: 1rem;
+            line-height: 1;
+            cursor: pointer;
+            transition: background-color 0.2s;
         }
-        .go-button svg {
-            margin-right: 0.25rem;
-            width: 1.25rem; 
-            height: 1.25rem;
-            fill: currentColor;
+        #btn-clear-top:hover {
+            background-color: #c00;
         }
 
-        /* --- Eliminación de Efecto Celeste/Ring/Highlight en TODOS los botones y chips --- */
-        
-        /* 1. Para navegadores basados en Webkit (Chrome, Safari, Android) */
-        * {
-            -webkit-tap-highlight-color: transparent !important; 
+
+        /* --- CONTENEDOR DE MENSAJES --- */
+        #message-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            scroll-behavior: smooth;
         }
         
-        /* 2. Asegura la eliminación del outline/ring en estados focus/active */
-        .action-chip, .category-chip, .language-chip, .go-button, .map-input {
-            outline: none !important;
-            box-shadow: none !important;
-            --tw-ring-color: transparent !important;
+        /* --- BURBUJAS DE MENSAJE --- */
+        .user-bubble, .model-bubble {
+            max-width: 80%;
+            border-radius: 1.25rem;
+            padding: 0.6rem 1rem;
+            word-wrap: break-word;
         }
-        .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active, .go-button:focus, .go-button:active {
-            outline: none !important;
-            box-shadow: none !important;
-            --tw-ring-color: transparent !important;
+        .user-bubble {
+            background-color: #000;
+            color: #fff;
+            border-bottom-right-radius: 0.2rem;
+            font-size: 0.95rem;
         }
-        .hover\:bg-gray-300:active {
-            background-color: #d1d5db; 
+        .model-bubble {
+            background-color: #e5e7eb; /* Gris claro */
+            color: #1f2937; /* Gris oscuro */
+            border-bottom-left-radius: 0.2rem;
+            font-size: 0.95rem;
+            white-space: pre-wrap; /* Mantiene saltos de línea y espacios de Gemini */
         }
-        
-        /* --- Efecto Ola y Transición para los Chips --- */
-        .category-chip, .language-chip {
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+        .timestamp {
+            font-size: 0.65rem;
+            color: #9ca3af;
+            margin-top: 2px;
+            margin-right: 8px; /* Solo en burbujas de usuario */
+            margin-left: 8px; /* Solo en burbujas de modelo */
+        }
+
+        /* --- CHIPS DINÁMICOS (CATEGORÍAS / LENGUAJE) --- */
+        .chip-group {
+            padding: 0.5rem 1rem;
+            overflow-x: auto;
             white-space: nowrap;
-            display: inline-flex;
-            align-items: center;
+            /* Estilo de scrollbar minimalista para una mejor experiencia móvil */
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
         }
-        .visible-chip {
+        .chip-group::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+        .category-chip, .language-chip {
+            display: inline-block;
+            background-color: #f3f4f6;
+            color: #4b5563;
+            border-radius: 9999px;
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+            margin-right: 0.5rem;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+        }
+        .category-chip.visible-chip, .language-chip.visible-chip {
             opacity: 1;
             transform: translateY(0);
         }
-
-        /* Estilo para el Timestamp */
-        .timestamp {
-            font-size: 0.7rem; 
-            color: #9ca3af; 
-            margin-top: 2px;
+        
+        /* --- INPUT Y BOTÓN DE ENVÍO --- */
+        #input-container {
+            padding: 0.75rem 1rem;
+            background-color: #fff;
+            border-top: 1px solid #e5e7eb;
+            box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
+        }
+        #user-input {
+            border: 1px solid #d1d5db;
+            border-radius: 9999px;
+            padding: 0.75rem 1.25rem;
+            flex-grow: 1;
+            margin-right: 0.5rem;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        #user-input:focus {
+            border-color: #000;
+        }
+        #go-button {
+            background-color: #000;
+            color: #fff;
+            border-radius: 9999px;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+        #go-button:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+        #go-button:hover:not(:disabled) {
+            background-color: #1f2937;
         }
 
-        /* AJUSTE CRÍTICO PARA EL NUEVO HEADER FLOTANTE */
-        #message-container {
-            padding-top: 6rem; 
+        /* --- INDICADOR DE CARGA --- */
+        #loading-indicator {
+            position: absolute;
+            bottom: 6rem;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 0.5rem 1rem;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 9999px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            font-size: 0.875rem;
+            z-index: 10;
         }
-        #btn-clear-top {
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
-            outline: none !important;
+        
+        /* Animación simple de puntos */
+        .dots span {
+            animation: blink 1.4s infinite;
+        }
+        .dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 0.2; }
+            40% { opacity: 1; }
         }
 
-        /* NUEVOS ESTILOS PARA LA TARJETA DE NOTIFICACIÓN */
-        .notification-card {
-            background-color: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.05);
-            color: #1f2937; 
-            padding: 12px 16px;
+
+        /* --- ALERTAS FLOTANTES (app-alert-container) --- */
+        #app-alert-container {
+            position: fixed;
+            top: 6rem; /* Debajo del header */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
             max-width: 90%;
-            min-width: 250px;
+        }
+
+        .notification-card {
+            background-color: #38a169; /* Verde por defecto */
+            color: white;
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-top: 10px; 
-            transform: translateY(-100%);
-            transition: transform 0.4s ease-out, opacity 0.4s ease-out;
             opacity: 0;
+            transition: opacity 0.4s ease-in-out;
+            margin-bottom: 0.5rem; /* Espacio entre alertas si hubiera */
         }
-
+        
         .notification-card.show {
-            transform: translateY(0);
             opacity: 1;
         }
-
+        
         .notification-card .message-content {
-            flex-grow: 1;
-            font-weight: 500;
             display: flex;
             align-items: center;
-            line-height:16px;
+            font-size: 0.9rem;
+            font-weight: 500;
         }
 
         .notification-card .close-btn {
             background: none;
             border: none;
-            color: #9ca3af; 
-            font-size: 1.2rem;
+            color: white;
+            font-size: 1.25rem;
+            margin-left: 1rem;
             cursor: pointer;
-            margin-left: 15px;
-            padding: 0;
-            outline: none;
             line-height: 1;
-            transition: color 0.2s;
         }
         
-        .notification-card .close-btn:active {
-            color: #4b5563; 
+        /* --- ESTILOS DE FICHAS ESTRUCTURADAS (model-bubble) --- */
+        .action-bar-container {
+            padding: 0.5rem 0 0.25rem 0;
+            width: 100%;
+        }
+        .action-btn {
+            text-decoration: none;
+            text-align: center;
+            font-size: 0.75rem !important; /* Más pequeño para móviles */
+            padding: 0.5rem 0.75rem !important;
+        }
+        
+        /* --- BOTÓN DE ACCIÓN RÁPIDA FLOTANTE INFERIOR --- */
+        #quick-action-full-list {
+            position: fixed;
+            bottom: 6rem; 
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 30;
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+        #quick-action-full-list.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: translate(-50%, 20px);
         }
 
-        /* Botón de Notificaciones (SIN CAMBIOS) */
-        #btn-notifications {
-            background-color: white;
-            color: #4b5563; 
-            border: 1px solid #d1d5db; 
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
-            outline: none !important;
-            padding: 8px 12px; 
-            border-radius: 9999px; 
-            font-size: 1.1rem; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
-        }
-        #btn-notifications:hover {
-            background-color: #f3f4f6;
-            color: #1f2937;
-        }
-        #btn-notifications:active {
-            background-color: #e5e7eb;
+        #btn-view-all-places {
+            background-color: #ff9900; /* Naranja/Ámbar llamativo */
             color: #000;
+            border-radius: 9999px;
+            padding: 0.6rem 1.5rem;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background-color 0.2s;
         }
-
-        /* Panel de Preferencias (SIN CAMBIOS) */
-        .notification-modal-overlay {
+        #btn-view-all-places:hover {
+            background-color: #ffaa33;
+        }
+        
+        
+        /* --- MODAL DE PREFERENCIAS (NUEVO) --- */
+        #notification-preferences-modal {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5); 
+            background-color: rgba(0, 0, 0, 0.5);
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 100; 
+            z-index: 100;
             opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+            pointer-events: none;
+            transition: opacity 0.3s;
         }
 
-        .notification-modal-overlay.show {
+        #notification-preferences-modal.show {
             opacity: 1;
-            visibility: visible;
+            pointer-events: auto;
         }
 
         .notification-panel {
             background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2), 0 5px 10px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
             width: 90%;
-            max-width: 400px; 
-            transform: translateY(20px); 
-            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
-            opacity: 0;
-            padding: 20px;
-            pointer-events: auto; 
+            max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transform: translateY(-50px);
+            transition: transform 0.3s;
         }
-
-        .notification-modal-overlay.show .notification-panel {
+        
+        #notification-preferences-modal.show .notification-panel {
             transform: translateY(0);
-            opacity: 1;
         }
 
-        /* Toggles (Switch) - (SIN CAMBIOS) */
         .toggle-switch {
             position: relative;
             display: inline-block;
-            width: 40px; 
-            height: 20px; 
-            flex-shrink: 0;
+            width: 60px;
+            height: 34px;
         }
 
         .toggle-switch input {
@@ -266,234 +355,131 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: #ccc; 
+            background-color: #ccc;
             transition: .4s;
-            border-radius: 20px; 
+            border-radius: 34px;
         }
 
         .slider:before {
             position: absolute;
             content: "";
-            height: 16px; 
-            width: 16px; 
-            left: 2px; 
-            bottom: 2px;
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
             background-color: white;
             transition: .4s;
-            border-radius: 50%; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2); 
+            border-radius: 50%;
         }
 
         input:checked + .slider {
-            background-color: #2563eb; 
-        }
-
-        input:focus + .slider {
-            box-shadow: 0 0 1px #2563eb;
+            background-color: #000;
         }
 
         input:checked + .slider:before {
-            transform: translateX(20px); 
-        }
-
-        /* Info card dentro del panel (SIN CAMBIOS) */
-        .info-card-panel {
-            background-color: #eff6ff; 
-            color: #1e40af; 
-            border-left: 4px solid #3b82f6; 
-            border-radius: 4px;
-            padding: 12px;
-            font-size: 0.9rem;
-            display: none;
-            align-items: flex-start;
-            margin-top: 20px;
-        }
-        .info-card-panel span {
-            margin-right: 8px;
-            font-size: 1.1rem;
+            transform: translateX(26px);
         }
         
-        /* --- CAMBIOS SOLICITADOS EN CSS --- */
-        
-        /* NUEVO: ESTILO PARA EL CONTENEDOR INFERIOR COMPLETO (Quick Replies + Chat Bar) */
-        .bottom-action-area {
-            border-top: 1px solid #e5e7eb;
-            background: linear-gradient(90deg, rgba(196, 228, 242, 0.35) 0%, #eff6ff 40%, #eff6ff 100%);
-            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
-            z-index: 10;
-            padding-bottom: 0; /* Ajustamos con los p-4 internos */
+        .toggle-disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
-
-        /* 1. 🎨 FONDO PARA EL QUICK REPLIES CONTAINER (Adaptado para usar el fondo del padre) */
-        #quick-replies-container {
-            border-top: none; /* El padre (bottom-action-area) ya tiene un borde superior */
-            background: transparent; /* Fondo transparente para que use el del padre */
-            padding: 0.5rem; 
-            box-shadow: none; /* La sombra la maneja el padre */
-            z-index: 10;
-        }
-
-
-        /* --- NUEVOS ESTILOS GLASS CHIP (SIN CAMBIOS) --- */
-        .glass-chip {
-            /* 2. 🎨 FONDO PARA LOS BOTONES (Menu Action Chip) */
-            background: linear-gradient(90deg, rgb(226 246 255 / 35%) 0%, #f9fafb 90%) !important; 
-            
-            backdrop-filter: blur(8px); 
-            -webkit-backdrop-filter: blur(8px);
-            
-            border: 1px solid rgba(255, 255, 255, 0.8) !important; 
-            
-            box-shadow: 
-                inset 0 1px 0 rgba(255, 255, 255, 0.9),
-                inset 0 -1px 0 rgba(0, 0, 0, 0.1);
-            
-            color: #1f2937 !important; 
-            
-            transition: all 0.2s ease-in-out;
-        }
-
-        .glass-chip:hover {
-            background: linear-gradient(90deg, rgb(226 246 255 / 50%) 0%, #ffffff 100%) !important;
-            box-shadow: 
-                0 2px 4px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 1),
-                inset 0 -1px 0 rgba(0, 0, 0, 0.2);
-        }
-
-        .glass-chip:active {
-            background: rgb(226 246 255 / 80%) !important;
-            box-shadow: none !important; 
-        }
-
-        /* Anular el fondo gris de Tailwind en los chips de menú principales */
-        #menu-actions .menu-action-chip {
-            background-color: transparent !important;
-        }
-        
     </style>
-    <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
 </head>
 <body>
-    <div id="chat-window" class="chat-window h-screen w-full"> 
-        
-        <div class="fixed top-0 left-0 w-full z-50 p-4 pt-6 flex justify-between bg-transparent">
-            <div id="top-action-bar-left" class="flex items-center space-x-3">
-                <div id="btn-clear-top" class="action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-white text-red-700 cursor-pointer transition hover:bg-gray-100 shadow-md border border-red-300" data-action="CLEAR_HISTORY">❌ Borrar Chat</div>
+    <div id="app">
+        <header id="header" class="flex items-center justify-between">
+            <h1 class="header-title">PROGRESO TOUR GUIDE</h1>
+            <div class="flex space-x-2">
+                <button id="btn-notifications" class="menu-action-chip">🔔</button>
+                <button id="btn-clear-top" data-action="CLEAR_HISTORY" aria-label="Limpiar chat">🗑️</button>
             </div>
-            <div id="top-action-bar-right" class="flex items-center space-x-3">
-                <button id="btn-notifications" class="action-chip flex items-center text-sm font-semibold cursor-pointer">🔔</button>
-            </div>
-        </div>
-        <div id="app-alert-container" class="fixed top-0 w-full flex justify-center z-50 pointer-events-none"></div>
+        </header>
 
-        <div id="message-container" class="flex-grow overflow-y-auto p-4 flex flex-col"></div>
-
-        <div id="loading-indicator" class="flex justify-start hidden p-4 pl-1 flex-shrink-0" style="margin-left:-42px;margin-bottom:-22px;">
-            <dotlottie-wc src="https://lottie.host/65b2d1fc-9840-476c-867e-6236ce234b38/SwsGK4ZVOj.lottie" style="width: 150px; height:" autoplay loop></dotlottie-wc>
+        <div id="menu-actions" class="flex justify-start space-x-2 px-4 py-2 bg-gray-100 overflow-x-auto">
+            <button id="btn-categorias" data-action="CATEGORIES" class="menu-action-chip">📂 Categorías</button>
+            <button id="btn-lenguaje" data-action="LANGUAGE" class="menu-action-chip">🌐 Lenguaje</button>
+            <button id="btn-comollegar" data-action="MAPS" data-query-es="¿Cómo llegar a Nuevo Progreso desde EE. UU.?" data-query-en="How to get to Nuevo Progreso from the US?" class="menu-action-chip">📍 Cómo Llegar</button>
+            <button id="btn-info" data-action="INFO" data-query-es="Cuéntame sobre Nuevo Progreso y sus atracciones principales." data-query-en="Tell me about Nuevo Progreso and its main attractions." class="menu-action-chip">ℹ️ Info</button>
         </div>
         
-        <div class="bottom-action-area flex-shrink-0 flex flex-col space-y-2">
-            
-            <div id="quick-action-full-list" class="px-4 pt-0 pb-2 hidden">
-                <div id="btn-view-all-places" class="action-chip flex items-center p-3 rounded-xl text-lg font-bold cursor-pointer transition glass-chip justify-center">
-                    ➡️ Ver todos los lugares
-                </div>
-            </div>
-            
-            <div id="quick-replies-container" class="quick-replies-container flex-shrink-0 flex flex-col space-y-2">
-                
-                <div id="category-chips-group" class="chip-group-scroll hidden">
-                    <div id="category-chips-list" class="inline-flex space-x-3 pb-3 border-b border-gray-200"> 
-                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-green-500 bg-green-50 text-green-700 cursor-pointer transition hover:bg-green-100" data-query-es="Dime sobre la Categoría Salud y Estética en Progreso" data-query-en="Tell me about the Health and Beauty Category in Progreso">🏥 Salud & Estética</div>
-                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-blue-500 bg-blue-50 text-blue-700 cursor-pointer transition hover:bg-blue-100" data-query-es="Dime sobre la Categoría Compras y Tiendas en Progreso" data-query-en="Tell me about the Shopping and Stores Category in Progreso">🛍️ Compras</div>
-                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-purple-500 bg-purple-50 text-purple-700 cursor-pointer transition hover:bg-purple-100" data-query-es="Dime sobre la Categoría Entretenimiento y Atracciones en Progreso" data-query-en="Tell me about the Entertainment and Attractions Category in Progreso">🎺 Entretenimiento</div>
-                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-yellow-500 bg-yellow-50 text-yellow-700 cursor-pointer transition hover:bg-yellow-100" data-query-es="Top 10 Dentistas en Progreso" data-query-en="Top 10 Dentists in Progreso">🦷 Top 10 Dental</div>
-                    </div>
-                </div>
+        <div id="category-chips-group" class="chip-group hidden border-b border-gray-200">
+            <button class="category-chip" data-query-es="Quiero ver negocios de salud y estética" data-query-en="I want to see health and beauty businesses">🏥 Salud & Estética</button>
+            <button class="category-chip" data-query-es="Lugares de compras y souvenirs" data-query-en="Shopping and souvenir places">🛍️ Compras</button>
+            <button class="category-chip" data-query-es="¿Hay lugares de entretenimiento nocturno?" data-query-en="Are there night entertainment places?">🎺 Entretenimiento</button>
+            <button class="category-chip" data-query-es="Dame una lista de las 10 mejores clínicas dentales" data-query-en="Give me a list of the top 10 dental clinics">🦷 Top 10 Dental</button>
+        </div>
+        
+        <div id="language-chips-group" class="chip-group hidden border-b border-gray-200">
+            <button class="language-chip" data-lang="es">Español 🇪🇸</button>
+            <button class="language-chip" data-lang="en">English 🇺🇸</button>
+        </div>
 
-                <div id="language-chips-group" class="chip-group-scroll hidden">
-                    <div class="inline-flex space-x-3 pb-3 border-b border-gray-200"> 
-                        <div class="language-chip flex items-center p-2 rounded-full text-sm font-semibold border border-gray-400 bg-white text-gray-800 cursor-pointer transition hover:bg-gray-100" data-lang="es">🇲🇽 Español</div>
-                        <div class="language-chip flex items-center p-2 rounded-full text-sm font-semibold border border-gray-400 bg-white text-gray-800 cursor-pointer transition hover:bg-gray-100" data-lang="en">🇺🇸 English</div>
-                    </div>
-                </div>
-                
-                <div id="menu-actions" class="chip-group-scroll">
-                    <div class="inline-flex space-x-3 pt-2">
-                        <div id="btn-categorias" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="CATEGORIES">📂 Categorías</div>
-                        <div id="btn-lenguaje" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="LANGUAGE">🌐 Lenguaje</div>
-                        <div id="btn-comollegar" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="GET_THERE" data-query-es="Dime cómo llegar a Progreso, Tamaulipas." data-query-en="Tell me how to get to Progreso, Tamaulipas.">📍 Cómo Llegar</div>
-                        <div id="btn-info" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="INFO" data-query-es="Información general sobre Nuevo Progreso." data-query-en="General information about Nuevo Progreso.">ℹ️ Info</div>
-                    </div>
-                </div>
+        <div id="message-container">
             </div>
-            
-            <div class="p-4 flex-shrink-0 pt-2"> 
-                <div class="map-search-bar w-full">
-                    <input type="text" id="user-input" class="map-input focus:outline-none focus:ring-0" placeholder="Ask the map">
-                    
-                    <button id="go-button" class="go-button transition hover:opacity-90 disabled:opacity-50">
-                        <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 122.88 122.88" class="h-5 w-5"><g><path class="st0" d="M62.43,122.88h-1.98c0-16.15-6.04-30.27-18.11-42.34C30.27,68.47,16.16,62.43,0,62.43v-1.98 c16.16,0,30.27-6.04,42.34-18.14C54.41,30.21,60.45,16.1,60.45,0h1.98c0,16.15,6.04,30.27,18.11,42.34 c12.07,12.07,26.18,18.11,42.34,18.11v1.98c-16.15,0-30.27,6.04-42.34,18.11C68.47,92.61,62.43,106.72,62.43,122.88L62.43,122.88z"/></g></svg>
-                        <span id="go-text">Ir</span> 
-                    </button>
-                </div>
-            </div>
+
+        <div id="loading-indicator" class="hidden">
+            <span class="dots">
+                <span>.</span><span>.</span><span>.</span>
+            </span>
         </div>
+
+        <div id="input-container" class="flex items-center">
+            <input type="text" id="user-input" placeholder="Pregúntale al mapa" class="flex-grow">
+            <button id="go-button">
+                <span id="go-text">Ir</span>
+            </button>
         </div>
+    </div>
     
-    <div id="notification-preferences-modal" class="notification-modal-overlay">
+    <div id="app-alert-container">
+        </div>
+
+    <div id="quick-action-full-list" class="hidden">
+        <button id="btn-view-all-places">➡️ Ver todos los 99 lugares</button>
+    </div>
+    
+    <div id="notification-preferences-modal">
         <div class="notification-panel">
-            <h3 class="text-xl font-bold mb-2 text-gray-900">Preferencias de Notificaciones</h3>
-            <p class="text-sm text-gray-600 mb-6">Elige qué notificaciones quieres recibir.</p>
-
-            <div class="space-y-4">
-                
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="font-semibold text-gray-800">Noticias de Interfaz</p>
-                        <p class="text-sm text-gray-500">Alertas de cambios de idioma, historial y otros eventos de la aplicación. (Recomendado)</p>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="toggle-news" checked data-pref="news">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="font-semibold text-gray-800">Alertas de Ficha</p>
-                        <p class="text-sm text-gray-500">Notificaciones de confirmación cuando se muestra información de una ficha de lugar o categoría.</p>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="toggle-reminders" checked data-pref="reminders">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-
-                <div class="flex items-center justify-between opacity-50 cursor-not-allowed">
-                    <div>
-                        <p class="font-semibold text-gray-800">Promociones y Ofertas</p>
-                        <p class="text-sm text-gray-500">Recibe notificaciones sobre promociones especiales. (Próximamente)</p>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="toggle-promotions" disabled data-pref="promotions">
-                        <span class="slider"></span>
-                    </label>
-                </div>
+            <h3 class="text-xl font-bold mb-4">Preferencias de Notificación</h3>
+            
+            <div class="flex items-center justify-between py-2 border-b">
+                <span>Alertas de Interfaz (Noticias)</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="toggle-news">
+                    <span class="slider"></span>
+                </label>
             </div>
-
-            <div class="info-card-panel">
-                <span>ℹ️</span> Recuerda que las **alertas de error** (❌) siempre se mostrarán, independientemente de tus preferencias, para garantizar la usabilidad.
+            
+            <div class="flex items-center justify-between py-2 border-b">
+                <span>Fichas Estructuradas (Recordatorios)</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="toggle-reminders">
+                    <span class="slider"></span>
+                </label>
             </div>
-
-            <div class="flex justify-end space-x-3 mt-8">
-                <button id="btn-discard-changes" class="py-2 px-4 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition">Descartar</button>
-                <button id="btn-apply-changes" class="py-2 px-4 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition">Aplicar Cambios</button>
+            
+            <div class="flex items-center justify-between py-2 toggle-disabled">
+                <span>Promociones Especiales</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="toggle-promotions" disabled>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            
+            <div class="flex justify-end space-x-3 mt-6">
+                <button id="btn-discard-changes" class="bg-gray-200 text-gray-800 py-2 px-4 rounded-lg font-semibold hover:bg-gray-300 transition">
+                    Descartar
+                </button>
+                <button id="btn-apply-changes" class="bg-black text-white py-2 px-4 rounded-lg font-semibold hover:bg-gray-800 transition">
+                    Guardar
+                </button>
             </div>
         </div>
     </div>
-    <script>
+
+
+<script>
     // --- BLOQUE JAVASCRIPT: SETUP Y UTILIDADES ---
     
     // **NOTA: Debe coincidir con el endpoint de Vercel/backend**
@@ -885,25 +871,27 @@
                     ? (m.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
                     : (m.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
                 
+                
+                // 🛑 CORRECCIÓN CRÍTICA DE URL: Asegura el fallback de URL de Google Maps/Search.
+                const queryEncoded = encodeURIComponent(entityName + " Nuevo Progreso Tamps");
+                
                 let directionsUrl = '#';
-                let searchUrl = '#';
+                let searchUrl = `https://www.google.com/search?q=${queryEncoded}`;
                 let phoneUrl = null;
                 let reviewUrl = null;
                 
                 if (isPlace) {
-                    const query = encodeURIComponent(entityName + " Nuevo Progreso Tamps");
-                    // Aquí se espera que el backend haya insertado la URL correcta o la URL de búsqueda básica.
-                    directionsUrl = m.mapUrl || `https://www.google.com/maps/search/?api=1&query=${query}`;
+                    // Fallback de URL corregido para Google Maps
+                    directionsUrl = m.mapUrl || `https://www.google.com/maps/search/?api=1&query=${queryEncoded}`;
                     
-                    searchUrl = `https://www.google.com/search?q=${query}`;
                     phoneUrl = m.placePhone ? `tel:${m.placePhone}` : `javascript:alert('${currentLanguage === 'es' ? 'Número no disponible.' : 'Number unavailable.'}')`;
                     reviewUrl = m.reviewUrl || directionsUrl; 
                     
                 } else if (isCategory) {
-                    const query = encodeURIComponent(entityName + " Nuevo Progreso Tamps");
-                    directionsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
-                    searchUrl = `https://www.google.com/search?q=${query}`;
+                    // Fallback de URL corregido para Categorías (también a Google Maps Search)
+                    directionsUrl = m.mapUrl || `https://www.google.com/maps/search/?api=1&query=${queryEncoded}`;
                 }
+                // -------------------------------------------------------------
                 
                 content = `<div class="model-bubble text-gray-800 p-3 shadow-md">${m.text || m.description}</div>`;
                 
@@ -974,11 +962,13 @@
         }
     }
 
-    // --- CÓDIGO DE CONEXIÓN AL BACKEND (SIN CAMBIOS) ---
+    // --- CÓDIGO DE CONEXIÓN AL BACKEND ---
 
     async function getGeminiResponse(userPrompt, chatHistoryForAPI) {
         
+        // Mapea el historial para enviarlo a la API de Gemini (solo texto y rol)
         const historyForAPI = chatHistoryForAPI.map(m => {
+            // Aseguramos que solo el texto/descripción se envíe al modelo, no el objeto estructurado completo.
             const textContent = m.isStructured && m.description ? m.description : m.text;
             
             return {
@@ -992,19 +982,20 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    history: historyForAPI, 
+                    history: historyForAPI, // Historial limitado y mapeado
                     userPrompt: userPrompt, 
-                    currentLanguage: currentLanguage
+                    currentLanguage: currentLanguage 
                 }) 
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(`Error HTTP: ${response.status}. Mensaje: ${errorData.message || 'El servicio de chat falló.'}`);
+                throw new Error(`Error HTTP: ${response.status}. Mensaje: ${errorData.error || 'El servicio de chat falló.'}`);
             }
 
             const data = await response.json();
-            return data.responseText; 
+            // El backend devuelve {responseText, isLocalRecommendation, totalCount, apiQueryForChip}
+            return data; 
 
         } catch (error) {
             console.error("Fallo del Proxy o API de Gemini:", error);
@@ -1031,71 +1022,70 @@
 
         if (typeof toggleInput === 'function') toggleInput(true);
         
+        // 1. Agregar mensaje de usuario al historial
         chatHistory.push({ role: 'user', text: userPrompt, timestamp: new Date() });
         if (typeof renderChat === 'function') renderChat();
         inputElement.value = '';
 
+        // Limitar historial enviado a la API para ahorrar tokens
         const MAX_HISTORY_TO_SEND = 10; 
         const previousHistory = chatHistory.slice(0, -1); 
         const startIndex = Math.max(0, previousHistory.length - MAX_HISTORY_TO_SEND);
         const limitedHistory = previousHistory.slice(startIndex);
         
-        let modelResponseText = await getGeminiResponse(userPrompt, limitedHistory);
+        const responseData = await getGeminiResponse(userPrompt, limitedHistory);
         
+        if (!responseData) {
+            if (typeof toggleInput === 'function') toggleInput(false);
+            return;
+        }
+        
+        const modelResponseText = responseData.responseText;
+
         let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date(), isStructured: false };
-        let totalCount = 0; // Inicializar para la lógica de abajo
-        let apiQuery = null; // Inicializar para la lógica de abajo
+        let totalCount = responseData.totalCount || 0; // Viene del backend (si es LocalRecommendation)
+        let apiQuery = responseData.apiQueryForChip || null; // Viene del backend (si es LocalRecommendation)
 
         try {
-            const jsonStart = modelResponseText.indexOf('{');
-            const jsonEnd = modelResponseText.lastIndexOf('}');
-            
-            if (jsonStart !== -1 && jsonEnd !== -1) {
-                const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
-                const parsedJson = JSON.parse(jsonString);
+            // 1. Manejo de Recomendación Local (isLocalRecommendation)
+            if (responseData.isLocalRecommendation === true) {
+                
+                // Ya tenemos totalCount y apiQuery. El texto viene limpio y forzado.
+                finalMessage.text = modelResponseText; 
+                
+            } 
+            // 2. Manejo de Respuesta Estructurada (Fichas) - Solo si no es recomendación local
+            else {
+                const jsonStart = modelResponseText.indexOf('{');
+                const jsonEnd = modelResponseText.lastIndexOf('}');
+                
+                if (jsonStart !== -1 && jsonEnd !== -1) {
+                    const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
+                    const parsedJson = JSON.parse(jsonString);
 
-                // *** INICIO DE LA LÓGICA DE PROCESAMIENTO DE RESPUESTA ***
-
-                // 1. Manejo de Respuesta Estructurada (Fichas)
-                if (parsedJson.isStructured === true) {
-                    
-                    if (parsedJson.type === 'place') {
+                    if (parsedJson.isStructured === true) {
+                        
+                        // Si es estructurada, extraemos la data para la ficha
                         finalMessage = {
                             role: 'model',
                             isStructured: true,
                             type: parsedJson.type, 
-                            text: parsedJson.description || modelResponseText, 
+                            text: parsedJson.description || modelResponseText, // Si hay descripción en JSON, la usamos.
                             placeName: parsedJson.placeName, 
                             placePhone: parsedJson.placePhone || null, 
                             mapUrl: parsedJson.mapUrl || null,
                             reviewUrl: parsedJson.reviewUrl || null,
-                            timestamp: finalMessage.timestamp
-                        };
-                    } else if (parsedJson.type === 'category') {
-                        finalMessage = {
-                            role: 'model',
-                            isStructured: true,
-                            type: parsedJson.type, 
-                            text: parsedJson.description || modelResponseText, 
                             categoryName: parsedJson.categoryName,
-                            timestamp: finalMessage.timestamp
+                            timestamp: finalMessage.timestamp,
+                            // Guardamos la descripción por separado si existe, para el mapeo del historial
+                            description: parsedJson.description || modelResponseText
                         };
-                    }
+                    } 
                 } 
-                
-                // 2. Manejo de Recomendación Local (Texto Plano Forzado con metadatos)
-                else if (parsedJson.isLocalRecommendation === true) {
-                    // Si es una recomendación local forzada (que Gemini respondió como texto plano)
-                    totalCount = parsedJson.totalCount || 0;
-                    apiQuery = parsedJson.apiQueryForChip || null;
-                    
-                    // Aseguramos que el texto plano sea el que Gemini generó (eliminando el JSON de los metadatos)
-                    finalMessage.text = modelResponseText.replace(jsonString, '').trim();
-                    if (finalMessage.text.length < 5) finalMessage.text = modelResponseText;
-                }
+                // Si no hay JSON o falla el parseo, se mantiene como texto plano
             }
         } catch (e) {
-            console.error("Error al parsear JSON estructurado o de recomendación:", e);
+            console.error("Error al parsear JSON estructurado:", e);
             finalMessage.text = modelResponseText;
         }
 
@@ -1115,6 +1105,7 @@
                 ? (finalMessage.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
                 : (finalMessage.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
 
+            // El tipo 'reminders' está controlado por el modal de notificaciones
             const alertText = isPlace 
                 ? UI_STRINGS[currentLanguage].alertStructured(entityName)
                 : UI_STRINGS[currentLanguage].alertCategory(entityName);
@@ -1124,8 +1115,8 @@
             // Si es una ficha estructurada, no mostramos el botón.
             quickActionFullList.classList.add('hidden');
 
-        } else if (totalCount > MAX_CHAT_RESULTS && apiQuery) {
-            // Caso de Recomendación Local Forzada (Texto Plano) con más de 4 resultados
+        } else if (responseData.isLocalRecommendation === true && totalCount > MAX_CHAT_RESULTS && apiQuery) {
+            // Caso de Recomendación Local Forzada con más de 4 resultados
             
             // Guardar en las variables globales para el listener del botón
             lastTotalCount = totalCount;
@@ -1197,12 +1188,12 @@
 
             if (lastApiQuery) {
                 
-                // 🛑 LÓGICA DUAL: El botón usa la consulta API completa para buscar en Google (Local + Genérica).
+                // 🛑 LÓGICA FINAL: Redirige a Google Search con la consulta completa.
                 
                 // 1. Codificar el query completo (ej: 'Taquerías y Tacos en Nuevo Progreso')
                 const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(lastApiQuery + " Nuevo Progreso Tamps")}`;
 
-                // 2. Abrir la búsqueda en una nueva pestaña/ventana (complementando la lista local)
+                // 2. Abrir la búsqueda en una nueva pestaña/ventana
                 window.open(searchUrl, '_blank'); 
                 
                 alertUser(currentLanguage === 'es' 
@@ -1280,10 +1271,10 @@
         // Cargar preferencias de notificación
         loadNotificationPreferences(); 
         
-        // 4. ⚠️ CORRECCIÓN DE ERROR ADICIONAL: Desbloquear la entrada por si acaso
+        // Desbloquear la entrada por si acaso
         toggleInput(false); 
     });
 </script>
-<script type="module" src="/js/ui.js"></script>
+
 </body>
 </html>
