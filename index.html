@@ -378,59 +378,7 @@
             background-color: transparent !important;
         }
 
-        /* --- NUEVOS ESTILOS PARA EL CARRUSEL HORIZONTAL --- */
-        .carousel-container {
-            overflow-x: auto;
-            white-space: nowrap;
-            -webkit-overflow-scrolling: touch;
-            padding-bottom: 10px; /* Espacio para la sombra */
-        }
-
-        .card-slide {
-            display: inline-block;
-            width: 85vw; /* Ancho de la tarjeta para que se vea parte de la siguiente */
-            max-width: 320px;
-            margin-right: 15px;
-            vertical-align: top;
-            
-            /* Estilo de la tarjeta */
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            padding: 15px;
-            position: relative;
-            white-space: normal;
-            transition: transform 0.3s;
-        }
-
-        .card-slide-header {
-            font-size: 1.1rem;
-            font-weight: bold;
-            color: #1f2937;
-            margin-bottom: 8px;
-            border-bottom: 1px solid #f3f4f6;
-            padding-bottom: 5px;
-        }
-
-        .card-slide-description {
-            font-size: 0.95rem;
-            color: #4b5563;
-            margin-bottom: 10px;
-        }
-
-        .card-slide .action-bar-container {
-            padding: 0;
-            margin-top: 10px;
-        }
-
-        /* Esconde la barra de scroll en Webkit (Chrome, Safari) */
-        .carousel-container::-webkit-scrollbar {
-            display: none;
-        }
-        .carousel-container {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
+        /* --- ESTILOS DE CARRUSEL ELIMINADOS DE AQUÍ --- */
         
     </style>
     <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
@@ -954,173 +902,84 @@
 
             if (m.isStructured) { 
                 
-                // --- NUEVO: MANEJO DE CARRUSEL ---
-                if (m.type === 'carousel' && Array.isArray(m.cards)) {
-                    
-                    let carouselHTML = '';
-                    const timeSpanCarousel = timeStr ? `<span class="timestamp mt-2 ml-4">${timeStr}</span>` : '';
+                // --- LÓGICA DE FICHA ÚNICA RESTAURADA (Eliminando el carrusel y la lógica multi-estructurada) ---
 
-                    m.cards.forEach(card => {
-                        const isPlace = card.type === 'place';
-                        const isCategory = card.type === 'category';
-
-                        // 1. Definición del Título
-                        let title = card.categoryName || card.placeName || (currentLanguage === 'es' ? 'Ficha de Lugar' : 'Place Card');
-                        
-                        // 2. Definición de URLs y Acciones (La misma lógica que antes, solo que dentro de un bucle)
-                        let directionsUrl = '#';
-                        let searchUrl = '#';
-                        let phoneUrl = null;
-                        let reviewUrl = null;
-                        
-                        if (isPlace) {
-                            const query = encodeURIComponent(title + " Nuevo Progreso Tamps");
-                            directionsUrl = card.mapUrl || `https://www.google.com/maps/search/?api=1&query=${query}`;
-                            searchUrl = `https://www.google.com/search?q=${query}`;
-                            phoneUrl = card.placePhone ? `tel:${card.placePhone}` : null; // Si es nulo, no se genera el botón
-                            reviewUrl = card.reviewUrl || directionsUrl; 
-                            
-                        } else if (isCategory) {
-                            const query = encodeURIComponent(title + " Nuevo Progreso Tamps");
-                            directionsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
-                            searchUrl = `https://www.google.com/search?q=${query}`;
-                        }
-                        
-                        let actionsHTML = `
-                            <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Ver en Mapa 🗺️' : 'View on Map 🗺️'}</a>
-                        `;
-
-                        if (isPlace) {
-                            if (phoneUrl) {
-                                actionsHTML += `
-                                    <a href="${phoneUrl}" class="action-btn bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">
-                                        ${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}
-                                    </a>
-                                `;
-                            }
-                            if (reviewUrl) {
-                                actionsHTML += `
-                                    <a href="${reviewUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-500 transition flex-shrink-0 text-sm">
-                                        ${currentLanguage === 'es' ? 'Reseñas ⭐' : 'Reviews ⭐'}
-                                    </a>
-                                `;
-                            }
-                        }
-
-                        actionsHTML += `
-                            <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-700 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Buscar en Google 🔍' : 'Search on Google 🔍'}</a>
-                        `;
-                        
-                        // 3. Renderizar la Tarjeta Individual
-                        carouselHTML += `
-                            <div class="card-slide">
-                                <div class="card-slide-header">${title}</div>
-                                <div class="card-slide-description">${card.description || card.text}</div>
-                                <div class="action-bar-container">
-                                    <div class="inline-flex space-x-3 p-1">
-                                        ${actionsHTML}
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    });
-
-                    // 4. Contenedor final del carrusel
-                    content = `
-                        <div class="carousel-container">
-                            ${carouselHTML}
-                        </div>
-                    `;
-
-                    w.innerHTML = `
-                        <div class="flex flex-col items-start w-full">
-                            ${content}
-                            ${timeSpanCarousel}
-                        </div>
-                    `;
-                    // El carrusel no necesita la envoltura de burbuja estándar `model-bubble`
+                const ficha = m; // Usamos la variable 'm' para la ficha única
+                const isPlace = ficha.type === 'place';
+                const isCategory = ficha.type === 'category';
+                
+                const entityName = isPlace 
+                    ? (ficha.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
+                    : (ficha.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
+                
+                let directionsUrl = '#';
+                let searchUrl = '#';
+                let phoneUrl = null;
+                let reviewUrl = null;
+                
+                if (isPlace) {
+                    const query = encodeURIComponent(entityName + " Nuevo Progreso Tamps");
+                    directionsUrl = ficha.mapUrl || `https://www.google.com/maps/search/?api=1&query=${query}`;
                     
-                } else {
-                    // --- FIN NUEVO: MANEJO DE CARRUSEL, AHORA LÓGICA DE FICHA ÚNICA ---
-
-                    // *** Lógica original para ficha ÚNICA (m.isStructured === true) ***
+                    searchUrl = `https://www.google.com/search?q=${query}`;
+                    // La lógica para el teléfono ahora usa un `javascript:alert` si el número no está disponible
+                    phoneUrl = ficha.placePhone ? `tel:${ficha.placePhone}` : `javascript:alert('${currentLanguage === 'es' ? 'Número no disponible.' : 'Number unavailable.'}')`;
+                    reviewUrl = ficha.reviewUrl || directionsUrl; 
                     
-                    const ficha = m; // Usamos la misma variable 'm' para la ficha única
-                    const isPlace = ficha.type === 'place';
-                    const isCategory = ficha.type === 'category';
-                    
-                    const entityName = isPlace 
-                        ? (ficha.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
-                        : (ficha.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
-                    
-                    let directionsUrl = '#';
-                    let searchUrl = '#';
-                    let phoneUrl = null;
-                    let reviewUrl = null;
-                    
-                    if (isPlace) {
-                        const query = encodeURIComponent(entityName + " Nuevo Progreso Tamps");
-                        directionsUrl = ficha.mapUrl || `https://www.google.com/maps/search/?api=1&query=${query}`;
-                        
-                        searchUrl = `https://www.google.com/search?q=${query}`;
-                        phoneUrl = ficha.placePhone ? `tel:${ficha.placePhone}` : `javascript:alert('${currentLanguage === 'es' ? 'Número no disponible.' : 'Number unavailable.'}')`;
-                        reviewUrl = ficha.reviewUrl || directionsUrl; 
-                        
-                    } else if (isCategory) {
-                        const query = encodeURIComponent(entityName + " Nuevo Progreso Tamps");
-                        directionsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
-                        searchUrl = `https://www.google.com/search?q=${query}`;
-                    }
-                    
-                    content = `<div class="model-bubble text-gray-800 p-3 shadow-md">${ficha.text || ficha.description}</div>`;
-                    
-                    let actionsHTML = `
-                        <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Ver en Mapa 🗺️' : 'View on Map 🗺️'}</a>
-                    `;
-
-                    if (isPlace) {
-                        const phoneAvailable = !!ficha.placePhone;
-                        const reviewsAvailable = !!ficha.reviewUrl;
-                        
-                        // REGLA CRÍTICA DE SALUD EN EL FRONTEND: Si el backend bloqueó placePhone, no se muestra.
-                        if (phoneAvailable) {
-                            actionsHTML += `
-                                <a href="${phoneUrl}" class="action-btn bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">
-                                    ${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}
-                                </a>
-                            `;
-                        }
-                        
-                        if (reviewsAvailable) {
-                            actionsHTML += `
-                                <a href="${reviewUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-500 transition flex-shrink-0 text-sm">
-                                    ${currentLanguage === 'es' ? 'Reseñas ⭐' : 'Reviews ⭐'}
-                                </a>
-                            `;
-                        }
-                    }
-
-                    actionsHTML += `
-                        <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-700 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Buscar en Google 🔍' : 'Search on Google 🔍'}</a>
-                    `;
-
-                    const actionsBar = `
-                        <div class="action-bar-container">
-                            <div class="inline-flex space-x-3 p-1">
-                                ${actionsHTML}
-                            </div>
-                        </div>
-                    `;
-                    
-                    w.innerHTML = `
-                        <div class="flex flex-col items-start">
-                            ${content}
-                            ${actionsBar}
-                            ${timeSpan}
-                        </div>
-                    `;
-                    
+                } else if (isCategory) {
+                    const query = encodeURIComponent(entityName + " Nuevo Progreso Tamps");
+                    directionsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
+                    searchUrl = `https://www.google.com/search?q=${query}`;
                 }
+                
+                content = `<div class="model-bubble text-gray-800 p-3 shadow-md">${ficha.text || ficha.description}</div>`;
+                
+                let actionsHTML = `
+                    <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Ver en Mapa 🗺️' : 'View on Map 🗺️'}</a>
+                `;
+
+                if (isPlace) {
+                    const phoneAvailable = !!ficha.placePhone;
+                    const reviewsAvailable = !!ficha.reviewUrl;
+                    
+                    // Solo se añade el botón si hay un teléfono disponible
+                    if (phoneAvailable) {
+                        actionsHTML += `
+                            <a href="${phoneUrl}" class="action-btn bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">
+                                ${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}
+                            </a>
+                        `;
+                    }
+                    
+                    if (reviewsAvailable) {
+                        actionsHTML += `
+                            <a href="${reviewUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-500 transition flex-shrink-0 text-sm">
+                                ${currentLanguage === 'es' ? 'Reseñas ⭐' : 'Reviews ⭐'}
+                            </a>
+                        `;
+                    }
+                }
+
+                actionsHTML += `
+                    <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-700 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Buscar en Google 🔍' : 'Search on Google 🔍'}</a>
+                `;
+
+                const actionsBar = `
+                    <div class="action-bar-container">
+                        <div class="inline-flex space-x-3 p-1">
+                            ${actionsHTML}
+                        </div>
+                    </div>
+                `;
+                
+                w.innerHTML = `
+                    <div class="flex flex-col items-start">
+                        ${content}
+                        ${actionsBar}
+                        ${timeSpan}
+                    </div>
+                `;
+                // --- FIN LÓGICA DE FICHA ÚNICA RESTAURADA ---
 
             } else {
                 // ... (código existente para texto plano)
@@ -1205,6 +1064,7 @@
     async function getGeminiResponse(userPrompt, chatHistoryForAPI) {
         
         const historyForAPI = chatHistoryForAPI.map(m => {
+            // Se restaura la lógica para enviar solo texto, ya que la API no manejará el tipo 'carousel'
             const textContent = m.isStructured && m.description ? m.description : m.text;
             
             return {
@@ -1284,20 +1144,16 @@
 
                 // *** INICIO DE LA LÓGICA DE PROCESAMIENTO DE RESPUESTA (ACTUALIZADA) ***
                 
-                let fichasParaMostrar = [];
+                let fichaUnica = null; // Volvemos a manejar solo una ficha a la vez
                 // Separar el texto conversacional del JSON
                 let conversationText = modelResponseText.replace(jsonString, '').trim();
 
-                // 1. Manejo de Múltiples Fichas (CARRUSEL)
-                if (parsedJson.isMultiStructured === true && Array.isArray(parsedJson.response)) {
-                    fichasParaMostrar = parsedJson.response;
-                    if (parsedJson.conversationText) conversationText = parsedJson.conversationText;
+                // 1. Manejo de Respuesta Estructurada Única
+                // NOTA: Se elimina la lógica isMultiStructured
+                if (parsedJson.isStructured === true) {
+                    fichaUnica = parsedJson;
                 } 
-                // 2. Manejo de Respuesta Estructurada Única
-                else if (parsedJson.isStructured === true) {
-                    fichasParaMostrar = [parsedJson];
-                } 
-                // 3. Manejo de Recomendación Local (Texto Plano Forzado con metadatos)
+                // 2. Manejo de Recomendación Local (Texto Plano Forzado con metadatos)
                 else if (parsedJson.isLocalRecommendation === true) {
                     totalCount = parsedJson.totalCount || 0;
                     apiQuery = parsedJson.apiQueryForChip || null;
@@ -1307,68 +1163,46 @@
                     if (finalMessage.text.length < 5) finalMessage.text = modelResponseText;
                 }
                 
-                // 4. Manejo de Chips Dinámicos
+                // 3. Manejo de Chips Dinámicos
                 else if (parsedJson.isDynamicChips === true) {
                     dynamicChipsData = parsedJson.chips;
                     finalMessage.text = conversationText;
                     if (finalMessage.text.length < 5) finalMessage.text = modelResponseText;
                 }
                 
-                // Procesar Fichas (si hay una o varias)
-                if (fichasParaMostrar.length > 0) {
+                // Procesar Ficha Única (si existe)
+                if (fichaUnica) {
                     
                     // Si hay fichas, el primer mensaje es el texto conversacional (si existe)
                     if (conversationText.length > 0) {
                         chatHistory.push({ role: 'model', text: conversationText, timestamp: new Date(), isStructured: false });
                     }
                     
-                    // --- NUEVA LÓGICA DE CARRUSEL ---
-                    if (fichasParaMostrar.length > 1) {
-                        // Si hay MÁS DE UNA ficha, las unimos en un único mensaje de tipo carrusel
-                        chatHistory.push({
-                            role: 'model',
-                            isStructured: true,
-                            type: 'carousel', // Tipo especial para el carrusel
-                            cards: fichasParaMostrar,
-                            timestamp: new Date()
-                        });
-                        
-                        // Disparar la alerta (solo una vez para el carrusel)
-                        const alertText = currentLanguage === 'es' 
-                            ? `¡Encontré ${fichasParaMostrar.length} resultados! Desliza para verlos. ↔️`
-                            : `I found ${fichasParaMostrar.length} results! Swipe to view. ↔️`;
-                        if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
+                    // Pushear la ficha única con todos sus datos
+                    chatHistory.push({ 
+                        role: 'model', 
+                        isStructured: true,
+                        type: fichaUnica.type, 
+                        text: fichaUnica.description || fichaUnica.text, 
+                        placeName: fichaUnica.placeName, 
+                        placePhone: fichaUnica.placePhone || null, 
+                        mapUrl: fichaUnica.mapUrl || null,
+                        reviewUrl: fichaUnica.reviewUrl || null,
+                        categoryName: fichaUnica.categoryName || null,
+                        timestamp: new Date()
+                    });
 
-                    } else {
-                        // Si es una ficha ÚNICA (comportamiento anterior)
-                        const ficha = fichasParaMostrar[0];
-                        chatHistory.push({ 
-                            role: 'model', 
-                            isStructured: true,
-                            type: ficha.type, 
-                            text: ficha.description || ficha.text, 
-                            placeName: ficha.placeName, 
-                            placePhone: ficha.placePhone || null, 
-                            mapUrl: ficha.mapUrl || null,
-                            reviewUrl: ficha.reviewUrl || null,
-                            categoryName: ficha.categoryName || null,
-                            timestamp: new Date()
-                        });
+                    // Disparar la alerta
+                    const isPlace = fichaUnica.type === 'place';
+                    const entityName = isPlace 
+                        ? (fichaUnica.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
+                        : (fichaUnica.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
 
-                        // Disparar la alerta (para ficha única)
-                        const isPlace = ficha.type === 'place';
-                        const entityName = isPlace 
-                            ? (ficha.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
-                            : (ficha.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
-
-                        const alertText = isPlace 
-                            ? UI_STRINGS[currentLanguage].alertStructured(entityName)
-                            : UI_STRINGS[currentLanguage].alertCategory(entityName);
-                        
-                        if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
-                    }
-                    // --- FIN LÓGICA DE CARRUSEL ---
-
+                    const alertText = isPlace 
+                        ? UI_STRINGS[currentLanguage].alertStructured(entityName)
+                        : UI_STRINGS[currentLanguage].alertCategory(entityName);
+                    
+                    if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
 
                     // Como ya pusheamos todos los mensajes, salimos del resto de la función.
                     saveHistory(); 
@@ -1377,18 +1211,18 @@
                     return; // 🛑 FINALIZA la ejecución de handleSend
                 }
                 
-                // Si no hay fichas, el finalMessage ya tiene el texto plano.
+                // Si no hay ficha, el finalMessage ya tiene el texto plano.
 
             }
         } catch (e) {
-            console.error("Error al parsear JSON estructurado, de chip o array:", e);
+            console.error("Error al parsear JSON estructurado o de chip:", e);
             // Si hay error de parseo, cae a texto plano (modelResponseText)
             finalMessage.text = modelResponseText;
         }
 
         // *** FIN DE LA LÓGICA DE PROCESAMIENTO DE RESPUESTA ***
 
-        chatHistory.push(finalMessage); // <- Esta es la línea que antes estaba duplicada y ahora está corregida.
+        chatHistory.push(finalMessage); // <- Añade el mensaje final de texto plano.
         
         // --- LÓGICA DE ACTIVACIÓN DE CHIPS Y ALERTA ---
         
@@ -1403,6 +1237,7 @@
             
         } else if (finalMessage.isStructured) {
             // Caso de FICHA ESTRUCTURADA (SOLO SI LLEGÓ UNA AQUÍ, si no, ya salió antes)
+            // ESTA LÓGICA NO DEBERÍA EJECUTARSE TRAS LOS CAMBIOS DE ARRIBA, pero se deja por seguridad
             const isPlace = finalMessage.type === 'place';
             const entityName = isPlace 
                 ? (finalMessage.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
