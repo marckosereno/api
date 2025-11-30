@@ -26,9 +26,69 @@
             overflow: hidden 
         }
         .user-bubble { border-radius: 18px 18px 0 18px; max-width: 90% }
-        .model-bubble { border-radius: 18px 18px 18px 0; max-width: 90%;padding-left:8px;backgroud-color: rgb(140 154 178/6%); }
+        /* 🛑 CAMBIO CLAVE 1: Eliminamos el estilo anterior de la burbuja del modelo, ahora usa el wrapper */
+        .model-bubble { border-radius: 18px 18px 18px 0; max-width: 90%; padding-left:8px; backgroud-color: transparent; }
+        
+        /* 🛑 NUEVO: Wrapper para aplicar el color de fondo y el relleno, manteniendo el padding-left del div interno */
+        .model-bubble-wrapper {
+            /* Colores de la paleta: #3A4EFB / #334AFA */
+            background: linear-gradient(135deg, #3A4EFB, #334AFA); 
+            color: #FFFFFF; /* Texto blanco para alto contraste */
+            border-radius: 18px 18px 18px 0;
+            padding: 12px; /* Mantiene el padding uniforme de la burbuja */
+            box-shadow: 0 4px 6px rgba(58, 78, 251, 0.4);
+            max-width: 90%;
+            width: fit-content;
+        }
+
         .action-bar-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 10px; padding-bottom: 5px }
-        .action-btn { white-space: nowrap }
+        .action-btn { 
+            white-space: nowrap;
+            /* 🛑 CAMBIO CLAVE 3: Estilos de Botón Glassmorphism */
+            border-radius: 23px; /* Bordes muy redondeados (SOLICITADO) */
+            font-weight: 300;   /* Fuente delgada (SOLICITADO) */
+            
+            /* EFECTO GLASSMORHPISM COMPLETO */
+            background: rgba(255, 255, 255, 0.1); /* Fondo muy transparente */
+            border: 1px solid rgba(255, 255, 255, 0.3); /* Borde sutil */
+            backdrop-filter: blur(8px); /* Desenfoque clave del efecto */
+            -webkit-backdrop-filter: blur(8px); /* Para compatibilidad */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Sombra sutil */
+            color: #FFFFFF !important; /* Texto blanco por defecto */
+            
+            /* Anulamos la transición específica de color de fondo para que Glassmorphism funcione */
+            transition: all 0.3s ease; 
+        }
+
+        /* 🛑 Ajustes de los botones con color específico para que funcionen con Glassmorphism (Aseguramos la visibilidad) */
+        .action-bar-container .action-btn.bg-green-500 {
+            background-color: #10B981 !important; /* Verde sólido para el principal */
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            border: none;
+        }
+        .action-bar-container .action-btn.bg-blue-500 {
+            background-color: #3B82F6 !important; /* Azul sólido */
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            border: none;
+        }
+        .action-bar-container .action-btn.bg-yellow-400 {
+            background-color: #FBBF24 !important; /* Amarillo sólido */
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            border: none;
+            color: #1F2937 !important; /* Texto oscuro para el amarillo */
+        }
+        .action-bar-container .action-btn.bg-gray-600 {
+            /* Dejamos este como Glassmorphism o un gris oscuro */
+            background: rgba(75, 85, 99, 0.75) !important;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #FFFFFF !important;
+        }
+
         .chip-group-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
         
         /* Estilo de la barra de chat NUEVO (GLASSMOPRHISM) */
@@ -121,6 +181,8 @@
             font-size: 0.7rem; 
             color: #9ca3af; 
             margin-top: 2px;
+            /* Moverlo hacia el centro o la derecha bajo la burbuja */
+            align-self: flex-end; 
         }
 
         /* AJUSTE CRÍTICO PARA EL NUEVO HEADER FLOTANTE */
@@ -371,7 +433,7 @@
             background-color: transparent !important;
         }
         
-        /* --- ESTILOS ADICIONALES PARA EL EFECTO TYPING DEL USUARIO --- */
+        /* --- ESTILOS ADICIONALES PARA EL EFECTO TYPING DEL USUARIO Y MODELO --- */
 
         #user-typing-bubble {
             /* Mismo estilo que la burbuja del usuario, pero sin el timestamp */
@@ -385,15 +447,30 @@
             visibility: visible;
         }
         
+        /* 🛑 NUEVO: Burbuja de TYPING del BOT */
+        #model-typing-bubble {
+            /* Mismo estilo que la burbuja del bot */
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease-out, visibility 0.2s ease-out;
+            margin-bottom: 8px;
+            /* Usa la clase del wrapper para el estilo */
+        }
+        #model-typing-bubble.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
         .typing-dots {
             display: flex;
             align-items: center;
-height:8px;
+            height:8px;
         }
         .typing-dots .dot {
             width: 8px;
             height: 6px;
-            background-color: white; /* Color de los puntos dentro de la burbuja negra */
+            /* 🛑 COLOR DE LOS PUNTOS: Blanco para contraste en la burbuja */
+            background-color: white; 
             border-radius: 50%;
             margin: 0 2px;
             animation: bounce 1.4s infinite ease-in-out both;
@@ -424,6 +501,19 @@ height:8px;
         <div id="app-alert-container" class="fixed top-0 w-full flex justify-center z-50 pointer-events-none"></div>
 
         <div id="message-container" class="flex-grow overflow-y-auto p-4 flex flex-col">
+            
+            <div id="model-typing-bubble" class="flex mb-2 justify-start">
+                <div class="flex flex-col items-start">
+                    <div class="model-bubble-wrapper p-3 shadow-md">
+                        <div class="typing-dots">
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <div id="user-typing-bubble" class="flex mb-2 justify-end">
                 <div class="flex flex-col items-end max-w-xs sm:max-w-md lg:max-w-lg">
                     <div class="user-bubble bg-black text-white p-3 shadow-md">
@@ -435,7 +525,7 @@ height:8px;
                     </div>
                 </div>
             </div>
-            </div>
+        </div>
 
         <div class="bottom-action-area flex-shrink-0 flex flex-col space-y-2">
             
@@ -591,8 +681,10 @@ height:8px;
     const dynamicChipsGroup = document.getElementById('dynamic-chips-group');
     const dynamicChipsList = document.getElementById('dynamic-chips-list');
 
-    // NUEVA REFERENCIA PARA LA BURBUJA DE ESCRITURA DEL USUARIO
+    // NUEVA REFERENCIA PARA LA BURBUJA DE ESCRITURA DEL USUARIO Y MODELO
     const userTypingBubble = document.getElementById('user-typing-bubble');
+    const modelTypingBubble = document.getElementById('model-typing-bubble'); // 🛑 NUEVO
+    
 
 
     // Objeto de Traducción y textos de chips (SIN CAMBIOS)
@@ -658,16 +750,24 @@ height:8px;
         chatHistory = []; 
         localStorage.removeItem('chatHistory'); 
         
-        // **IMPORTANTE**: Limpiar el mensaje-container y dejar solo la burbuja de typing
+        // **IMPORTANTE**: Limpiar el mensaje-container y dejar solo las burbujas de typing
         if (messageContainer) {
-            // Eliminar todos los hijos excepto userTypingBubble
-            while (messageContainer.children.length > 1) {
-                messageContainer.removeChild(messageContainer.children[0]);
-            }
-            // Asegurar que la burbuja de typing del usuario esté al final, si existe
-            if (userTypingBubble && messageContainer.lastElementChild !== userTypingBubble) {
-                messageContainer.appendChild(userTypingBubble);
-            }
+            // Obtener las referencias de las burbujas de typing
+            const typingBubbles = [userTypingBubble, modelTypingBubble];
+            
+            // Eliminar todos los hijos que NO son las burbujas de typing
+            Array.from(messageContainer.children).forEach(child => {
+                if (!typingBubbles.includes(child)) {
+                    messageContainer.removeChild(child);
+                }
+            });
+            
+            // Asegurar que las burbujas de typing estén al final
+            messageContainer.appendChild(modelTypingBubble);
+            messageContainer.appendChild(userTypingBubble);
+            
+            // Asegurar que la burbuja del modelo esté OCULTA
+            modelTypingBubble.classList.remove('show');
         }
         
         // ALERTA DE CLEAR HISTORY USA 'news'
@@ -813,15 +913,19 @@ height:8px;
     function toggleInput(d) {
         if (inputElement) inputElement.disabled = d;
         if (sendButton) sendButton.disabled = d;
-        // La lógica de mostrar/ocultar estado de carga se mueve a show/hideLoadingIndicator
     }
 
     // --- FUNCIONES CORE MODIFICADAS PARA EL EFECTO TYPING/STATUS ---
 
     function showLoadingIndicator() {
         isBotTyping = true;
-        // Mostrar mensaje "Respondiendo tu petición..." en el input y deshabilitarlo
+        // Mostrar indicador de typing del bot
+        modelTypingBubble.classList.add('show'); 
+        
+        // Mostrar mensaje "Respondiendo tu petición..." en el input
         inputElement.placeholder = UI_STRINGS[currentLanguage].loadingStatus;
+        
+        // Deshabilitar entrada y botón
         inputElement.disabled = true;
         sendButton.disabled = true;
         
@@ -833,9 +937,13 @@ height:8px;
 
     function hideLoadingIndicator() {
         isBotTyping = false;
+        // Ocultar indicador de typing del bot
+        modelTypingBubble.classList.remove('show'); 
+        
         // Revertir el input a su estado normal
         inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
         inputElement.disabled = false;
+        
         // El botón de enviar solo se activa si hay texto
         sendButton.disabled = inputElement.value.trim() === ''; 
     }
@@ -998,6 +1106,7 @@ height:8px;
         else if (m.role === 'model') {
             w.className = 'flex flex-col justify-start w-full mb-2';
             let content = '';
+            let actionsBar = '';
 
             if (m.isStructured) { 
                 
@@ -1028,10 +1137,11 @@ height:8px;
                     searchUrl = `https://www.google.com/search?q=${query}`;
                 }
                 
-                content = `<div class="model-bubble text-gray-800 p-3 shadow-md">${m.text || m.description}</div>`;
+                // 🛑 HTML MODIFICADO: Usamos el wrapper para el estilo de color
+                content = `<div class="model-bubble-wrapper p-3 shadow-md">${m.text || m.description}</div>`;
                 
                 let actionsHTML = `
-                    <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Ver en Mapa 🗺️' : 'View on Map 🗺️'}</a>
+                    <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:opacity-90 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Ver en Mapa 🗺️' : 'View on Map 🗺️'}</a>
                 `;
 
                 if (isPlace) {
@@ -1041,7 +1151,7 @@ height:8px;
                     // REGLA CRÍTICA DE SALUD EN EL FRONTEND: Si el backend bloqueó placePhone, no se muestra.
                     if (phoneAvailable) {
                         actionsHTML += `
-                            <a href="${phoneUrl}" class="action-btn bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">
+                            <a href="${phoneUrl}" class="action-btn bg-blue-500 hover:opacity-90 text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">
                                 ${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}
                             </a>
                         `;
@@ -1049,7 +1159,7 @@ height:8px;
                     
                     if (reviewsAvailable) {
                         actionsHTML += `
-                            <a href="${reviewUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-500 transition flex-shrink-0 text-sm">
+                            <a href="${reviewUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:opacity-90 transition flex-shrink-0 text-sm">
                                 ${currentLanguage === 'es' ? 'Reseñas ⭐' : 'Reviews ⭐'}
                             </a>
                         `;
@@ -1057,10 +1167,10 @@ height:8px;
                 }
 
                 actionsHTML += `
-                    <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-700 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Buscar en Google 🔍' : 'Search on Google 🔍'}</a>
+                    <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg hover:opacity-90 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Buscar en Google 🔍' : 'Search on Google 🔍'}</a>
                 `;
 
-                const actionsBar = `
+                actionsBar = `
                     <div class="action-bar-container">
                         <div class="inline-flex space-x-3 p-1">
                             ${actionsHTML}
@@ -1077,7 +1187,8 @@ height:8px;
                 `;
 
             } else {
-                content = `<div class="model-bubble text-gray-800 p-3 shadow-md">${m.text || ''}</div>`;
+                // 🛑 HTML MODIFICADO: Usamos el wrapper para el estilo de color para texto plano
+                content = `<div class="model-bubble-wrapper p-3 shadow-md">${m.text || ''}</div>`;
                 w.innerHTML = `
                     <div class="flex flex-col items-start">
                         ${content}
@@ -1091,15 +1202,16 @@ height:8px;
 
     function renderChat() {
         if (messageContainer) {
-            // Limpiar todo excepto la burbuja de escritura del usuario
-            const messages = Array.from(messageContainer.children).filter(child => child.id !== 'user-typing-bubble');
+            // Limpiar todo excepto las burbujas de escritura del usuario y modelo
+            const typingBubbles = [userTypingBubble, modelTypingBubble];
+            const messages = Array.from(messageContainer.children).filter(child => !typingBubbles.includes(child));
             messages.forEach(msg => msg.remove());
 
             // Renderizar el historial
             chatHistory.forEach((m) => { 
                 const messageElement = createMessageBubble(m);
-                // Insertar el mensaje antes de la burbuja de escritura
-                messageContainer.insertBefore(messageElement, userTypingBubble); 
+                // Insertar el mensaje antes de la burbuja de escritura del modelo
+                messageContainer.insertBefore(messageElement, modelTypingBubble); 
             });
             
             scrollToBottom();
@@ -1518,13 +1630,15 @@ height:8px;
 
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Mover la burbuja de escritura del usuario al final del contenedor de mensajes
-        if (userTypingBubble && messageContainer.lastElementChild !== userTypingBubble) {
-            messageContainer.appendChild(userTypingBubble);
+        // Mover las burbujas de typing al final del contenedor de mensajes
+        if (modelTypingBubble && messageContainer.lastElementChild !== userTypingBubble) {
+             messageContainer.appendChild(modelTypingBubble);
+             messageContainer.appendChild(userTypingBubble);
         }
         
-        // Asegurarse de que esté oculta al inicio
+        // Asegurarse de que ambas estén ocultas al inicio
         hideUserTypingBubble();
+        modelTypingBubble.classList.remove('show');
         
         // Establece el idioma por defecto y actualiza la interfaz (sin disparar alerta)
         setInterfaceLanguage(currentLanguage); 
