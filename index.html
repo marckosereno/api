@@ -371,41 +371,32 @@
             background-color: transparent !important;
         }
         
-        /* --- ESTILOS ADICIONALES PARA EL EFECTO TYPING DEL USUARIO --- */
-
-        #user-typing-bubble {
-            /* Mismo estilo que la burbuja del usuario, pero sin el timestamp */
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.2s ease-out, visibility 0.2s ease-out;
-            margin-bottom: 8px; /* Espacio para que se vea bien */
-        }
-        #user-typing-bubble.show {
-            opacity: 1;
-            visibility: visible;
+        /* === TUS CAMBIOS SOLICITADOS (PUNTOS Y BURBUJA REDONDOS) === */
+        
+        #loading-indicator {
+            /* Mover el indicador a la izquierda para que simule una burbuja de bot */
+            margin-left: 0; 
+            /* padding: 0.5rem 1rem; /* Agregar padding para simular la burbuja */ 
+            /* background-color: rgb(243 244 246 / 80%); */
+            /* border-radius: 18px 18px 18px 0; */
+            
+            display: flex; /* Asegurar que sea flex para alinear */
+            align-items: center;
+            justify-content: flex-start;
         }
         
-        .typing-dots {
-            display: flex;
-            align-items: center;
-        }
-        .typing-dots .dot {
-            width: 8px;
-            height: 8px;
-            background-color: white; /* Color de los puntos dentro de la burbuja negra */
-            border-radius: 50%;
-            margin: 0 2px;
-            animation: bounce 1.4s infinite ease-in-out both;
-        }
-        .typing-dots .dot:nth-child(1) { animation-delay: -0.32s; }
-        .typing-dots .dot:nth-child(2) { animation-delay: -0.16s; }
-        .typing-dots .dot:nth-child(3) { animation-delay: 0s; }
-
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
+        /* 💡 ESTILO DEL LOTTIE WRAPPER/BURBUJA (Simulamos la burbuja) */
+        #lottie-wrapper {
+            background-color: rgb(243 244 246 / 80%);
+            padding: 8px 8px 2px 8px; /* Ajuste para que el lottie quede bien centrado/espaciado */
+            /* HACER LA BURBUJA MÁS REDONDA (Border Radius) */
+            border-radius: 18px 18px 18px 0; 
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            /* Asegurar que se alinee con el borde izquierdo del mensaje */
+            margin-left: 10px; 
         }
 
+        
     </style>
     <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
 </head>
@@ -422,20 +413,14 @@
         </div>
         <div id="app-alert-container" class="fixed top-0 w-full flex justify-center z-50 pointer-events-none"></div>
 
-        <div id="message-container" class="flex-grow overflow-y-auto p-4 flex flex-col">
-            <div id="user-typing-bubble" class="flex mb-2 justify-end">
-                <div class="flex flex-col items-end max-w-xs sm:max-w-md lg:max-w-lg">
-                    <div class="user-bubble bg-black text-white p-3 shadow-md">
-                        <div class="typing-dots">
-                            <div class="dot"></div>
-                            <div class="dot"></div>
-                            <div class="dot"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            </div>
+        <div id="message-container" class="flex-grow overflow-y-auto p-4 flex flex-col"></div>
 
+        <div id="loading-indicator" class="flex justify-start hidden p-4 flex-shrink-0">
+            <div id="lottie-wrapper">
+                <dotlottie-wc src="https://lottie.host/65b2d1fc-9840-476c-867e-6236ce234b38/SwsGK4ZVOj.lottie" style="width: 50px; height: 50px;" autoplay loop></dotlottie-wc>
+            </div>
+        </div>
+        
         <div class="bottom-action-area flex-shrink-0 flex flex-col space-y-2">
             
             <div id="quick-action-full-list" class="px-4 pt-0 pb-2 hidden">
@@ -552,8 +537,7 @@
     let currentLanguage = 'es'; 
     let categoriesVisible = false; 
     let languageMenuVisible = false; 
-    let isBotTyping = false; // NUEVA variable de estado del bot
-
+    
     // VARIABLES GLOBALES PARA EL PROTOCOLO DE RECOMENDACIÓN LOCAL
     let lastTotalCount = 0; // Para guardar el conteo total de la última recomendación
     let lastApiQuery = null; // Para guardar el query de Places para el chip
@@ -563,7 +547,7 @@
     const inputElement = document.getElementById('user-input');
     const sendButton = document.getElementById('go-button'); 
     const messageContainer = document.getElementById('message-container');
-    // const loadingIndicator = document.getElementById('loading-indicator'); // ELIMINADO: Ya no se usa el lottie
+    const loadingIndicator = document.getElementById('loading-indicator');
     const appAlertContainer = document.getElementById('app-alert-container');
     const categoryChipsGroup = document.getElementById('category-chips-group');
     const languageChipsGroup = document.getElementById('language-chips-group');
@@ -590,9 +574,6 @@
     const dynamicChipsGroup = document.getElementById('dynamic-chips-group');
     const dynamicChipsList = document.getElementById('dynamic-chips-list');
 
-    // NUEVA REFERENCIA PARA LA BURBUJA DE ESCRITURA DEL USUARIO
-    const userTypingBubble = document.getElementById('user-typing-bubble');
-
 
     // Objeto de Traducción y textos de chips (SIN CAMBIOS)
     const UI_STRINGS = {
@@ -600,7 +581,6 @@
             header: "PROGRESO TOUR GUIDE",
             placeholder: "Pregúntale al mapa",
             goButton: "Ir",
-            loadingStatus: "Respondiendo tu petición...", // NUEVO: Estado de carga
             categories: "📂 Categorías",
             language: "🌐 Lenguaje",
             getThere: "📍 Cómo Llegar",
@@ -616,7 +596,6 @@
             header: "PROGRESO TOUR GUIDE",
             placeholder: "Ask the map",
             goButton: "Go",
-            loadingStatus: "Processing your request...", // NUEVO: Estado de carga
             categories: "📂 Categories",
             language: "🌐 Language",
             getThere: "📍 How to get there",
@@ -657,18 +636,7 @@
         chatHistory = []; 
         localStorage.removeItem('chatHistory'); 
         
-        // **IMPORTANTE**: Limpiar el mensaje-container y dejar solo la burbuja de typing
-        if (messageContainer) {
-            // Eliminar todos los hijos excepto userTypingBubble
-            while (messageContainer.children.length > 1) {
-                messageContainer.removeChild(messageContainer.children[0]);
-            }
-            // Asegurar que la burbuja de typing del usuario esté al final, si existe
-            if (userTypingBubble && messageContainer.lastElementChild !== userTypingBubble) {
-                messageContainer.appendChild(userTypingBubble);
-            }
-        }
-        
+        if (messageContainer) messageContainer.innerHTML = ''; 
         // ALERTA DE CLEAR HISTORY USA 'news'
         alertUser(currentLanguage === 'es' ? '¡Conversación eliminada! Empecemos de cero. 👋' : 'Conversation cleared! Let\'s start fresh. 👋', 'i', 'news');
         
@@ -808,61 +776,22 @@
         if (messageContainer) messageContainer.scrollTop = messageContainer.scrollHeight; 
     }
     
-    // FUNCIÓN MODIFICADA: Ahora solo desactiva la entrada
     function toggleInput(d) {
         if (inputElement) inputElement.disabled = d;
         if (sendButton) sendButton.disabled = d;
-        // La lógica de mostrar/ocultar estado de carga se mueve a show/hideLoadingIndicator
-    }
-
-    // --- FUNCIONES CORE MODIFICADAS PARA EL EFECTO TYPING/STATUS ---
-
-    function showLoadingIndicator() {
-        isBotTyping = true;
-        // Mostrar mensaje "Respondiendo tu petición..." en el input y deshabilitarlo
-        inputElement.placeholder = UI_STRINGS[currentLanguage].loadingStatus;
-        inputElement.disabled = true;
-        sendButton.disabled = true;
         
-        // Asegurar que la burbuja de escritura del usuario se oculte
-        hideUserTypingBubble(); 
+        // 💡 CAMBIO CRÍTICO: Controlar el Lottie aquí
+        if (loadingIndicator) loadingIndicator.classList.toggle('hidden', !d);
         
-        scrollToBottom();
-    }
-
-    function hideLoadingIndicator() {
-        isBotTyping = false;
-        // Revertir el input a su estado normal
-        inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
-        inputElement.disabled = false;
-        // El botón de enviar solo se activa si hay texto
-        sendButton.disabled = inputElement.value.trim() === ''; 
-    }
-    
-    function showUserTypingBubble() {
-        // Solo mostrar si el bot no está respondiendo
-        if (!isBotTyping) {
-            userTypingBubble.classList.add('show');
-            scrollToBottom();
+        if (inputElement) inputElement.placeholder = d ? "" : UI_STRINGS[currentLanguage].placeholder;
+        
+        // 💡 Si se está escribiendo, hacer scroll al fondo para que el Lottie sea visible.
+        if (d) {
+            scrollToBottom(); 
         }
     }
 
-    function hideUserTypingBubble() {
-        userTypingBubble.classList.remove('show');
-    }
-
-    function handleTypingIndicator() {
-        const inputValue = inputElement.value.trim();
-        
-        // Si el usuario empieza a escribir Y el bot no está respondiendo
-        if (inputValue.length > 0 && !isBotTyping) {
-            showUserTypingBubble();
-        } else {
-            hideUserTypingBubble();
-        }
-    }
-
-    // --- Funciones de INTERACCIÓN (SIN CAMBIOS EN LÓGICA) ---
+    // --- FUNCIONES DE INTERACCIÓN ---
 
     function vibrateDevice() {
         if ("vibrate" in navigator) {
@@ -1090,17 +1019,8 @@
 
     function renderChat() {
         if (messageContainer) {
-            // Limpiar todo excepto la burbuja de escritura del usuario
-            const messages = Array.from(messageContainer.children).filter(child => child.id !== 'user-typing-bubble');
-            messages.forEach(msg => msg.remove());
-
-            // Renderizar el historial
-            chatHistory.forEach((m) => { 
-                const messageElement = createMessageBubble(m);
-                // Insertar el mensaje antes de la burbuja de escritura
-                messageContainer.insertBefore(messageElement, userTypingBubble); 
-            });
-            
+            messageContainer.innerHTML = '';
+            chatHistory.forEach((m) => { messageContainer.appendChild(createMessageBubble(m)); });
             scrollToBottom();
         }
     }
@@ -1211,8 +1131,8 @@
         lastTotalCount = 0;
         lastApiQuery = null;
 
-        // Utilizamos showLoadingIndicator para el nuevo efecto de status/input
-        showLoadingIndicator(); 
+        // 💡 CAMBIO CRÍTICO: Muestra el Lottie y bloquea el input
+        if (typeof toggleInput === 'function') toggleInput(true);
         
         chatHistory.push({ role: 'user', text: userPrompt, timestamp: new Date() }); // Añade el mensaje del usuario
         if (typeof renderChat === 'function') renderChat();
@@ -1225,15 +1145,11 @@
         
         let modelResponseText = await getGeminiResponse(userPrompt, limitedHistory);
         
-        // **IMPORTANTE**: Ocultar el estado de carga tan pronto como recibimos la respuesta.
-        hideLoadingIndicator(); 
-
-        if (modelResponseText === null) {
-            // Si hay un error, el estado ya se ocultó arriba y el input se habilitó.
-            return;
-        }
-
+        // 💡 CAMBIO CRÍTICO: Oculta el Lottie y desbloquea el input antes de procesar
+        if (typeof toggleInput === 'function') toggleInput(false);
         
+        if (!modelResponseText) return; // Si la respuesta falló, salimos después de ocultar el Lottie.
+
         let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date(), isStructured: false };
         let totalCount = 0; 
         let apiQuery = null; 
@@ -1390,16 +1306,6 @@
     if (sendButton) sendButton.addEventListener('click', () => handleSend());
     if (inputElement) inputElement.addEventListener('keypress', function(e) { if (e.key === 'Enter') { handleSend(); } });
     
-    // NUEVO LISTENER: Para el efecto de escritura del usuario y habilitar/deshabilitar el botón
-    if (inputElement) {
-        inputElement.addEventListener('input', () => {
-            // Habilitar/Deshabilitar el botón de envío
-            sendButton.disabled = inputElement.value.trim() === '';
-            // Manejar la burbuja de escritura del usuario
-            handleTypingIndicator();
-        });
-    }
-
     // Listeners para botones del menú principal (Categorías, Lenguaje, etc.)
     menuActionChips.forEach(chip => {
         chip.addEventListener('click', function() {
@@ -1517,14 +1423,6 @@
 
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Mover la burbuja de escritura del usuario al final del contenedor de mensajes
-        if (userTypingBubble && messageContainer.lastElementChild !== userTypingBubble) {
-            messageContainer.appendChild(userTypingBubble);
-        }
-        
-        // Asegurarse de que esté oculta al inicio
-        hideUserTypingBubble();
-        
         // Establece el idioma por defecto y actualiza la interfaz (sin disparar alerta)
         setInterfaceLanguage(currentLanguage); 
         
@@ -1535,7 +1433,7 @@
         loadNotificationPreferences(); 
         
         // 4. ⚠️ CORRECCIÓN DE ERROR ADICIONAL: Desbloquear la entrada por si acaso
-        hideLoadingIndicator(); // Usamos la nueva función para asegurar el estado normal
+        toggleInput(false); 
     });
 </script>
 </body>
