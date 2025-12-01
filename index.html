@@ -33,7 +33,7 @@
         .model-bubble-wrapper {
             /* Colores de la paleta: #3A4EFB / #334AFA */
             background: linear-gradient(127deg, #ffffff85, #fff); 
-            color: #373737; /* Texto blanco para alto contraste */
+            color: #373737; /* Texto negro */
             border-radius: 18px 18px 18px 0;
             padding: 12px; /* Mantiene el padding uniforme de la burbuja */
             box-sha: 0 4px 6px rgba(0, 0, 0, 0.6);
@@ -176,14 +176,22 @@
             transform: translateY(0);
         }
 
-        /* Estilo para el Timestamp */
+        /* 🛑 CAMBIOS SOLICITADOS EN TIMESTAMP */
         .timestamp {
             font-size: 0.7rem; 
             color: #9ca3af; 
             margin-top: 2px;
-            /* Moverlo hacia el centro o la derecha bajo la burbuja */
-            align-self: flex-start; 
+            /* Se alinea automáticamente por el padre flex-col */
         }
+        .user-timestamp-container { 
+            align-self: flex-end; /* Mueve el timestamp del usuario al lado derecho (end) */
+            margin-right: 4px; /* Espacio para que no esté pegado al borde */
+        }
+        .model-timestamp-container { 
+            align-self: flex-start; /* Mueve el timestamp del modelo al lado izquierdo (start) */
+            margin-left: 4px; /* Espacio para que no esté pegado al borde */
+        }
+        /* FIN CAMBIOS SOLICITADOS EN TIMESTAMP */
 
         /* AJUSTE CRÍTICO PARA EL NUEVO HEADER FLOTANTE */
         #message-container {
@@ -383,8 +391,7 @@
             background: linear-gradient(90deg, rgba(196, 228, 242, 0.35) 0%, #eff6ff 40%, #eff6ff 100%);
             box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
             z-index: 10;
-            /* 🛑 MODIFICACIÓN SOLICITADA 1: Eliminar el padding inferior */
-            padding-bottom: 0; 
+            padding-bottom: 0; /* Ajustamos con los p-4 internos */
         }
 
         /* 1. 🎨 FONDO PARA EL QUICK REPLIES CONTAINER (Adaptado para usar el fondo del padre) */
@@ -441,11 +448,16 @@
             opacity: 1;
             visibility: hidden;
             transition: opacity 0.2s ease-out, visibility 0.2s ease-out;
-            margin-bottom: 8px; /* Espacio para que se vea bien */
+            /* 🛑 CLAVE 1: Eliminamos el margin-bottom para que se colapse al ocultarse */
+            margin-bottom: 0; 
+            height: 0; /* CLAVE 2: Colapsamos la altura */
+            overflow: hidden; /* Ocultamos el contenido durante el colapso */
         }
         #user-typing-bubble.show {
             opacity: 1;
             visibility: visible;
+            height: auto; /* Devolvemos la altura automática */
+            margin-bottom: 8px; /* Restauramos el margen para que se vea bien */
         }
         
         /* 🛑 NUEVO: Burbuja de TYPING del BOT */
@@ -453,13 +465,17 @@
             /* Mismo estilo que la burbuja del bot */
             opacity: 0;
             visibility: hidden;
-            transition: opacity 0.2s ease-out, visibility 0.2s ease-out;
-            margin-bottom: 8px;
-            /* Usa la clase del wrapper para el estilo */
+            transition: opacity 0.2s ease-out, visibility 0.2s ease-out, height 0.2s ease-out, margin-bottom 0.2s ease-out;
+            /* 🛑 CLAVE 1: Eliminamos el margin-bottom para que se colapse al ocultarse */
+            margin-bottom: 0;
+            height: 0; /* CLAVE 2: Colapsamos la altura */
+            overflow: hidden; /* Ocultamos el contenido durante el colapso */
         }
         #model-typing-bubble.show {
             opacity: 1;
             visibility: visible;
+            height: auto; /* Devolvemos la altura automática */
+            margin-bottom: 8px; /* Restauramos el margen para que se vea bien */
         }
         
         .typing-dots {
@@ -470,12 +486,15 @@
         .typing-dots .dot {
             width: 8px;
             height: 6px;
-            /* 🛑 MODIFICACIÓN SOLICITADA 2: Color de los puntos en blanco */
-            background-color: white; 
             border-radius: 50%;
             margin: 0 2px;
             animation: bounce 1.4s infinite ease-in-out both;
         }
+        /* 🛑 COLOR DE LOS PUNTOS: NEGRO para el bot (fondo blanco) */
+        #model-typing-bubble .dot { background-color: black; }
+        /* 🛑 COLOR DE LOS PUNTOS: BLANCO para el usuario (fondo negro) */
+        #user-typing-bubble .dot { background-color: white; }
+
         .typing-dots .dot:nth-child(1) { animation-delay: -0.32s; }
         .typing-dots .dot:nth-child(2) { animation-delay: -0.16s; }
         .typing-dots .dot:nth-child(3) { animation-delay: 0s; }
@@ -1093,10 +1112,12 @@
         const w = document.createElement('div');
         
         const timeStr = m.timestamp ? formatTime(m.timestamp) : '';
-        const timeSpan = timeStr ? `<span class="timestamp">${timeStr}</span>` : '';
-
+        // 🛑 CAMBIO CLAVE: Usamos contenedores con clases específicas para el alineamiento del timestamp
+        let timeSpan = '';
+        
         if (m.role === 'user') { 
             w.className = 'flex justify-end mb-2'; 
+            timeSpan = timeStr ? `<div class="user-timestamp-container"><span class="timestamp">${timeStr}</span></div>` : '';
             w.innerHTML = `
                 <div class="flex flex-col items-end">
                     <div class="user-bubble bg-black text-white p-3 shadow-md">${m.text}</div>
@@ -1106,6 +1127,8 @@
         } 
         else if (m.role === 'model') {
             w.className = 'flex flex-col justify-start w-full mb-2';
+            timeSpan = timeStr ? `<div class="model-timestamp-container"><span class="timestamp">${timeStr}</span></div>` : '';
+            
             let content = '';
             let actionsBar = '';
 
