@@ -767,9 +767,10 @@
                 }
             });
             
-            // Asegurar que las burbujas de typing estén al final
-            messageContainer.appendChild(modelTypingBubble);
-            messageContainer.appendChild(userTypingBubble);
+            // 🛑 ELIMINACIÓN CRÍTICA: NO mover las burbujas al final del contenedor aquí.
+            // Las burbujas deben quedarse en su posición inicial en el DOM.
+            // messageContainer.appendChild(modelTypingBubble);
+            // messageContainer.appendChild(userTypingBubble);
             
             // Asegurar que las burbujas estén OCULTAS y sin ocupar espacio
             hideUserTypingBubble();
@@ -942,7 +943,8 @@
         inputElement.disabled = true;
         sendButton.disabled = true;
         
-        scrollToBottom();
+        // El scroll debe activarse cuando el bot empieza a escribir para mostrar el indicador.
+        scrollToBottom(); 
     }
 
     function hideLoadingIndicator() {
@@ -962,7 +964,9 @@
         // Solo mostrar si el bot no está respondiendo
         if (!isBotTyping) {
             userTypingBubble.classList.add('show');
-            scrollToBottom();
+            // 🛑 CRÍTICO: NO HACER SCROLL CUANDO EL USUARIO ESCRIBE. 
+            // Esto oculta los chips inferiores.
+            // scrollToBottom(); 
         }
     }
 
@@ -975,6 +979,7 @@
         
         // Si el usuario empieza a escribir Y el bot no está respondiendo
         if (inputValue.length > 0 && !isBotTyping) {
+            // 🛑 Usar la función que NO hace scroll
             showUserTypingBubble();
         } else {
             hideUserTypingBubble();
@@ -1228,9 +1233,10 @@
                 messageContainer.insertBefore(messageElement, modelTypingBubble); 
             });
             
-            // Asegurar que las burbujas de typing estén al final del DOM, justo antes de los inputs
-            messageContainer.appendChild(modelTypingBubble);
-            messageContainer.appendChild(userTypingBubble);
+            // 🛑 ELIMINACIÓN CRÍTICA: NO mover las burbujas al final del contenedor.
+            // Esto asegura que se queden donde están declaradas en el HTML (al inicio)
+            // messageContainer.appendChild(modelTypingBubble);
+            // messageContainer.appendChild(userTypingBubble);
             
             scrollToBottom();
         }
@@ -1648,12 +1654,14 @@
 
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Mover las burbujas de typing al final del contenedor de mensajes
-        // Esto es CRÍTICO para que al hacer scroll, siempre estén al final
+        
+        // 🛑 LÍNEAS ELIMINADAS/COMENTADAS para evitar que el JS mueva las burbujas al final
+        /*
         if (modelTypingBubble && userTypingBubble) {
              messageContainer.appendChild(modelTypingBubble);
              messageContainer.appendChild(userTypingBubble);
         }
+        */
         
         // Asegurarse de que ambas estén ocultas al inicio
         hideUserTypingBubble();
