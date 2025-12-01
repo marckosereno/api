@@ -1161,7 +1161,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                 content = `<div class="model-bubble-wrapper p-3 shadow-md">${m.text || m.description}</div>`;
                 
                 let actionsHTML = `
-                    <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:opacity-90 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Ver en Mapa 🗺️' : 'View on Map 🗺️'}</a>
+                    <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:opacity-90 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Ver en Mapa 🧭' : 'View on Map 🧭'}</a>
                 `;
 
                 if (isPlace) {
@@ -1187,7 +1187,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                 }
 
                 actionsHTML += `
-                    <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg hover:opacity-90 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Buscar en Google 🔍' : 'Search on Google 🔍'}</a>
+                    <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg hover:opacity-90 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Buscar en Google 🕶' : 'Search on Google 🕶'}</a>
                 `;
 
                 actionsBar = `
@@ -1208,7 +1208,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
 
             } else {
                 // 🛑 HTML MODIFICADO: Usamos el wrapper para el estilo de color para texto plano
-                content = `<div class="model-bubble-wrapper p-3 shadow-md">${m.text || ''}</div>`;
+                content = `<div class="model-bubble-wrapper p-3 pb-4 shadow-md">${m.text || ''}</div>`;
                 w.innerHTML = `
                     <div class="flex flex-col items-start">
                         ${content}
