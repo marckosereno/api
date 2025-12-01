@@ -383,7 +383,8 @@
             background: linear-gradient(90deg, rgba(196, 228, 242, 0.35) 0%, #eff6ff 40%, #eff6ff 100%);
             box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
             z-index: 10;
-            padding-bottom: 0; /* Ajustamos con los p-4 internos */
+            /* 🛑 MODIFICACIÓN SOLICITADA 1: Eliminar el padding inferior */
+            padding-bottom: 0; 
         }
 
         /* 1. 🎨 FONDO PARA EL QUICK REPLIES CONTAINER (Adaptado para usar el fondo del padre) */
@@ -469,7 +470,7 @@
         .typing-dots .dot {
             width: 8px;
             height: 6px;
-            /* 🛑 COLOR DE LOS PUNTOS: Blanco para contraste en la burbuja */
+            /* 🛑 MODIFICACIÓN SOLICITADA 2: Color de los puntos en blanco */
             background-color: white; 
             border-radius: 50%;
             margin: 0 2px;
