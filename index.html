@@ -89,7 +89,7 @@
             color: #FFFFFF !important;
         }
 
-        .chip-group-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+        .chip-group-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 5px; padding-bottom: 5px; }
         
         /* Estilo de la barra de chat NUEVO (GLASSMOPRHISM) */
         .map-search-bar {
@@ -188,6 +188,8 @@
         /* AJUSTE CRÍTICO PARA EL NUEVO HEADER FLOTANTE */
         #message-container {
             padding-top: 6rem; 
+            /* 🛑 CAMBIO SOLICITADO 1: Ajuste del padding inferior para eliminar el espacio vacío */
+            padding-bottom: 0.5rem; /* Reducido de 1rem a 0.5rem para un padding pequeño */
         }
         #btn-clear-top {
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
@@ -383,7 +385,8 @@
             background: linear-gradient(90deg, rgba(196, 228, 242, 0.35) 0%, #eff6ff 40%, #eff6ff 100%);
             box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
             z-index: 10;
-            padding-bottom: 0; /* Ajustamos con los p-4 internos */
+            /* 🛑 CAMBIO SOLICITADO 2: Ajuste del padding inferior para el contenedor principal */
+            padding-bottom: 0; /* Lo gestionaremos con un padding interno para el input */
         }
 
         /* 1. 🎨 FONDO PARA EL QUICK REPLIES CONTAINER (Adaptado para usar el fondo del padre) */
@@ -475,6 +478,12 @@
             margin: 0 2px;
             animation: bounce 1.4s infinite ease-in-out both;
         }
+        
+        /* 🛑 CAMBIO SOLICITADO 3: Puntos negros para la burbuja del BOT (fondo blanco) */
+        #model-typing-bubble .typing-dots .dot {
+            background-color: black; 
+        }
+        
         .typing-dots .dot:nth-child(1) { animation-delay: -0.32s; }
         .typing-dots .dot:nth-child(2) { animation-delay: -0.16s; }
         .typing-dots .dot:nth-child(3) { animation-delay: 0s; }
