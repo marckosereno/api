@@ -176,7 +176,7 @@
             transform: translateY(0);
         }
 
-        /* 🛑 CAMBIOS SOLICITADOS EN TIMESTAMP */
+        /* 🛑 Ajustes de los timestamp */
         .timestamp {
             font-size: 0.7rem; 
             color: #9ca3af; 
@@ -442,40 +442,25 @@
         }
         
         /* --- ESTILOS ADICIONALES PARA EL EFECTO TYPING DEL USUARIO Y MODELO --- */
-
-        #user-typing-bubble {
-            /* Mismo estilo que la burbuja del usuario, pero sin el timestamp */
-            opacity: 1;
-            visibility: hidden;
-            transition: opacity 0.2s ease-out, visibility 0.2s ease-out;
-            /* 🛑 CLAVE 1: Eliminamos el margin-bottom para que se colapse al ocultarse */
-            margin-bottom: 0; 
-            height: 0; /* CLAVE 2: Colapsamos la altura */
-            overflow: hidden; /* Ocultamos el contenido durante el colapso */
-        }
-        #user-typing-bubble.show {
-            opacity: 1;
-            visibility: visible;
-            height: auto; /* Devolvemos la altura automática */
-            margin-bottom: 8px; /* Restauramos el margen para que se vea bien */
-        }
         
-        /* 🛑 NUEVO: Burbuja de TYPING del BOT */
-        #model-typing-bubble {
-            /* Mismo estilo que la burbuja del bot */
+        /* 🛑 CRÍTICO: Estilos base de las burbujas de typing para ocultarlas sin ocupar espacio */
+        #user-typing-bubble, #model-typing-bubble {
             opacity: 0;
             visibility: hidden;
+            /* Transición para un efecto de colapso suave */
             transition: opacity 0.2s ease-out, visibility 0.2s ease-out, height 0.2s ease-out, margin-bottom 0.2s ease-out;
-            /* 🛑 CLAVE 1: Eliminamos el margin-bottom para que se colapse al ocultarse */
-            margin-bottom: 0;
+            margin-bottom: 0 !important; /* CLAVE 1: Eliminamos el margen para que se colapse */
             height: 0; /* CLAVE 2: Colapsamos la altura */
             overflow: hidden; /* Ocultamos el contenido durante el colapso */
+            /* Mantenemos el justify-end/start definido en el HTML para el alineamiento */
         }
-        #model-typing-bubble.show {
+        
+        /* Estilos para el estado VISIBLE */
+        #user-typing-bubble.show, #model-typing-bubble.show {
             opacity: 1;
             visibility: visible;
             height: auto; /* Devolvemos la altura automática */
-            margin-bottom: 8px; /* Restauramos el margen para que se vea bien */
+            margin-bottom: 8px !important; /* Restauramos el margen para que se vea bien */
         }
         
         .typing-dots {
@@ -522,7 +507,7 @@
 
         <div id="message-container" class="flex-grow overflow-y-auto p-4 flex flex-col">
             
-            <div id="model-typing-bubble" class="flex mb-2 justify-start">
+            <div id="model-typing-bubble" class="flex justify-start">
                 <div class="flex flex-col items-start">
                     <div class="model-bubble-wrapper p-3 shadow-md">
                         <div class="typing-dots">
@@ -534,7 +519,7 @@
                 </div>
             </div>
             
-            <div id="user-typing-bubble" class="flex mb-2 justify-end">
+            <div id="user-typing-bubble" class="flex justify-end">
                 <div class="flex flex-col items-end max-w-xs sm:max-w-md lg:max-w-lg">
                     <div class="user-bubble bg-black text-white p-3 shadow-md">
                         <div class="typing-dots">
@@ -703,7 +688,7 @@
 
     // NUEVA REFERENCIA PARA LA BURBUJA DE ESCRITURA DEL USUARIO Y MODELO
     const userTypingBubble = document.getElementById('user-typing-bubble');
-    const modelTypingBubble = document.getElementById('model-typing-bubble'); // 🛑 NUEVO
+    const modelTypingBubble = document.getElementById('model-typing-bubble'); 
     
 
 
@@ -786,8 +771,9 @@
             messageContainer.appendChild(modelTypingBubble);
             messageContainer.appendChild(userTypingBubble);
             
-            // Asegurar que la burbuja del modelo esté OCULTA
-            modelTypingBubble.classList.remove('show');
+            // Asegurar que las burbujas estén OCULTAS y sin ocupar espacio
+            hideUserTypingBubble();
+            hideModelTypingBubble();
         }
         
         // ALERTA DE CLEAR HISTORY USA 'news'
@@ -936,9 +922,16 @@
     }
 
     // --- FUNCIONES CORE MODIFICADAS PARA EL EFECTO TYPING/STATUS ---
+    
+    function hideModelTypingBubble() {
+        modelTypingBubble.classList.remove('show');
+    }
 
     function showLoadingIndicator() {
         isBotTyping = true;
+        // Ocultar indicador de typing del usuario (por si acaso)
+        hideUserTypingBubble(); 
+        
         // Mostrar indicador de typing del bot
         modelTypingBubble.classList.add('show'); 
         
@@ -949,16 +942,13 @@
         inputElement.disabled = true;
         sendButton.disabled = true;
         
-        // Asegurar que la burbuja de escritura del usuario se oculte
-        hideUserTypingBubble(); 
-        
         scrollToBottom();
     }
 
     function hideLoadingIndicator() {
         isBotTyping = false;
         // Ocultar indicador de typing del bot
-        modelTypingBubble.classList.remove('show'); 
+        hideModelTypingBubble(); 
         
         // Revertir el input a su estado normal
         inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
@@ -1237,6 +1227,10 @@
                 // Insertar el mensaje antes de la burbuja de escritura del modelo
                 messageContainer.insertBefore(messageElement, modelTypingBubble); 
             });
+            
+            // Asegurar que las burbujas de typing estén al final del DOM, justo antes de los inputs
+            messageContainer.appendChild(modelTypingBubble);
+            messageContainer.appendChild(userTypingBubble);
             
             scrollToBottom();
         }
@@ -1655,14 +1649,15 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         // Mover las burbujas de typing al final del contenedor de mensajes
-        if (modelTypingBubble && messageContainer.lastElementChild !== userTypingBubble) {
+        // Esto es CRÍTICO para que al hacer scroll, siempre estén al final
+        if (modelTypingBubble && userTypingBubble) {
              messageContainer.appendChild(modelTypingBubble);
              messageContainer.appendChild(userTypingBubble);
         }
         
         // Asegurarse de que ambas estén ocultas al inicio
         hideUserTypingBubble();
-        modelTypingBubble.classList.remove('show');
+        hideModelTypingBubble();
         
         // Establece el idioma por defecto y actualiza la interfaz (sin disparar alerta)
         setInterfaceLanguage(currentLanguage); 
