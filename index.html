@@ -775,8 +775,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             
             // 🛑 ELIMINACIÓN CRÍTICA: NO mover las burbujas al final del contenedor aquí.
             // Las burbujas deben quedarse en su posición inicial en el DOM.
-            // messageContainer.appendChild(modelTypingBubble);
-            // messageContainer.appendChild(userTypingBubble);
             
             // Asegurar que las burbujas estén OCULTAS y sin ocupar espacio
             hideUserTypingBubble();
@@ -855,6 +853,20 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         hours = hours ? hours : 12; 
         const minutesStr = minutes < 10 ? '0'+minutes : minutes;
         return hours + ':' + minutesStr + ' ' + ampm;
+    }
+    
+    // 🛑 NUEVA FUNCIÓN: Verificar si el usuario está cerca del fondo
+    function isScrolledToBottom() {
+        if (!messageContainer) return true;
+        // Permite un margen de 200px para considerarse "cerca del fondo"
+        // messageContainer.scrollHeight: Altura total del contenido
+        // messageContainer.scrollTop: Distancia del scroll desde la parte superior
+        // messageContainer.clientHeight: Altura visible del contenedor
+        const scrollDifference = messageContainer.scrollHeight - messageContainer.scrollTop;
+        const viewportHeight = messageContainer.clientHeight;
+        // Si la diferencia entre el final del contenido y el scroll está dentro de la altura visible + 200px
+        const isNearBottom = scrollDifference <= viewportHeight + 200;
+        return isNearBottom;
     }
 
     // FUNCIÓN DE ALERTA MEJORADA CON CONTROL DE PREFERENCIAS
@@ -970,9 +982,12 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         // Solo mostrar si el bot no está respondiendo
         if (!isBotTyping) {
             userTypingBubble.classList.add('show');
-            // 🛑 CRÍTICO: NO HACER SCROLL CUANDO EL USUARIO ESCRIBE. 
-            // Esto oculta los chips inferiores.
-            // scrollToBottom(); 
+            
+            // 🛑 CAMBIO CRÍTICO: SCROLL CONDICIONAL
+            // Si el usuario ya está cerca del fondo, hacemos scroll para ver la burbuja.
+            if (isScrolledToBottom()) {
+                scrollToBottom(); 
+            }
         }
     }
 
@@ -985,7 +1000,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         
         // Si el usuario empieza a escribir Y el bot no está respondiendo
         if (inputValue.length > 0 && !isBotTyping) {
-            // 🛑 Usar la función que NO hace scroll
+            // 🛑 Usar la función que ahora tiene scroll condicional
             showUserTypingBubble();
         } else {
             hideUserTypingBubble();
@@ -1240,9 +1255,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             });
             
             // 🛑 ELIMINACIÓN CRÍTICA: NO mover las burbujas al final del contenedor.
-            // Esto asegura que se queden donde están declaradas en el HTML (al inicio)
-            // messageContainer.appendChild(modelTypingBubble);
-            // messageContainer.appendChild(userTypingBubble);
             
             scrollToBottom();
         }
@@ -1661,14 +1673,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
 
     document.addEventListener('DOMContentLoaded', () => {
         
-        // 🛑 LÍNEAS ELIMINADAS/COMENTADAS para evitar que el JS mueva las burbujas al final
-        /*
-        if (modelTypingBubble && userTypingBubble) {
-             messageContainer.appendChild(modelTypingBubble);
-             messageContainer.appendChild(userTypingBubble);
-        }
-        */
-        
         // Asegurarse de que ambas estén ocultas al inicio
         hideUserTypingBubble();
         hideModelTypingBubble();
@@ -1686,5 +1690,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         hideLoadingIndicator(); // Usamos la nueva función para asegurar el estado normal
     });
 </script>
+
 </body>
 </html>
