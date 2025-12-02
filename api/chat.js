@@ -17,7 +17,6 @@ const CATEGORY_MAP = {
 
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
-// Asegúrate de que placesApiKey esté disponible aquí o se lea correctamente
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY; 
 const placesClient = new PlacesClient({}); 
 
@@ -111,7 +110,6 @@ async function getPlaceDetails(query) {
             params: {
                 key: placesApiKey,
                 place_id: placeId,
-                // Usamos 'url' que es la URL canónica de Google Maps para el lugar
                 fields: ['name', 'formatted_phone_number', 'url', 'reviews'] 
             }
         });
@@ -219,8 +217,8 @@ export default async function handler(req, res) {
                             const placeNameSearch = ficha.placeToSearch.trim();
                             const isHealthPlace = ficha.isHealthPlace === true; 
 
-                            // 🛑 CORRECCIÓN CRÍTICA #1: Se corrige la sintaxis de la URL de fallback.
-                            const fallbackMapUrl = `https://www.google.com/maps/search/?api=1&query=$${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
+                            // 🛑 CORRECCIÓN CRÍTICA 1: Se corrige la sintaxis de la URL de fallback.
+                            const fallbackMapUrl = `https://www.google.com/maps/search/?api=1&query=$$${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
                             // Establecemos el fallback antes de cualquier lógica
                             enrichedFicha.mapUrl = fallbackMapUrl; 
 
@@ -248,9 +246,7 @@ export default async function handler(req, res) {
                                         reviewUrl: placeData.reviewUrl, 
                                     };
                                 } else {
-                                    // 🛑 CORRECCIÓN CRÍTICA #2: Si Places falla, NO eliminamos placeToSearch.
-                                    // Solo garantizamos que mapUrl usa el fallback (que ya está puesto).
-                                    // delete enrichedFicha.placeToSearch; // <--- Línea eliminada para conservar el botón "Búsqueda en Google"
+                                    // Si Places falla, conservamos placeToSearch y mapUrl usa el fallback.
                                 }
                             }
                         }
