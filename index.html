@@ -3,647 +3,595 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Progreso Tour Guide</title>
-<link href="https://db.onlinewebfonts.com/c/0991fb109ac529a8f639460d21e766cf?family=Spline+Sans+Light" rel="stylesheet">
-<link href="https://db.onlinewebfonts.com/c/c583d0702911444628b39c6d070d99c4?family=Spline+Sans+Medium" rel="stylesheet">
-<link href="https://fonts.cdnfonts.com/css/avenir" rel="stylesheet">
-         <link href="https://db.onlinewebfonts.com/c/ddadf4e5d67469bf2fb13ca47ac078ba?family=FH+Oscar+Test+Medium" rel="stylesheet">       
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <title>Progreso Tour Guide Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Estilos base */
-        html, body { 
-            font-family:Spline Sans Medium; 
-            height: 100%; 
-            margin: 0; 
-            padding: 0; 
-            /* Fondo sutil para que el Glassmorphim funcione */
-            background: linear-gradient(179deg, rgb(224 235 251 / 4%) 0%, #eff6ff 100% 60%);
-        }
-        .chat-window { 
-            height: 100%; 
-            width: 100vw; 
-            display: flex; 
-            flex-direction: column; 
-            background-color: transparent; 
-            overflow: hidden;
-font-weight:200;
-line-height:0.5cm;
-font-family:Spline Sans Light;
-        }
-        .user-bubble { border-radius: 18px 18px 0 18px; max-width: 90% }
-        /* 🛑 CAMBIO CLAVE 1: Eliminamos el estilo anterior de la burbuja del modelo, ahora usa el wrapper */
-        .model-bubble { border-radius: 18px 18px 18px 0; max-width: 90%; padding-left:8px; backgroud-color: transparent; }
+        /* --- ESTILOS GENERALES Y DE LA APLICACIÓN --- */
         
-        /* 🛑 NUEVO: Wrapper para aplicar el color de fondo y el relleno, manteniendo el padding-left del div interno */
-        .model-bubble-wrapper {
-            /* Colores de la paleta: #3A4EFB / #334AFA */
-            background: linear-gradient(127deg, #ffffff85, #fff); 
-            color: #373737; /* Texto negro */
-            border-radius: 18px 18px 18px 0;
-            padding: 12px; /* Mantiene el padding uniforme de la burbuja */
-            box-sha: 0 4px 6px rgba(0, 0, 0, 0.6);
-            max-width: 90%;
-            width: fit-content;
-        }
-
-        .action-bar-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 10px; padding-bottom: 5px }
-        .action-btn { 
-            white-space: nowrap;
-            /* 🛑 CAMBIO CLAVE 3: Estilos de Botón Glassmorphism */
-            border-radius: 23px; /* Bordes muy redondeados (SOLICITADO) */
-            font-weight: 500;   /* Fuente delgada (SOLICITADO) */
-            
-            /* EFECTO GLASSMORHPISM COMPLETO */
-            background: rgba(255, 255, 255, 0.1); /* Fondo muy transparente */
-            border: 1px solid rgba(255, 255, 255, 0.3); /* Borde sutil */
-            backdrop-filter: blur(8px); /* Desenfoque clave del efecto */
-            -webkit-backdrop-filter: blur(8px); /* Para compatibilidad */
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Sombra sutil */
-            color: #FFFFFF !important; /* Texto blanco por defecto */
-            
-            /* Anulamos la transición específica de color de fondo para que Glassmorphism funcione */
-            transition: all 0.3s ease; 
-        }
-
-        /* 🛑 Ajustes de los botones con color específico para que funcionen con Glassmorphism (Aseguramos la visibilidad) */
-        .action-bar-container .action-btn.bg-green-500 {
-            background-color: #000 !important; /* Verde sólido para el principal */
-            backdrop-filter: none;
-            -webkit-backdrop-filter: none;
-            border: none;
-        }
-        .action-bar-container .action-btn.bg-blue-500 {
-            background-color: #3B82F6 !important; /* Azul sólido */
-            backdrop-filter: none;
-            -webkit-backdrop-filter: none;
-            border: none;
-        }
-        .action-bar-container .action-btn.bg-yellow-400 {
-            background-color: #FBBF24 !important; /* Amarillo sólido */
-            backdrop-filter: none;
-            -webkit-backdrop-filter: none;
-            border: none;
-            color: #1F2937 !important; /* Texto oscuro para el amarillo */
-        }
-        .action-bar-container .action-btn.bg-gray-600 {
-            /* Dejamos este como Glassmorphism o un gris oscuro */
-            background: rgba(75, 85, 99, 0.75) !important;
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: #FFFFFF !important;
-        }
-
-        .chip-group-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
-        
-        /* Estilo de la barra de chat NUEVO (GLASSMOPRHISM) */
-        .map-search-bar {
-            background-color: #ffffffb8; /* Fondo blanco con 72% de opacidad (Glassmorphism) */
-            border-radius: 20px;
-            box-shadow: 1px 2px 2px 2px #000, 0 2px 4px -2px rgba(0, 0, 0, 0.06); /* Sombra personalizada */
-            border: 1px solid #e5e7eb; /* Mantenemos el borde para definición */
+        body {
+            background-color: #f7f7f7;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
             display: flex;
-            align-items: center;
-            padding: 4px; 
-            width: 100%; 
-            box-sizing: border-box; 
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden; /* Evita el scroll del body */
         }
-        
-        .map-input {
-            flex-grow: 1;
-            padding: 0.75rem 0.75rem; 
-            color: #9ca3af;
-            font-size: 1.125rem;
-            background: transparent;
-            border: none;
-            min-width: 0; 
-            outline: none !important;
-            box-shadow: none !important;
-        }
-        .go-button {
-            background-color: black;
-            color: white;
-            font-size: 1rem;
-            font-weight: bold;
-            border-radius: 15px;
-            padding: 0.5rem 1rem; 
+
+        #app-container {
+            max-width: 420px; /* Tamaño máximo de un teléfono */
+            width: 100%;
+            height: 100vh;
+            margin: 0 auto;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: hover:opacity-90 disabled:opacity-50;
-            flex-shrink: 0;
-            min-width: 60px;
-            height: 44px;
-            box-sizing: border-box;
-            margin-right: 4px;
-            outline: none !important;
-        }
-        .go-button svg {
-            margin-right: 0.25rem;
-            width: 1.25rem; 
-            height: 1.25rem;
-            fill: currentColor;
-        }
-
-        /* --- Eliminación de Efecto Celeste/Ring/Highlight en TODOS los botones y chips --- */
-        
-        /* 1. Para navegadores basados en Webkit (Chrome, Safari, Android) */
-        * {
-            -webkit-tap-highlight-color: transparent !important; 
-        }
-        
-        /* 2. Asegura la eliminación del outline/ring en estados focus/active */
-        .action-chip, .category-chip, .language-chip, .go-button, .map-input, .dynamic-chip {
-            outline: none !important;
-            box-shadow: none !important;
-            --tw-ring-color: transparent !important;
-        }
-        .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active, .go-button:focus, .go-button:active, .dynamic-chip:focus, .dynamic-chip:active {
-            outline: none !important;
-            box-shadow: none !important;
-            --tw-ring-color: transparent !important;
-        }
-        .hover\:bg-gray-300:active {
-            background-color: #d1d5db; 
-        }
-        
-        /* --- Efecto Ola y Transición para los Chips --- */
-        .category-chip, .language-chip, .dynamic-chip {
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
-            white-space: nowrap;
-            display: inline-flex;
-            align-items: center;
-        }
-        .visible-chip {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        /* 🛑 Ajustes de los timestamp */
-        .timestamp {
-            font-size: 0.7rem; 
-            color: #9ca3af; 
-            margin-top: 2px;
-            /* Se alinea automáticamente por el padre flex-col */
-        }
-        .user-timestamp-container { 
-            align-self: flex-end; /* Mueve el timestamp del usuario al lado derecho (end) */
-            margin-right: 4px; /* Espacio para que no esté pegado al borde */
-        }
-        .model-timestamp-container { 
-            align-self: flex-start; /* Mueve el timestamp del modelo al lado izquierdo (start) */
-            margin-left: 4px; /* Espacio para que no esté pegado al borde */
-        }
-        /* FIN CAMBIOS SOLICITADOS EN TIMESTAMP */
-
-        /* AJUSTE CRÍTICO PARA EL NUEVO HEADER FLOTANTE */
-        #message-container {
-            padding-top: 6rem; 
-        }
-        #btn-clear-top {
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
-            outline: none !important;
-        }
-
-        /* NUEVOS ESTILOS PARA LA TARJETA DE NOTIFICACIÓN */
-        .notification-card {
+            flex-direction: column;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
             background-color: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.05);
-            color: #1f2937; 
-            padding: 12px 16px;
-            max-width: 90%;
-            min-width: 250px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-top: 10px; 
-            transform: translateY(-100%);
-            transition: transform 0.4s ease-out, opacity 0.4s ease-out;
+            position: relative;
+        }
+
+        /* --- HEADER Y BOTÓN FLOTANTE --- */
+        
+        header {
+            background-color: #1a1a1a;
+            color: white;
+            padding: 1rem;
+            position: relative;
+            z-index: 20; /* Sobre el chat */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        #btn-clear-top {
+            position: absolute;
+            top: 50%;
+            right: 15px;
+            transform: translateY(-50%);
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 0.75rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 9999px; /* Chip redondeado */
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            z-index: 30; /* Sobre el header y chat */
+        }
+
+        #btn-clear-top:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* --- CONTENEDOR DE MENSAJES --- */
+        
+        #message-container {
+            flex-grow: 1;
+            padding: 1rem 1rem 0 1rem;
+            overflow-y: auto;
+            /* Scrollbar más limpio en Webkit */
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+        }
+        
+        /* Ocultar scrollbar por defecto pero permitir scroll */
+        #message-container::-webkit-scrollbar {
+            width: 0px; 
+            background: transparent; 
+        }
+
+        /* --- BURBUJAS DE CHAT --- */
+
+        .user-bubble {
+            max-width: 80%;
+            border-radius: 12px 12px 0 12px;
+            background-color: #1a1a1a; /* Negro del header */
+            color: white;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 0.9rem;
+        }
+
+        .model-bubble-wrapper {
+            max-width: 80%;
+            background-color: #f0f0f0;
+            color: #333;
+            border-radius: 12px 12px 12px 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 0.9rem;
+            
+            /* Sombra y estilo tipo carta si es ficha, si no, se queda simple */
+            transition: all 0.3s ease;
+        }
+
+        /* Estilo para las burbujas de ficha estructurada */
+        .model-bubble-wrapper:has(+ .action-bar-container) {
+            background-color: #e6f7ff; /* Un azul muy claro o gris claro */
+            border-left: 5px solid #0077b6;
+            border-radius: 12px 12px 12px 0; 
+            padding-left: 1rem; 
+            padding-right: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        /* --- BOTONES DE ACCIÓN (DE LA FICHA) --- */
+        
+        .action-bar-container {
+            width: 100%;
+            max-width: 80%; /* Debe coincidir con el max-width del bubble */
+            margin-top: 0.5rem;
+            overflow-x: auto;
+            white-space: nowrap; /* Asegura que los botones se mantengan en una línea */
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 5px; /* Espacio para el scroll */
+        }
+        
+        /* Ocultar scrollbar del action-bar */
+        .action-bar-container::-webkit-scrollbar {
+            height: 0px; 
+            background: transparent; 
+        }
+
+        .action-btn {
+            font-size: 0.75rem; 
+            line-height: 1.25rem;
+            height: 36px;
+        }
+        
+        /* --- TIMESTAMPS --- */
+        
+        .timestamp {
+            font-size: 0.7rem;
+            color: #999;
+            margin-top: 2px;
+            margin-bottom: 10px;
+        }
+
+        .user-timestamp-container {
+            text-align: right;
+            padding-right: 0.5rem; 
+        }
+
+        .model-timestamp-container {
+            text-align: left;
+            padding-left: 0.5rem; 
+        }
+
+        /* --- ÁREA DE ENTRADA Y ACCIONES --- */
+        
+        #input-area {
+            position: relative;
+            background-color: white;
+            padding: 1rem;
+            border-top: 1px solid #eee;
+            z-index: 10;
+        }
+
+        #user-input {
+            border: none;
+            outline: none;
+            flex-grow: 1;
+            padding-right: 60px; /* Espacio para el botón "Ir" */
+            transition: all 0.3s ease;
+        }
+        
+        #user-input::placeholder {
+            color: #999;
+        }
+
+        #go-button {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #1a1a1a;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: background-color 0.2s;
+        }
+
+        #go-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* --- CHIPS DE MENÚ Y DINÁMICOS --- */
+
+        .menu-action-chip {
+            background-color: #e6f7ff; /* Azul claro para el menú */
+            border: 1px solid #0077b6;
+            color: #0077b6;
+            transition: all 0.2s ease;
+        }
+
+        .action-chip:hover {
+            opacity: 0.8;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .chip-group {
+            position: absolute;
+            left: 1rem;
+            right: 1rem;
+            bottom: calc(100% + 10px); /* Arriba de la barra de entrada */
+            padding: 0.5rem;
+            z-index: 5;
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+            max-height: 0;
+            overflow: hidden;
             opacity: 0;
+            background-color: transparent; 
+        }
+
+        .chip-group:not(.hidden) {
+            max-height: 500px; 
+            opacity: 1;
+        }
+        
+        .chip-group .category-chip, 
+        .chip-group .language-chip {
+            background-color: white;
+            border: 1px solid #ddd;
+            transition: all 0.3s ease;
+            transform: translateY(20px);
+            opacity: 0;
+        }
+
+        .chip-group .visible-chip {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Glass effect para chips dinámicos */
+        .dynamic-chip {
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            color: #1a1a1a;
+        }
+
+        /* --- CHIP DE ACCIÓN RÁPIDA (Ver Todos) --- */
+
+        #quick-action-full-list {
+            position: sticky; /* Sticky para mantenerse visible en el scroll */
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 1rem;
+            background: linear-gradient(to top, white 80%, rgba(255, 255, 255, 0));
+            z-index: 8;
+            transition: opacity 0.3s ease;
+        }
+
+        #btn-view-all-places {
+            width: 100%;
+            background-color: #0077b6;
+            color: white;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+        
+        /* --- NOTIFICACIÓN (APP ALERT) --- */
+        
+        #app-alert-container {
+            position: fixed;
+            top: 60px; /* Justo debajo del header */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 400px;
+            z-index: 1000;
+            pointer-events: none; /* Permite clics a través del contenedor */
+        }
+
+        .notification-card {
+            background-color: #fff;
+            color: #333;
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+            pointer-events: auto; /* Permite clics dentro de la tarjeta */
+            border-left: 5px solid #0077b6;
         }
 
         .notification-card.show {
-            transform: translateY(0);
             opacity: 1;
-        }
-
-        .notification-card .message-content {
-            flex-grow: 1;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            line-height:16px;
+            transform: translateY(0);
         }
 
         .notification-card .close-btn {
             background: none;
             border: none;
-            color: #9ca3af; 
+            color: #999;
             font-size: 1.2rem;
             cursor: pointer;
-            margin-left: 15px;
-            padding: 0;
-            outline: none;
-            line-height: 1;
-            transition: color 0.2s;
-        }
-        
-        .notification-card .close-btn:active {
-            color: #4b5563; 
+            padding: 0 5px;
         }
 
-        /* Botón de Notificaciones (SIN CAMBIOS) */
-        #btn-notifications {
-            background-color: white;
-            color: #4b5563; 
-            border: 1px solid #d1d5db; 
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
-            outline: none !important;
-            padding: 8px 12px; 
-            border-radius: 9999px; 
-            font-size: 1.1rem; 
+        /* --- INDICADORES DE ESCRITURA (TYPING) --- */
+
+        .typing-bubble {
+            background-color: #f0f0f0;
+            color: #333;
+            border-radius: 12px 12px 12px 0;
+            padding: 10px 15px;
+            width: 60px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
-        }
-        #btn-notifications:hover {
-            background-color: #f3f4f6;
-            color: #1f2937;
-        }
-        #btn-notifications:active {
-            background-color: #e5e7eb;
-            color: #000;
+            margin-bottom: 10px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            transform: translateY(10px);
         }
 
-        /* Panel de Preferencias (SIN CAMBIOS) */
-        .notification-modal-overlay {
+        .typing-bubble.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* Burbuja del usuario (alineada a la derecha) */
+        #user-typing-bubble {
+            margin-left: auto;
+            border-radius: 12px 12px 0 12px;
+            background-color: #1a1a1a; 
+        }
+
+        /* Contenedor para alinear la burbuja del usuario a la derecha */
+        .user-typing-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            margin: 0 3px;
+            background-color: #999;
+            border-radius: 50%;
+            display: inline-block;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        #user-typing-bubble .dot {
+            background-color: white;
+        }
+
+        .dot1 { animation-delay: -0.32s; }
+        .dot2 { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+
+        /* --- MODAL DE NOTIFICACIONES --- */
+
+        #notification-preferences-modal {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5); 
+            background-color: rgba(0, 0, 0, 0.5);
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 100; 
+            z-index: 1000;
             opacity: 0;
             visibility: hidden;
-            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+            transition: opacity 0.3s ease;
         }
 
-        .notification-modal-overlay.show {
+        #notification-preferences-modal.show {
             opacity: 1;
             visibility: visible;
         }
 
         .notification-panel {
             background-color: white;
+            padding: 1.5rem;
             border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2), 0 5px 10px rgba(0, 0, 0, 0.1);
             width: 90%;
-            max-width: 400px; 
-            transform: translateY(20px); 
-            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
-            opacity: 0;
-            padding: 20px;
-            pointer-events: auto; 
+            max-width: 350px;
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
         }
 
-        .notification-modal-overlay.show .notification-panel {
+        #notification-preferences-modal.show .notification-panel {
             transform: translateY(0);
-            opacity: 1;
         }
 
-        /* Toggles (Switch) - (SIN CAMBIOS) */
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 40px; 
-            height: 20px; 
-            flex-shrink: 0;
+        /* Estilo de Toggle Switch */
+        .switch {
+          position: relative;
+          display: inline-block;
+          width: 45px;
+          height: 25px;
         }
 
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
+        .switch input { 
+          opacity: 0;
+          width: 0;
+          height: 0;
         }
 
         .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc; 
-            transition: .4s;
-            border-radius: 20px; 
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: #ccc;
+          transition: .4s;
+          border-radius: 25px;
         }
 
         .slider:before {
-            position: absolute;
-            content: "";
-            height: 16px; 
-            width: 16px; 
-            left: 2px; 
-            bottom: 2px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2); 
+          position: absolute;
+          content: "";
+          height: 18px;
+          width: 18px;
+          left: 4px;
+          bottom: 3.5px;
+          background-color: white;
+          transition: .4s;
+          border-radius: 50%;
         }
 
         input:checked + .slider {
-            background-color: #2563eb; 
+          background-color: #0077b6;
         }
 
         input:focus + .slider {
-            box-shadow: 0 0 1px #2563eb;
+          box-shadow: 0 0 1px #0077b6;
         }
 
         input:checked + .slider:before {
-            transform: translateX(20px); 
+          transform: translateX(18px);
         }
 
-        /* Info card dentro del panel (SIN CAMBIOS) */
-        .info-card-panel {
-            background-color: #eff6ff; 
-            color: #1e40af; 
-            border-left: 4px solid #3b82f6; 
-            border-radius: 4px;
-            padding: 12px;
-            font-size: 0.9rem;
-            display: none;
-            align-items: flex-start;
-            margin-top: 20px;
-        }
-        .info-card-panel span {
-            margin-right: 8px;
-            font-size: 1.1rem;
-        }
-        
-        /* --- CAMBIOS SOLICITADOS EN CSS --- */
-        
-        /* NUEVO: ESTILO PARA EL CONTENEDOR INFERIOR COMPLETO (Quick Replies + Chat Bar) */
-        .bottom-action-area {
-            border-top: 1px solid #e5e7eb;
-            background: linear-gradient(90deg, rgba(196, 228, 242, 0.35) 0%, #eff6ff 40%, #eff6ff 100%);
-            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
-            z-index: 10;
-            padding-bottom: 0; /* Ajustamos con los p-4 internos */
-        }
-
-        /* 1. 🎨 FONDO PARA EL QUICK REPLIES CONTAINER (Adaptado para usar el fondo del padre) */
-        #quick-replies-container {
-            border-top: none; /* El padre (bottom-action-area) ya tiene un borde superior */
-            background: transparent; /* Fondo transparente para que use el del padre */
-            padding: 0.5rem; 
-            box-shadow: none; /* La sombra la maneja el padre */
-            z-index: 10;
-        }
-
-
-        /* --- NUEVOS ESTILOS GLASS CHIP (SIN CAMBIOS) --- */
-        .glass-chip {
-            /* 2. 🎨 FONDO PARA LOS BOTONES (Menu Action Chip) */
-            background: linear-gradient(90deg, rgb(226 246 255 / 35%) 0%, #fffafb 90%) !important; 
-            
-            backdrop-filter: blur(8px); 
-            -webkit-backdrop-filter: blur(8px);
-            
-            border: 1px solid rgba(255, 255, 255, 0.8) !important; 
-            
-            box-shadow: 
-                inset 0 1px 0 rgba(255, 255, 255, 0.9),
-                inset 0 -1px 0 rgba(0, 0, 0, 0.1);
-            
-            color: #1f2937 !important; 
-            
-            transition: all 0.2s ease-in-out;
-        }
-
-        .glass-chip:hover {
-            background: linear-gradient(90deg, rgb(226 246 255 / 50%) 0%, #ffffff 100%) !important;
-            box-shadow: 
-                0 2px 4px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 1),
-                inset 0 -1px 0 rgba(0, 0, 0, 0.2);
-        }
-
-        .glass-chip:active {
-            background: rgb(226 246 255 / 80%) !important;
-            box-shadow: none !important; 
-        }
-
-        /* Anular el fondo gris de Tailwind en los chips de menú principales */
-        #menu-actions .menu-action-chip {
-            background-color: transparent !important;
-        }
-        
-        /* --- ESTILOS ADICIONALES PARA EL EFECTO TYPING DEL USUARIO Y MODELO --- */
-        
-        /* 🛑 CRÍTICO: Estilos base de las burbujas de typing para ocultarlas sin ocupar espacio */
-        #user-typing-bubble, #model-typing-bubble {
-            opacity: 0;
-            visibility: hidden;
-            /* Transición para un efecto de colapso suave */
-            transition: opacity 0.2s ease-out, visibility 0.2s ease-out, height 0.2s ease-out, margin-bottom 0.2s ease-out;
-            margin-bottom: 0 !important; /* CLAVE 1: Eliminamos el margen para que se colapse */
-            height: 0; /* CLAVE 2: Colapsamos la altura */
-            overflow: hidden; /* Ocultamos el contenido durante el colapso */
-            /* Mantenemos el justify-end/start definido en el HTML para el alineamiento */
-        }
-        
-        /* Estilos para el estado VISIBLE */
-        #user-typing-bubble.show, #model-typing-bubble.show {
-            opacity: 1;
-            visibility: visible;
-            height: auto; 
-padding-bottom:40px; /* Devolvemos la altura automática */
-            margin-bottom: 18px !important; /* Restauramos el margen para que se vea bien */
-        }
-        
-        .typing-dots {
-            display: flex;
-            align-items: center;
-            height:8px;
-        }
-        .typing-dots .dot {
-            width: 8px;
-            height: 6px;
-            border-radius: 50%;
-            margin: 0 2px;
-            animation: bounce 1.4s infinite ease-in-out both;
-        }
-        /* 🛑 COLOR DE LOS PUNTOS: NEGRO para el bot (fondo blanco) */
-        #model-typing-bubble .dot { background-color: black; }
-        /* 🛑 COLOR DE LOS PUNTOS: BLANCO para el usuario (fondo negro) */
-        #user-typing-bubble .dot { background-color: white; }
-
-        .typing-dots .dot:nth-child(1) { animation-delay: -0.32s; }
-        .typing-dots .dot:nth-child(2) { animation-delay: -0.16s; }
-        .typing-dots .dot:nth-child(3) { animation-delay: 0s; }
-
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
-        }
 
     </style>
-    <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
 </head>
 <body>
-    <div id="chat-window" class="chat-window h-screen w-full"> 
+
+    <div id="app-container">
         
-        <div class="fixed top-0 left-0 w-full z-50 p-4 pt-6 flex justify-between bg-transparent">
-            <div id="top-action-bar-left" class="flex items-center space-x-3">
-                <div id="btn-clear-top" class="action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-white text-red-700 cursor-pointer transition hover:bg-gray-100 shadow-md border border-red-300" data-action="CLEAR_HISTORY">❌ Borrar Chat</div>
+        <header class="flex justify-between items-center relative">
+            <h1 class="text-xl font-bold" id="header-title">PROGRESO TOUR GUIDE</h1>
+            <button id="btn-notifications" class="text-white hover:opacity-80 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.93 6 11v5l-2 2v1h16v-1l-2-2z"/>
+                </svg>
+            </button>
+            <button id="btn-clear-top" data-action="CLEAR_HISTORY" class="hidden sm:inline-block">❌ Borrar Chat</button>
+        </header>
+
+        <div id="message-container">
+            
+            <div id="model-typing-bubble" class="typing-bubble">
+                <span class="dot dot1"></span>
+                <span class="dot dot2"></span>
+                <span class="dot dot3"></span>
             </div>
-            <div id="top-action-bar-right" class="flex items-center space-x-3">
-                <button id="btn-notifications" class="action-chip flex items-center text-sm font-semibold cursor-pointer">🔔</button>
+            
+            <div id="user-typing-bubble" class="typing-bubble user-typing-container">
+                <span class="dot dot1"></span>
+                <span class="dot dot2"></span>
+                <span class="dot dot3"></span>
+            </div>
+
+            </div>
+
+        <div id="quick-action-full-list" class="hidden p-4 pt-8 sticky bottom-0 left-0 right-0 bg-gradient-to-t from-white to-transparent z-8">
+            <button id="btn-view-all-places" class="action-chip bg-blue-600 text-white font-semibold py-3 px-4 rounded-full transition-colors">
+                ➡️ Ver todos los lugares
+            </button>
+        </div>
+        
+        <div id="dynamic-chips-group" class="chip-group flex justify-start items-center space-x-2 hidden">
+            <div id="dynamic-chips-list" class="flex overflow-x-auto space-x-2 p-1">
+                </div>
+        </div>
+
+        <div id="category-chips-group" class="chip-group flex flex-wrap justify-start items-center gap-2 hidden">
+            <div class="category-chip action-chip p-3 rounded-full text-sm font-semibold cursor-pointer" 
+                 data-query-es="Dime sobre la Categoría Salud y Estética en Progreso" 
+                 data-query-en="Tell me about the Health and Beauty Category in Progreso">🏥 Salud & Estética</div>
+            
+            <div class="category-chip action-chip p-3 rounded-full text-sm font-semibold cursor-pointer" 
+                 data-query-es="Dime sobre la Categoría Compras y Tiendas en Progreso"
+                 data-query-en="Tell me about the Shopping and Stores Category in Progreso">🛍️ Compras</div>
+            
+            <div class="category-chip action-chip p-3 rounded-full text-sm font-semibold cursor-pointer" 
+                 data-query-es="Dime sobre la Categoría Entretenimiento y Atracciones en Progreso"
+                 data-query-en="Tell me about the Entertainment and Attractions Category in Progreso">🎺 Entretenimiento</div>
+            
+            <div class="category-chip action-chip p-3 rounded-full text-sm font-semibold cursor-pointer" 
+                 data-query-es="Top 10 Dentistas en Nuevo Progreso con ficha y reseñas"
+                 data-query-en="Top 10 Dentists in Nuevo Progreso with card and reviews">🦷 Top 10 Dental</div>
+        </div>
+
+        <div id="language-chips-group" class="chip-group flex justify-start items-center space-x-2 hidden">
+            <div class="language-chip action-chip p-3 rounded-full text-sm font-semibold cursor-pointer" data-lang="es">Español 🇲🇽</div>
+            <div class="language-chip action-chip p-3 rounded-full text-sm font-semibold cursor-pointer" data-lang="en">English 🇺🇸</div>
+        </div>
+
+        <div id="input-area">
+            
+            <div id="menu-actions" class="flex overflow-x-auto space-x-2 pb-3 no-scrollbar">
+                <button id="btn-categorias" data-action="CATEGORIES" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer flex-shrink-0">✨️ Categorías</button>
+                <button id="btn-lenguaje" data-action="LANGUAGE" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer flex-shrink-0">🧢 Idioma</button>
+                
+                <button id="btn-comollegar" data-action="GET_THERE" data-query-es="Cómo llegar y transportes a Nuevo Progreso desde la frontera de Estados Unidos" data-query-en="How to get to Nuevo Progreso and transportation options from the US border" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer flex-shrink-0">🚀 Cómo Llegar</button>
+                <button id="btn-info" data-action="INFO" data-query-es="Información general de Nuevo Progreso: clima, horarios y seguridad" data-query-en="General information about Nuevo Progreso: weather, schedules and safety" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer flex-shrink-0">ℹ️ Info</button>
+            </div>
+            
+            <div class="flex items-center relative">
+                <input type="text" id="user-input" placeholder="Pregúntale al mapa" class="w-full text-base py-3 px-4 border-2 border-gray-200 rounded-full focus:border-gray-500 transition duration-150 pr-20" disabled>
+                <button id="go-button" class="flex items-center justify-center" disabled>
+                    <span id="go-text">Ir</span>
+                </button>
             </div>
         </div>
-        <div id="app-alert-container" class="fixed top-0 w-full flex justify-center z-50 pointer-events-none"></div>
+        
+        <div id="app-alert-container">
+            </div>
 
-        <div id="message-container" class="flex-grow overflow-y-auto p-4 flex flex-col">
-            
-            <div id="model-typing-bubble" class="flex justify-start">
-                <div class="flex flex-col items-start">
-                    <div class="model-bubble-wrapper p-3 shadow-md">
-                        <div class="typing-dots">
-                            <div class="dot"></div>
-                            <div class="dot"></div>
-                            <div class="dot"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="user-typing-bubble" class="flex justify-end">
-                <div class="flex flex-col items-end max-w-xs sm:max-w-md lg:max-w-lg">
-                    <div class="user-bubble bg-black text-white p-3 shadow-md">
-                        <div class="typing-dots">
-                            <div class="dot"></div>
-                            <div class="dot"></div>
-                            <div class="dot"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="bottom-action-area flex-shrink-0 flex flex-col space-y-2">
-            
-            <div id="quick-action-full-list" class="px-4 pt-0 pb-2 hidden">
-                <div id="btn-view-all-places" class="action-chip flex items-center p-3 rounded-xl text-lg font-bold cursor-pointer transition glass-chip justify-center">
-                    ➡️ Ver todos los lugares
-                </div>
-            </div>
-            
-            <div id="quick-replies-container" class="quick-replies-container flex-shrink-0 flex flex-col space-y-2">
+        <div id="notification-preferences-modal" class="hidden">
+            <div class="notification-panel">
+                <h3 class="text-lg font-bold mb-4">Preferencias de Notificación</h3>
                 
-                <div id="dynamic-chips-group" class="chip-group-scroll hidden px-4 pt-0">
-                    <div id="dynamic-chips-list" class="inline-flex space-x-3 pt-2 br-4"> 
-                        </div>
+                <div class="flex justify-between items-center py-2 border-b">
+                    <span>Mensajes del Sistema (Alertas, Borrar Chat)</span>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-news" checked>
+                        <span class="slider"></span>
+                    </label>
                 </div>
                 
-                <div id="category-chips-group" class="chip-group-scroll hidden px-4">
-                    <div id="category-chips-list" class="inline-flex space-x-3 pb-3 border-b border-gray-200"> 
-                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-green-500 bg-green-50 text-green-700 cursor-pointer transition hover:bg-green-100" data-query-es="Dime sobre la Categoría Salud y Estética en Progreso" data-query-en="Tell me about the Health and Beauty Category in Progreso">🏥 Salud & Estética</div>
-                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-blue-500 bg-blue-50 text-blue-700 cursor-pointer transition hover:bg-blue-100" data-query-es="Dime sobre la Categoría Compras y Tiendas en Progreso" data-query-en="Tell me about the Shopping and Stores Category in Progreso">🛍️ Compras</div>
-                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-purple-500 bg-purple-50 text-purple-700 cursor-pointer transition hover:bg-purple-100" data-query-es="Dime sobre la Categoría Entretenimiento y Atracciones en Progreso" data-query-en="Tell me about the Entertainment and Attractions Category in Progreso">🎺 Entretenimiento</div>
-                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-yellow-500 bg-yellow-50 text-yellow-700 cursor-pointer transition hover:bg-yellow-100" data-query-es="Top 10 Dentistas en Progreso" data-query-en="Top 10 Dentists in Progreso">🦷 Top 10 Dental</div>
-                    </div>
-                </div>
-
-                <div id="language-chips-group" class="chip-group-scroll hidden px-4">
-                    <div class="inline-flex space-x-3 pb-3 border-b border-gray-200"> 
-                        <div class="language-chip flex items-center p-2 rounded-full text-sm font-semibold border border-gray-400 bg-white text-gray-800 cursor-pointer transition hover:bg-gray-100" data-lang="es">🇲🇽 Español</div>
-                        <div class="language-chip flex items-center p-2 rounded-full text-sm font-semibold border border-gray-400 bg-white text-gray-800 cursor-pointer transition hover:bg-gray-100" data-lang="en">🇺🇸 English</div>
-                    </div>
+                <div class="flex justify-between items-center py-2 border-b">
+                    <span>Alertas Estructuradas (Fichas de Lugar/Categoría)</span>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-reminders" checked>
+                        <span class="slider"></span>
+                    </label>
                 </div>
                 
-                <div id="menu-actions" class="chip-group-scroll px-4">
-                    <div class="inline-flex space-x-3 pt-2">
-                        <div id="btn-categorias" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="CATEGORIES">✨️ Categorías</div>
-                        <div id="btn-lenguaje" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="LANGUAGE">🧢 Idioma</div>
-                        <div id="btn-comollegar" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="GET_THERE" data-query-es="Dime cómo llegar a Progreso, Tamaulipas." data-query-en="Tell me how to get to Progreso, Tamaulipas.">🚀 Cómo Llegar</div>
-                        <div id="btn-info" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="INFO" data-query-es="Información general sobre Nuevo Progreso." data-query-en="General information about Nuevo Progreso.">ℹ️ Info</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="p-4 flex-shrink-0 pt-2"> 
-                <div class="map-search-bar w-full">
-                    <input type="text" id="user-input" class="map-input focus:outline-none focus:ring-0" placeholder="Ask the map">
-                    
-                    <button id="go-button" class="go-button transition hover:opacity-90 disabled:opacity-50">
-                        <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 122.88 122.88" class="h-5 w-5"><g><path class="st0" d="M62.43,122.88h-1.98c0-16.15-6.04-30.27-18.11-42.34C30.27,68.47,16.16,62.43,0,62.43v-1.98 c16.16,0,30.27-6.04,42.34-18.14C54.41,30.21,60.45,16.1,60.45,0h1.98c0,16.15,6.04,30.27,18.11,42.34 c12.07,12.07,26.18,18.11,42.34,18.11v1.98c-16.15,0-30.27,6.04-42.34,18.11C68.47,92.61,62.43,106.72,62.43,122.88L62.43,122.88z"/></g></svg>
-                        <span id="go-text">Ir</span> 
-                    </button>
-                </div>
-            </div>
-        </div>
-        </div>
-    
-    <div id="notification-preferences-modal" class="notification-modal-overlay">
-        <div class="notification-panel">
-            <h3 class="text-xl font-bold mb-2 text-gray-900">Preferencias de Notificaciones</h3>
-            <p class="text-sm text-gray-600 mb-6">Elige qué notificaciones quieres recibir.</p>
-
-            <div class="space-y-4">
-                
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="font-semibold text-gray-800">Noticias de Interfaz</p>
-                        <p class="text-sm text-gray-500">Alertas de cambios de idioma, historial y otros eventos de la aplicación. (Recomendado)</p>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="toggle-news" checked data-pref="news">
+                <div class="flex justify-between items-center py-2 text-gray-400">
+                    <span>Promociones y Ofertas (Próximamente)</span>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-promotions" disabled>
                         <span class="slider"></span>
                     </label>
                 </div>
 
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="font-semibold text-gray-800">Alertas de Ficha</p>
-                        <p class="text-sm text-gray-500">Notificaciones de confirmación cuando se muestra información de una ficha de lugar o categoría.</p>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="toggle-reminders" checked data-pref="reminders">
-                        <span class="slider"></span>
-                    </label>
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button id="btn-discard-changes" class="px-4 py-2 text-sm font-semibold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition">Descartar</button>
+                    <button id="btn-apply-changes" class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Aplicar Cambios</button>
                 </div>
-
-                <div class="flex items-center justify-between opacity-50 cursor-not-allowed">
-                    <div>
-                        <p class="font-semibold text-gray-800">Promociones y Ofertas</p>
-                        <p class="text-sm text-gray-500">Recibe notificaciones sobre promociones especiales. (Próximamente)</p>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="toggle-promotions" disabled data-pref="promotions">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="info-card-panel">
-                <span>ℹ️</span> Recuerda que las **alertas de error** (❌) siempre se mostrarán, independientemente de tus preferencias, para garantizar la usabilidad.
-            </div>
-
-            <div class="flex justify-end space-x-3 mt-8">
-                <button id="btn-discard-changes" class="py-2 px-4 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition">Descartar</button>
-                <button id="btn-apply-changes" class="py-2 px-4 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition">Aplicar Cambios</button>
             </div>
         </div>
+
     </div>
-    <script>
+
+<script>
     // --- BLOQUE JAVASCRIPT: SETUP Y UTILIDADES ---
     
     // **NOTA: Debe coincidir con el endpoint de Vercel/backend**
@@ -665,7 +613,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     const inputElement = document.getElementById('user-input');
     const sendButton = document.getElementById('go-button'); 
     const messageContainer = document.getElementById('message-container');
-    // const loadingIndicator = document.getElementById('loading-indicator'); // ELIMINADO: Ya no se usa el lottie
     const appAlertContainer = document.getElementById('app-alert-container');
     const categoryChipsGroup = document.getElementById('category-chips-group');
     const languageChipsGroup = document.getElementById('language-chips-group');
@@ -724,7 +671,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             { label: "Hoteles y Hospedaje 🏨", query: "Hoteles y hospedaje en Progreso" },
             { label: "Eventos y Fiestas 🎉", query: "Próximos eventos y fiestas en Progreso" }
         ],
-        // Nota: No es necesario añadir el chip 'Top 10 Dentistas' ya que es una búsqueda directa.
     };
 
 
@@ -803,8 +749,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                 }
             });
             
-            // 🛑 ELIMINACIÓN CRÍTICA: NO mover las burbujas al final del contenedor aquí.
-            
             // Asegurar que las burbujas estén OCULTAS y sin ocupar espacio
             hideUserTypingBubble();
             hideModelTypingBubble();
@@ -840,7 +784,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             // Si hay un error de parseo, aseguramos que el historial esté vacío
             chatHistory = []; 
         }
-        // 3. ⚠️ CORRECCIÓN DE ERROR CLAVE: Asegurar que chatHistory esté listo.
+        // ⚠️ CORRECCIÓN DE ERROR CLAVE: Asegurar que chatHistory esté listo.
         if (!loaded) {
             chatHistory = []; 
         }
@@ -888,12 +832,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     function isScrolledToBottom() {
         if (!messageContainer) return true;
         // Permite un margen de 200px para considerarse "cerca del fondo"
-        // messageContainer.scrollHeight: Altura total del contenido
-        // messageContainer.scrollTop: Distancia del scroll desde la parte superior
-        // messageContainer.clientHeight: Altura visible del contenedor
         const scrollDifference = messageContainer.scrollHeight - messageContainer.scrollTop;
         const viewportHeight = messageContainer.clientHeight;
-        // Si la diferencia entre el final del contenido y el scroll está dentro de la altura visible + 200px
         const isNearBottom = scrollDifference <= viewportHeight + 200;
         return isNearBottom;
     }
@@ -1395,6 +1335,53 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         lastTotalCount = 0;
         lastApiQuery = null;
 
+        // *** 🛑 LÓGICA DE INTERCEPTACIÓN DE SUBCATEGORÍAS (FRONTEND) ***
+        
+        if (SUBCATEGORIES_MAP[userPrompt]) {
+            // Caso 1: El usuario hizo clic en un chip de categoría general (ej. Salud y Estética)
+            
+            // 1. Preparamos los datos de los chips dinámicos
+            const dynamicChipsData = SUBCATEGORIES_MAP[userPrompt].map(chip => ({
+                label: chip.label,
+                query: chip.query
+            }));
+
+            // 2. Insertamos un mensaje conversacional genérico del modelo
+            // Esto requiere una llamada *muy* ligera o un mensaje local predefinido.
+            // Para mantener la consistencia con el backend, haremos una llamada ligera para obtener la respuesta conversacional.
+            
+            // Añade el mensaje del usuario al historial primero
+            chatHistory.push({ role: 'user', text: userPrompt, timestamp: new Date() }); 
+            if (typeof renderChat === 'function') renderChat();
+            
+            showLoadingIndicator();
+            
+            // Llamamos al modelo *solo* para obtener el texto conversacional (o forzamos un mensaje local si la API es muy lenta)
+            const conversationResponse = await getGeminiResponse(userPrompt, chatHistory.slice(0, -1));
+            
+            hideLoadingIndicator();
+            
+            let finalConversationText = conversationResponse || "¡Claro! Explora estas opciones para la categoría.";
+            
+            // Eliminamos la burbuja de usuario que se insertó al inicio
+            chatHistory.pop(); 
+            // Añadimos el mensaje de usuario Y la respuesta conversacional del modelo
+            chatHistory.push({ role: 'user', text: userPrompt, timestamp: new Date() });
+            chatHistory.push({ role: 'model', text: finalConversationText, timestamp: new Date(), isStructured: false });
+            
+            saveHistory();
+            if (typeof renderChat === 'function') renderChat();
+            
+            // 3. Renderizamos los chips dinámicos
+            renderDynamicChips(dynamicChipsData);
+            
+            return; // 🛑 FINALIZA la ejecución, la API principal NO se llama.
+        }
+
+        // *** FIN LÓGICA DE INTERCEPTACIÓN ***
+        
+        // Si no fue interceptado, el flujo continúa a la API (Lógica de Ficha Estructurada/Texto Plano)
+        
         // Utilizamos showLoadingIndicator para el nuevo efecto de status/input
         showLoadingIndicator(); 
         
@@ -1421,7 +1408,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date(), isStructured: false };
         let totalCount = 0; 
         let apiQuery = null; 
-        let dynamicChipsData = null; // Para guardar los datos de los chips
+        let dynamicChipsData = null; // Para guardar los datos de los chips (si el backend los devuelve)
 
         try {
             const jsonStart = modelResponseText.indexOf('{');
@@ -1456,28 +1443,18 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                     if (finalMessage.text.length < 5) finalMessage.text = modelResponseText;
                 }
                 
-                // 4. Manejo de Chips Dinámicos
+                // 4. Manejo de Chips Dinámicos (si el backend lo soporta)
                 else if (parsedJson.isDynamicChips === true) {
                     dynamicChipsData = parsedJson.chips;
                     finalMessage.text = conversationText;
                     if (finalMessage.text.length < 5) finalMessage.text = modelResponseText;
                 }
                 
-                // ** 🛑 NUEVA LÓGICA: Detección de Categoría General para Subcategorías Locales (FRONTEND) **
-                // Si el query del usuario coincide con una clave en SUBCATEGORIES_MAP, forzamos los chips dinámicos
-                else if (SUBCATEGORIES_MAP[userPrompt]) {
-                    dynamicChipsData = SUBCATEGORIES_MAP[userPrompt].map(chip => ({
-                        label: chip.label,
-                        query: chip.query
-                    }));
-                    
-                    // Si hay texto conversacional del bot, úsalo. Si no, usa el original.
-                    finalMessage.text = conversationText || modelResponseText;
-                }
-                // ** 🛑 FIN NUEVA LÓGICA **
-                
                 // Procesar Fichas (si hay una o varias)
                 if (fichasParaMostrar.length > 0) {
+                    
+                    // Como el usuario ya fue pusheado antes del fetch, solo insertamos la respuesta del modelo
+                    
                     // Si hay fichas, el primer mensaje es el texto conversacional (si existe)
                     if (conversationText.length > 0) {
                         chatHistory.push({ role: 'model', text: conversationText, timestamp: new Date(), isStructured: false });
@@ -1530,7 +1507,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
 
         // *** FIN DE LA LÓGICA DE PROCESAMIENTO DE RESPUESTA ***
 
-        chatHistory.push(finalMessage); // <- Esta es la línea que antes estaba duplicada y ahora está corregida.
+        chatHistory.push(finalMessage); // <- Añade la respuesta del modelo (texto plano o fallback)
         
         // --- LÓGICA DE ACTIVACIÓN DE CHIPS Y ALERTA ---
         
@@ -1539,7 +1516,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         lastApiQuery = null;
 
         if (dynamicChipsData && dynamicChipsData.length > 0) {
-            // Caso de CHIPS DINÁMICOS O SUBCATEGORÍAS FORZADAS
+            // Caso de CHIPS DINÁMICOS si vinieron del backend
             renderDynamicChips(dynamicChipsData);
             quickActionFullList.classList.add('hidden'); // Asegurar que el otro chip esté oculto
             
@@ -1615,7 +1592,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     categoryChips.forEach(chip => {
         chip.addEventListener('click', function() {
             const lang = currentLanguage;
-            const query = this.getAttribute(`data-query-${lang}`);
+            // Usamos data-query-es porque el mapeo de subcategorías se basa en el query en español
+            const query = this.getAttribute(`data-query-es`); 
             handleSend(query); 
             hideChipGroup(categoryChipsGroup, categoryChips);
             categoriesVisible = false;
@@ -1728,11 +1706,10 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         // Cargar preferencias de notificación
         loadNotificationPreferences(); 
         
-        // 4. ⚠️ CORRECCIÓN DE ERROR ADICIONAL: Desbloquear la entrada por si acaso
-        hideLoadingIndicator(); // Usamos la nueva función para asegurar el estado normal
+        // Desbloquear la entrada y botón
+        hideLoadingIndicator(); 
     });
 </script>
-
 
 </body>
 </html>
