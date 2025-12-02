@@ -696,6 +696,36 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     const userTypingBubble = document.getElementById('user-typing-bubble');
     const modelTypingBubble = document.getElementById('model-typing-bubble'); 
     
+    // 🛑 NUEVO: Objeto de mapeo de Subcategorías (Clave: Query del Chip de Categoría General)
+    const SUBCATEGORIES_MAP = {
+        // --- CATEGORÍA SALUD Y ESTÉTICA ---
+        "Dime sobre la Categoría Salud y Estética en Progreso": [
+            { label: "Dentistas 🦷", query: "Mejores dentistas en Progreso" },
+            { label: "Ópticas 👓", query: "Ópticas y lentes de contacto en Progreso" },
+            { label: "Farmacias 💊", query: "Farmacias con medicamento de patente en Progreso" },
+            { label: "Clínicas y Doctores 👨‍⚕️", query: "Clínicas y doctores en Progreso" },
+            { label: "Cirugía Estética ✨", query: "Cirujanos plásticos y estética en Progreso" },
+            { label: "Laboratorios 🧪", query: "Laboratorios de análisis clínicos en Progreso" },
+            { label: "Veterinarios 🐶", query: "Veterinarias en Progreso" },
+            { label: "Todos de Salud 🧭", query: "Todos los lugares de salud y estética en Progreso" }
+        ],
+        // --- CATEGORÍA COMPRAS Y TIENDAS ---
+        "Dime sobre la Categoría Compras y Tiendas en Progreso": [
+            { label: "Ropa y Moda 👕", query: "Tiendas de ropa y moda en Progreso" },
+            { label: "Artesanías 🎁", query: "Artesanías y souvenirs en Progreso" },
+            { label: "Vinos y Licores 🍾", query: "Tiendas de vinos y licores en Progreso" },
+            { label: "Joyería y Regalos 💍", query: "Joyerías y tiendas de regalos en Progreso" },
+            { label: "Todos de Compras 🛍️", query: "Todos los lugares de compras y tiendas en Progreso" }
+        ],
+        // --- CATEGORÍA ENTRETENIMIENTO Y ATRACCIONES ---
+        "Dime sobre la Categoría Entretenimiento y Atracciones en Progreso": [
+            { label: "Atracciones 🎡", query: "Atracciones turísticas en Progreso" },
+            { label: "Bares y Cantinas 🍺", query: "Bares y cantinas en Progreso" },
+            { label: "Hoteles y Hospedaje 🏨", query: "Hoteles y hospedaje en Progreso" },
+            { label: "Eventos y Fiestas 🎉", query: "Próximos eventos y fiestas en Progreso" }
+        ],
+        // Nota: No es necesario añadir el chip 'Top 10 Dentistas' ya que es una búsqueda directa.
+    };
 
 
     // Objeto de Traducción y textos de chips (SIN CAMBIOS)
@@ -774,7 +804,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             });
             
             // 🛑 ELIMINACIÓN CRÍTICA: NO mover las burbujas al final del contenedor aquí.
-            // Las burbujas deben quedarse en su posición inicial en el DOM.
             
             // Asegurar que las burbujas estén OCULTAS y sin ocupar espacio
             hideUserTypingBubble();
@@ -1434,6 +1463,19 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                     if (finalMessage.text.length < 5) finalMessage.text = modelResponseText;
                 }
                 
+                // ** 🛑 NUEVA LÓGICA: Detección de Categoría General para Subcategorías Locales (FRONTEND) **
+                // Si el query del usuario coincide con una clave en SUBCATEGORIES_MAP, forzamos los chips dinámicos
+                else if (SUBCATEGORIES_MAP[userPrompt]) {
+                    dynamicChipsData = SUBCATEGORIES_MAP[userPrompt].map(chip => ({
+                        label: chip.label,
+                        query: chip.query
+                    }));
+                    
+                    // Si hay texto conversacional del bot, úsalo. Si no, usa el original.
+                    finalMessage.text = conversationText || modelResponseText;
+                }
+                // ** 🛑 FIN NUEVA LÓGICA **
+                
                 // Procesar Fichas (si hay una o varias)
                 if (fichasParaMostrar.length > 0) {
                     // Si hay fichas, el primer mensaje es el texto conversacional (si existe)
@@ -1497,7 +1539,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         lastApiQuery = null;
 
         if (dynamicChipsData && dynamicChipsData.length > 0) {
-            // Caso de CHIPS DINÁMICOS
+            // Caso de CHIPS DINÁMICOS O SUBCATEGORÍAS FORZADAS
             renderDynamicChips(dynamicChipsData);
             quickActionFullList.classList.add('hidden'); // Asegurar que el otro chip esté oculto
             
@@ -1690,6 +1732,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         hideLoadingIndicator(); // Usamos la nueva función para asegurar el estado normal
     });
 </script>
+
 
 </body>
 </html>
