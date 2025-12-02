@@ -217,16 +217,19 @@ export default async function handler(req, res) {
                             const placeNameSearch = ficha.placeToSearch.trim();
                             const isHealthPlace = ficha.isHealthPlace === true; 
 
+                            // 🛑 NUEVO: Fallback/Search Map URL (siempre debe existir una búsqueda general como fallback)
+                            const fallbackMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
+                            enrichedFicha.mapUrl = fallbackMapUrl; 
+
                             // **** REGLA DE SALUD DINÁMICA: Bloqueo de Enriquecimiento ****
                             if (isHealthPlace) {
                                 console.log(`Regla de Salud Aplicada: Bloqueando enriquecimiento Places para ${placeNameSearch}`);
-                                const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
 
                                 enrichedFicha = {
                                     ...enrichedFicha,
                                     placePhone: null, 
                                     reviewUrl: null,   
-                                    mapUrl: baseMapUrl 
+                                    mapUrl: fallbackMapUrl // Usamos el fallback/search URL corregido
                                 };
 
                             } else {
@@ -238,11 +241,11 @@ export default async function handler(req, res) {
                                         ...enrichedFicha,
                                         placeName: placeData.name,
                                         placePhone: placeData.phone,
-                                        mapUrl: placeData.mapUrl,
+                                        mapUrl: placeData.mapUrl, // Esto SOBRESCRIBE el fallback con la URL DIRECTA del lugar
                                         reviewUrl: placeData.reviewUrl, 
                                     };
                                 } else {
-                                    // Si falla Places
+                                    // Si falla Places, mapUrl usa el fallbackMapUrl que ya definimos arriba.
                                     delete enrichedFicha.placeToSearch;
                                 }
                             }
