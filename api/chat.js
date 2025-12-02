@@ -17,7 +17,8 @@ const CATEGORY_MAP = {
 
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
-const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
+// Asegúrate de que placesApiKey esté disponible aquí o se lea correctamente
+const placesApiKey = process.env.GOOGLE_PLACES_API_KEY; 
 const placesClient = new PlacesClient({}); 
 
 // 2. Definimos la Instrucción del Sistema (ACTUALIZADA con formato MultiStructured)
@@ -110,6 +111,7 @@ async function getPlaceDetails(query) {
             params: {
                 key: placesApiKey,
                 place_id: placeId,
+                // Usamos 'url' que es la URL canónica de Google Maps para el lugar
                 fields: ['name', 'formatted_phone_number', 'url', 'reviews'] 
             }
         });
@@ -119,7 +121,7 @@ async function getPlaceDetails(query) {
         return {
             name: place.name,
             phone: place.formatted_phone_number || null,
-            mapUrl: place.url || null,
+            mapUrl: place.url || null, 
             reviewUrl: place.url || null 
         };
 
@@ -142,7 +144,7 @@ export default async function handler(req, res) {
         const langText = currentLanguage === 'es' ? 'español' : 'inglés';
         const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
 
-        // LÓGICA DE INTERCEPTACIÓN Y PRIORIDAD LOCAL (MODIFICADA para forzar CATEGORY JSON)
+        // LÓGICA DE INTERCEPTACIÓN Y PRIORIDAD LOCAL
         let promptToSend = userPrompt;
 
         // Patrón para detectar solicitudes de listado/recomendación
@@ -166,7 +168,7 @@ export default async function handler(req, res) {
             
             console.log("PROTOCOLO CATEGORÍA GENERAL ACTIVADO para:", categoryName);
         }
-        // FIN DE LÓGICA DE INTERCEPTACIÓN (MODIFICADA)
+        // FIN DE LÓGICA DE INTERCEPTACIÓN 
 
 
         // Inicializar el chat con el historial y la instrucción de sistema
@@ -184,7 +186,7 @@ export default async function handler(req, res) {
         
         let finalResponseData = { responseText: modelResponseText };
 
-        // Lógica de ENRIQUECIMIENTO con Places API (MODIFICADA para Array de Fichas)
+        // Lógica de ENRIQUECIMIENTO con Places API (CORREGIDA)
         try {
             const jsonStart = modelResponseText.indexOf('{');
             const jsonEnd = modelResponseText.lastIndexOf('}');
@@ -217,8 +219,9 @@ export default async function handler(req, res) {
                             const placeNameSearch = ficha.placeToSearch.trim();
                             const isHealthPlace = ficha.isHealthPlace === true; 
 
-                            // 🛑 NUEVO: Fallback/Search Map URL (siempre debe existir una búsqueda general como fallback)
-                            const fallbackMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
+                            // 🛑 CORRECCIÓN CRÍTICA #1: Se corrige la sintaxis de la URL de fallback.
+                            const fallbackMapUrl = `https://www.google.com/maps/search/?api=1&query=$${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
+                            // Establecemos el fallback antes de cualquier lógica
                             enrichedFicha.mapUrl = fallbackMapUrl; 
 
                             // **** REGLA DE SALUD DINÁMICA: Bloqueo de Enriquecimiento ****
@@ -245,8 +248,9 @@ export default async function handler(req, res) {
                                         reviewUrl: placeData.reviewUrl, 
                                     };
                                 } else {
-                                    // Si falla Places, mapUrl usa el fallbackMapUrl que ya definimos arriba.
-                                    delete enrichedFicha.placeToSearch;
+                                    // 🛑 CORRECCIÓN CRÍTICA #2: Si Places falla, NO eliminamos placeToSearch.
+                                    // Solo garantizamos que mapUrl usa el fallback (que ya está puesto).
+                                    // delete enrichedFicha.placeToSearch; // <--- Línea eliminada para conservar el botón "Búsqueda en Google"
                                 }
                             }
                         }
@@ -255,15 +259,12 @@ export default async function handler(req, res) {
 
                     // Después de procesar todas las fichas, reconstruir la respuesta final.
                     if (parsedJson.isMultiStructured === true) {
-                         // Si fue MultiStructured, respondemos con el array completo y la propiedad "isMultiStructured"
                          finalResponseData.responseText = JSON.stringify({
                              isMultiStructured: true,
                              response: enrichedFichas,
-                             // Opcional: El texto conversacional (si el modelo lo incluyó antes del JSON)
                              conversationText: modelResponseText.replace(jsonString, '').trim() || ''
                          });
                     } else {
-                         // Si fue una ficha única, respondemos con la ficha enriquecida directamente.
                          finalResponseData.responseText = JSON.stringify(enrichedFichas[0]);
                     }
                 }
