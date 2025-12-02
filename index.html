@@ -689,55 +689,44 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     <script>
     // --- BLOQUE JAVASCRIPT: SETUP Y UTILIDADES ---
     
-    // **NOTA: Debe coincidir con el endpoint de Vercel/backend**
-    const BACKEND_URL = "/api/chat"; 
-    const MAX_CHAT_RESULTS = 4; // Límite de resultados mostrado en texto plano (DEBE COINCIDIR CON CHAT.JS)
-    
-    let chatHistory = [];
-    let currentLanguage = 'es'; 
-    let categoriesVisible = false; 
-    let languageMenuVisible = false; 
-    let isBotTyping = false; // NUEVA variable de estado del bot
-
-    // VARIABLES GLOBALES PARA EL PROTOCOLO DE RECOMENDACIÓN LOCAL
-    let lastTotalCount = 0; // Para guardar el conteo total de la última recomendación
-    let lastApiQuery = null; // Para guardar el query de Places para el chip
-
-
-    // Referencias a Elementos del DOM
-    const inputElement = document.getElementById('user-input');
-    const sendButton = document.getElementById('go-button'); 
+    // 1. Elementos del DOM y Constantes
+    const chatWindow = document.getElementById('chat-window');
     const messageContainer = document.getElementById('message-container');
-    // const loadingIndicator = document.getElementById('loading-indicator'); // ELIMINADO: Ya no se usa el lottie
-    const appAlertContainer = document.getElementById('app-alert-container');
-    const categoryChipsGroup = document.getElementById('category-chips-group');
+    const inputElement = document.getElementById('user-input');
+    const sendButton = document.getElementById('go-button');
+    const goText = document.getElementById('go-text');
     const languageChipsGroup = document.getElementById('language-chips-group');
-    const categoryChips = document.querySelectorAll('#category-chips-group .category-chip');
-    const languageChips = document.querySelectorAll('#language-chips-group .language-chip');
-    const menuActionChips = document.querySelectorAll('#menu-actions .menu-action-chip');
-    const btnClearTop = document.getElementById('btn-clear-top'); 
-    
-    // NUEVAS REFERENCIAS A ELEMENTOS DEL DOM para el panel de notificaciones
-    const btnNotifications = document.getElementById('btn-notifications');
-    const notificationModal = document.getElementById('notification-preferences-modal');
-    const notificationPanel = document.querySelector('#notification-preferences-modal .notification-panel');
-    const toggleNews = document.getElementById('toggle-news');
-    const toggleReminders = document.getElementById('toggle-reminders');
-    const togglePromotions = document.getElementById('toggle-promotions'); 
-    const btnDiscardChanges = document.getElementById('btn-discard-changes');
-    const btnApplyChanges = document.getElementById('btn-apply-changes');
-
-    // NUEVAS REFERENCIAS PARA EL BOTÓN DE ACCIÓN RÁPIDA "VER TODOS LOS LUGARES"
+    const languageChips = Array.from(languageChipsGroup.querySelectorAll('.language-chip'));
+    const categoryChipsGroup = document.getElementById('category-chips-group');
+    const categoryChips = Array.from(categoryChipsGroup.querySelectorAll('.category-chip'));
+    const menuActionChips = Array.from(document.getElementById('menu-actions').querySelectorAll('.menu-action-chip'));
+    const btnClearTop = document.getElementById('btn-clear-top');
     const quickActionFullList = document.getElementById('quick-action-full-list');
     const btnViewAllPlaces = document.getElementById('btn-view-all-places');
-    
     // NUEVAS REFERENCIAS PARA CHIPS DINÁMICOS
     const dynamicChipsGroup = document.getElementById('dynamic-chips-group');
     const dynamicChipsList = document.getElementById('dynamic-chips-list');
-
     // NUEVA REFERENCIA PARA LA BURBUJA DE ESCRITURA DEL USUARIO Y MODELO
     const userTypingBubble = document.getElementById('user-typing-bubble');
-    const modelTypingBubble = document.getElementById('model-typing-bubble'); 
+    const modelTypingBubble = document.getElementById('model-typing-bubble');
+    // REFERENCIAS PARA EL MODAL DE NOTIFICACIONES
+    const notificationModal = document.getElementById('notification-preferences-modal');
+    const notificationPanel = document.querySelector('.notification-panel');
+    const btnNotifications = document.getElementById('btn-notifications');
+    const btnDiscardChanges = document.getElementById('btn-discard-changes');
+    const btnApplyChanges = document.getElementById('btn-apply-changes');
+    const appAlertContainer = document.getElementById('app-alert-container');
+    const toggleNews = document.getElementById('toggle-news');
+    const toggleReminders = document.getElementById('toggle-reminders');
+    
+    // Estado del Chat
+    let chatHistory = [];
+    let currentLanguage = 'es'; 
+    let categoriesVisible = false;
+    let languageMenuVisible = false;
+    let isBotTyping = false;
+    let lastApiQuery = null;
+    let lastTotalCount = 0;
     
     // 🛑 NUEVO: Objeto de mapeo de Subcategorías (Clave: Query del Chip de Categoría General)
     const SUBCATEGORIES_MAP = {
@@ -754,24 +743,41 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         ],
         // --- CATEGORÍA COMPRAS Y TIENDAS ---
         "Dime sobre la Categoría Compras y Tiendas en Progreso": [
-            { label: "Ropa y Moda 👕", query: "Tiendas de ropa y moda en Progreso" },
-            { label: "Artesanías 🎁", query: "Artesanías y souvenirs en Progreso" },
-            { label: "Vinos y Licores 🍾", query: "Tiendas de vinos y licores en Progreso" },
-            { label: "Joyería y Regalos 💍", query: "Joyerías y tiendas de regalos en Progreso" },
-            { label: "Todos de Compras 🛍️", query: "Todos los lugares de compras y tiendas en Progreso" }
+            { label: "Tiendas de Artesanías 🛍️", query: "Tiendas de artesanías y souvenirs en Progreso" },
+            { label: "Licorerías y Bebidas 🍷", query: "Licorerías y expendios de cerveza en Progreso" },
+            { label: "Cigarros y Tabaco 🚬", query: "Tiendas de tabaco y cigarros en Progreso" },
+            { label: "Ropa y Accesorios 👚", query: "Tiendas de ropa y accesorios en Progreso" },
+            { label: "Joyas y Platería 💍", query: "Joyerías y platerías en Progreso" },
+            { label: "Todos de Compras 🧭", query: "Todos los lugares de compras y tiendas en Progreso" }
         ],
         // --- CATEGORÍA ENTRETENIMIENTO Y ATRACCIONES ---
         "Dime sobre la Categoría Entretenimiento y Atracciones en Progreso": [
-            { label: "Atracciones 🎡", query: "Atracciones turísticas en Progreso" },
             { label: "Bares y Cantinas 🍺", query: "Bares y cantinas en Progreso" },
-            { label: "Hoteles y Hospedaje 🏨", query: "Hoteles y hospedaje en Progreso" },
-            { label: "Eventos y Fiestas 🎉", query: "Próximos eventos y fiestas en Progreso" }
+            { label: "Música en Vivo 🎺", query: "Música en vivo y espectáculos en Progreso" },
+            { label: "Lugares Históricos 🏛️", query: "Lugares históricos y atracciones en Progreso" },
+            { label: "Eventos Especiales 🎉", query: "Eventos especiales y festivales en Progreso" },
+            { label: "Todos de Entretenimiento 🧭", query: "Todos los lugares de entretenimiento en Progreso" }
         ],
-        // Nota: No es necesario añadir el chip 'Top 10 Dentistas' ya que es una búsqueda directa.
+        // --- CATEGORÍA ALIMENTOS Y BEBIDAS (NO EN CHIPS, PERO LISTO POR SI EL MODELO LO USA) ---
+        "Dime sobre la Categoría Restaurantes y Comida en Progreso": [
+            { label: "Taquerías 🌮", query: "Mejores taquerías en Progreso" },
+            { label: "Restaurantes Mexicanos 🇲🇽", query: "Restaurantes de comida mexicana en Progreso" },
+            { label: "Barbacoa y Birria 🍖", query: "Lugares de barbacoa y birria en Progreso" },
+            { label: "Cafés y Postres ☕", query: "Cafeterías y postres en Progreso" },
+            { label: "Comida Rápida 🍔", query: "Puestos y locales de comida rápida en Progreso" },
+            { label: "Todos de Comida 🧭", query: "Todos los restaurantes y lugares de comida en Progreso" }
+        ],
+        // --- CATEGORÍA DENTAL (CHIP PRINCIPAL) ---
+        "Top 10 Dentistas en Progreso": [
+            { label: "Mejores Dentistas ⭐", query: "Dentistas mejor calificados en Progreso" },
+            { label: "Ortodoncia 🪥", query: "Especialistas en ortodoncia en Progreso" },
+            { label: "Implantes 🔩", query: "Clínicas de implantes dentales en Progreso" },
+            { label: "Emergencias 🚨", query: "Dentistas de emergencia 24h en Progreso" },
+            { label: "Todos de Dental 🧭", query: "Todos los dentistas en Progreso" }
+        ]
     };
 
-
-    // Objeto de Traducción y textos de chips (SIN CAMBIOS)
+    // Traducción y textos de chips (SIN CAMBIOS)
     const UI_STRINGS = {
         es: {
             header: "PROGRESO TOUR GUIDE",
@@ -817,53 +823,28 @@ padding-bottom:40px; /* Devolvemos la altura automática */
 
     // Estado inicial de las preferencias de notificación
     let notificationPreferences = {
-        news: true,      // Alertas de interfaz, historial, etc.
-        reminders: true, // Alertas estructuradas (fichas de lugar/categoría)
-        promotions: false
+        news: true, // Alertas de interfaz, historial, etc.
+        reminders: true, // Alertas estructuradas (fichas)
+        promotions: false // Deshabilitado por defecto
     };
 
+    // --- Funciones de utilidad de Almacenamiento y Carga ---
 
-    // Inicialización del estado
-    if (inputElement) inputElement.disabled = false;
-    if (sendButton) sendButton.disabled = false;
-
-    // --- Funciones de PERSISTENCIA y CONTROL DE CHAT ---
-    
     function saveHistory() {
         try {
-            localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+            // Guardar solo los últimos 20 mensajes para evitar sobrecargar localStorage
+            const historyToSave = chatHistory.slice(-20); 
+            localStorage.setItem('chatHistory', JSON.stringify(historyToSave));
         } catch (e) {
             console.error("Error al guardar el historial en localStorage", e);
         }
     }
-
+    
     function clearChatHistory() {
-        vibrateDevice();
-        chatHistory = []; 
-        localStorage.removeItem('chatHistory'); 
-        
-        // **IMPORTANTE**: Limpiar el mensaje-container y dejar solo las burbujas de typing
-        if (messageContainer) {
-            // Obtener las referencias de las burbujas de typing
-            const typingBubbles = [userTypingBubble, modelTypingBubble];
-            
-            // Eliminar todos los hijos que NO son las burbujas de typing
-            Array.from(messageContainer.children).forEach(child => {
-                if (!typingBubbles.includes(child)) {
-                    messageContainer.removeChild(child);
-                }
-            });
-            
-            // 🛑 ELIMINACIÓN CRÍTICA: NO mover las burbujas al final del contenedor aquí.
-            
-            // Asegurar que las burbujas estén OCULTAS y sin ocupar espacio
-            hideUserTypingBubble();
-            hideModelTypingBubble();
-        }
-        
-        // ALERTA DE CLEAR HISTORY USA 'news'
-        alertUser(currentLanguage === 'es' ? '¡Conversación eliminada! Empecemos de cero. 👋' : 'Conversation cleared! Let\'s start fresh. 👋', 'i', 'news');
-        
+        chatHistory = [];
+        localStorage.removeItem('chatHistory');
+        renderChat(); 
+        alertUser(currentLanguage === 'es' ? 'Historial de chat borrado. ¡Empecemos de nuevo! 👋' : 'Chat history cleared. Let\'s start fresh. 👋', 'i', 'news');
         scrollToBottom();
         // OCULTAR BOTONES DE ACCIÓN RÁPIDA
         quickActionFullList.classList.add('hidden');
@@ -871,7 +852,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         lastTotalCount = 0;
         lastApiQuery = null;
     }
-    
+
     function loadHistory() {
         // Inicializa chatHistory como array vacío si no se encuentra o es inválido
         let loaded = false;
@@ -880,8 +861,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             if (savedHistory) {
                 const loadedHistory = JSON.parse(savedHistory);
                 if (Array.isArray(loadedHistory) && loadedHistory.length > 0) {
-                    chatHistory = loadedHistory; 
-                    renderChat(); 
+                    chatHistory = loadedHistory;
+                    renderChat();
                     scrollToBottom();
                     loaded = true;
                 }
@@ -889,11 +870,11 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         } catch (e) {
             console.error("Error al cargar o parsear el historial de localStorage", e);
             // Si hay un error de parseo, aseguramos que el historial esté vacío
-            chatHistory = []; 
+            chatHistory = [];
         }
         // 3. ⚠️ CORRECCIÓN DE ERROR CLAVE: Asegurar que chatHistory esté listo.
         if (!loaded) {
-            chatHistory = []; 
+            chatHistory = [];
         }
         return loaded;
     }
@@ -923,71 +904,59 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         }
     }
 
-    // --- Funciones de utilidad de tiempo (SIN CAMBIOS) ---
+    // --- Funciones de utilidad de UI ---
+
     function formatTime(date) {
         if (!date) return '';
-        let hours = date.getHours();
-        const minutes = date.getMinutes();
-        const ampm = hours >= 12 ? 'pm' : 'am';
-        hours = hours % 12;
-        hours = hours ? hours : 12; 
-        const minutesStr = minutes < 10 ? '0'+minutes : minutes;
-        return hours + ':' + minutesStr + ' ' + ampm;
+        const d = date instanceof Date ? date : new Date(date);
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
-    
-    // 🛑 NUEVA FUNCIÓN: Verificar si el usuario está cerca del fondo
+
     function isScrolledToBottom() {
-        if (!messageContainer) return true;
-        // Permite un margen de 200px para considerarse "cerca del fondo"
-        // messageContainer.scrollHeight: Altura total del contenido
-        // messageContainer.scrollTop: Distancia del scroll desde la parte superior
-        // messageContainer.clientHeight: Altura visible del contenedor
+        if (!messageContainer) return false;
+        // Distancia desde el borde inferior del contenido hasta el borde inferior del contenedor
         const scrollDifference = messageContainer.scrollHeight - messageContainer.scrollTop;
         const viewportHeight = messageContainer.clientHeight;
-        // Si la diferencia entre el final del contenido y el scroll está dentro de la altura visible + 200px
+        // Considera "cerca" si la distancia restante del contenido y el scroll está dentro de la altura visible + 200px
         const isNearBottom = scrollDifference <= viewportHeight + 200;
         return isNearBottom;
     }
-
+    
     // FUNCIÓN DE ALERTA MEJORADA CON CONTROL DE PREFERENCIAS
     function alertUser(m, t='i', preferenceType = 'news') {
-        
         // 🛑 NUEVO: Si no es un error y la preferencia está desactivada, salir.
         if (t !== 'error' && !notificationPreferences[preferenceType]) {
             console.log(`Notificación de tipo "${preferenceType}" deshabilitada por el usuario. Mensaje: ${m}`);
-            return; 
+            return;
         }
-
+        
         // --- MODO DE LIMPIEZA INMEDIATA PARA EVITAR ACUMULACIÓN ---
         if (appAlertContainer) {
             // Elimina inmediatamente cualquier alerta existente en el contenedor
             const existingAlert = appAlertContainer.querySelector('.notification-card');
             if (existingAlert) {
-                existingAlert.remove(); 
+                existingAlert.remove();
             }
         }
         // --------------------------------------------------------
-        
+
         // Función auxiliar para esconder la alerta (con animación)
         const hideAlert = (alertElement) => {
             if (!alertElement || !alertElement.parentNode) return;
             alertElement.classList.remove('show');
-            alertElement.style.opacity = '0';
+            alertElement.style.opacity = '0'; 
             // Espera a que termine la transición (400ms) antes de eliminar del DOM
             setTimeout(() => {
                 if (alertElement.parentNode) alertElement.remove();
-            }, 400); 
+            }, 400);
         };
 
         const a = document.createElement('div');
-        const icon = (t === 'error') 
-            ? '❌' 
-            : (t === 'i' ? 'ℹ️' : '✅'); 
-
+        const icon = (t === 'error') ? '❌' : (t === 'i' ? 'ℹ️' : '✅');
         a.className = 'notification-card opacity-0 pointer-events-auto';
         a.innerHTML = `
             <div class="message-content">
-                <span class="mr-2">${icon}</span> 
+                <span class="mr-2">${icon}</span>
                 <span>${m}</span>
             </div>
             <button class="close-btn" aria-label="Cerrar notificación">×</button>
@@ -998,75 +967,71 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         setTimeout(() => {
             a.classList.add('show');
             a.style.opacity = '1';
-        }, 10); 
+        }, 10);
 
         const closeButton = a.querySelector('.close-btn');
         closeButton.addEventListener('click', () => {
             hideAlert(a);
         });
-        
+
         setTimeout(() => {
             hideAlert(a);
-        }, 4000);
-    }
-    
-    function scrollToBottom() { 
-        if (messageContainer) messageContainer.scrollTop = messageContainer.scrollHeight; 
-    }
-    
-    // FUNCIÓN MODIFICADA: Ahora solo desactiva la entrada
-    function toggleInput(d) {
-        if (inputElement) inputElement.disabled = d;
-        if (sendButton) sendButton.disabled = d;
+        }, 4000); 
     }
 
-    // --- FUNCIONES CORE MODIFICADAS PARA EL EFECTO TYPING/STATUS ---
-    
-    function hideModelTypingBubble() {
-        modelTypingBubble.classList.remove('show');
+    function scrollToBottom() {
+        if (messageContainer) {
+            messageContainer.scrollTop = messageContainer.scrollHeight;
+        }
     }
-
+    
     function showLoadingIndicator() {
         isBotTyping = true;
-        // Ocultar indicador de typing del usuario (por si acaso)
-        hideUserTypingBubble(); 
+        // Ocultar la burbuja de escritura del usuario
+        hideUserTypingBubble();
         
-        // Mostrar indicador de typing del bot
-        modelTypingBubble.classList.add('show'); 
-        
-        // Mostrar mensaje "Respondiendo tu petición..." en el input
-        inputElement.placeholder = UI_STRINGS[currentLanguage].loadingStatus;
-        
-        // Deshabilitar entrada y botón
+        // Desactivar input y botón
         inputElement.disabled = true;
         sendButton.disabled = true;
         
-        // El scroll debe activarse cuando el bot empieza a escribir para mostrar el indicador.
-        scrollToBottom(); 
-    }
-
-    function hideLoadingIndicator() {
-        isBotTyping = false;
-        // Ocultar indicador de typing del bot
-        hideModelTypingBubble(); 
+        // Mostrar estado de carga en el botón
+        goText.textContent = UI_STRINGS[currentLanguage].loadingStatus;
         
-        // Revertir el input a su estado normal
-        inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
-        inputElement.disabled = false;
+        // Mostrar la burbuja de escritura del modelo
+        modelTypingBubble.classList.add('show');
         
-        // El botón de enviar solo se activa si hay texto
-        sendButton.disabled = inputElement.value.trim() === ''; 
+        // Forzar scroll para ver el indicador
+        scrollToBottom();
     }
     
+    function hideLoadingIndicator() {
+        isBotTyping = false;
+        
+        // Ocultar la burbuja de escritura del modelo
+        modelTypingBubble.classList.remove('show');
+        
+        // Restaurar texto del botón y habilitar input
+        goText.textContent = UI_STRINGS[currentLanguage].goButton;
+        inputElement.disabled = false;
+        sendButton.disabled = inputElement.value.trim() === ''; // Vuelve al estado normal
+        
+        // Forzar scroll para limpiar el indicador
+        scrollToBottom();
+    }
+
+    function checkInput() {
+        // El botón de enviar solo se activa si hay texto
+        sendButton.disabled = inputElement.value.trim() === '';
+    }
+
     function showUserTypingBubble() {
         // Solo mostrar si el bot no está respondiendo
         if (!isBotTyping) {
             userTypingBubble.classList.add('show');
-            
             // 🛑 CAMBIO CRÍTICO: SCROLL CONDICIONAL
             // Si el usuario ya está cerca del fondo, hacemos scroll para ver la burbuja.
             if (isScrolledToBottom()) {
-                scrollToBottom(); 
+                scrollToBottom();
             }
         }
     }
@@ -1077,7 +1042,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
 
     function handleTypingIndicator() {
         const inputValue = inputElement.value.trim();
-        
         // Si el usuario empieza a escribir Y el bot no está respondiendo
         if (inputValue.length > 0 && !isBotTyping) {
             // 🛑 Usar la función que ahora tiene scroll condicional
@@ -1088,10 +1052,9 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     }
 
     // --- Funciones de INTERACCIÓN (SIN CAMBIOS EN LÓGICA) ---
-
     function vibrateDevice() {
         if ("vibrate" in navigator) {
-            navigator.vibrate(100); 
+            navigator.vibrate(100);
         }
     }
     
@@ -1111,13 +1074,11 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         chipElements.forEach((chip, index) => {
             chip.style.transition = 'none';
             chip.classList.remove('visible-chip');
-
-            void chip.offsetWidth; 
-
+            void chip.offsetWidth;
             setTimeout(() => {
                 chip.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
                 chip.classList.add('visible-chip');
-            }, index * 100); 
+            }, index * 100);
         });
     }
 
@@ -1130,51 +1091,33 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         languageMenuVisible = false;
 
         inputElement.placeholder = strings.placeholder;
-        document.getElementById('go-text').textContent = strings.goButton; 
-
-        document.getElementById('btn-categorias').textContent = strings.categories;
-        document.getElementById('btn-lenguaje').textContent = strings.language;
-        document.getElementById('btn-comollegar').textContent = strings.getThere;
-        document.getElementById('btn-info').textContent = strings.info;
-
-        const categoryChipTexts = [strings.chipHealth, strings.chipShopping, strings.chipEntertainment, strings.chipDental];
-        categoryChips.forEach((chip, index) => {
-            chip.textContent = categoryChipTexts[index];
-        });
-
+        document.getElementById('go-text').textContent = strings.goButton;
+        document.getElementById('btn-categorias').setAttribute('data-query-es', strings.categories);
+        document.getElementById('btn-lenguaje').setAttribute('data-query-es', strings.language);
+        document.getElementById('btn-comollegar').setAttribute('data-query-es', strings.getThere);
+        document.getElementById('btn-info').setAttribute('data-query-es', strings.info);
+        
+        // Re-renderizar el chat para aplicar el nuevo idioma a los botones de acción
+        renderChat();
+        
         if (langChanged) {
-            alertUser(`Interfaz y conversación cambiadas a ${lang === 'es' ? 'Español' : 'English'}`, 'i', 'news');
+            alertUser(lang === 'es' ? 'Idioma de la interfaz cambiado a Español. ¡Bienvenido!' : 'Interface language changed to English. Welcome!', 'i', 'news');
         }
     }
 
-    function handleMenuAction(actionChip) {
-        const action = actionChip.getAttribute('data-action');
-        const lang = currentLanguage;
-        const query = actionChip.getAttribute(`data-query-${lang}`);
-
-        vibrateDevice(); 
-
-        // Siempre ocultar los botones de acción rápida
-        quickActionFullList.classList.add('hidden');
-        dynamicChipsGroup.classList.add('hidden'); // Ocultar chips dinámicos
-        lastTotalCount = 0;
-        lastApiQuery = null;
-
-
-        if (action !== 'CATEGORIES' && categoriesVisible) {
-            hideChipGroup(categoryChipsGroup, categoryChips);
-            categoriesVisible = false;
-        }
-        if (action !== 'LANGUAGE' && languageMenuVisible) {
-            hideChipGroup(languageChipsGroup, languageChips);
-            languageMenuVisible = false;
-        }
+    function handleMenuAction(element) {
+        vibrateDevice();
+        const action = element.getAttribute('data-action');
+        const query = element.getAttribute(`data-query-${currentLanguage}`);
         
-        if (notificationModal.classList.contains('show')) {
-            notificationModal.classList.remove('show');
-        }
-
-
+        // Ocultar todos los chips (Categoría, Idioma, Dinámicos)
+        hideChipGroup(categoryChipsGroup, categoryChips);
+        categoriesVisible = false;
+        hideChipGroup(languageChipsGroup, languageChips);
+        languageMenuVisible = false;
+        hideChipGroup(dynamicChipsGroup); 
+        quickActionFullList.classList.add('hidden'); 
+        
         if (action === 'CATEGORIES') {
             if (categoriesVisible) {
                 hideChipGroup(categoryChipsGroup, categoryChips);
@@ -1191,60 +1134,73 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                 showChipGroupWithWave(languageChipsGroup, languageChips);
                 languageMenuVisible = true;
             }
-        } else if (action === 'CLEAR_HISTORY') { 
+        } else if (action === 'CLEAR_HISTORY') {
             clearChatHistory();
             return;
         } else {
             if (query) {
-                handleSend(query); 
-                if (categoriesVisible) { hideChipGroup(categoryChipsGroup, categoryChips); categoriesVisible = false; }
-                if (languageMenuVisible) { hideChipGroup(languageChipsGroup, languageChips); languageMenuVisible = false; }
+                handleSend(query);
+                if (categoriesVisible) {
+                    hideChipGroup(categoryChipsGroup, categoryChips);
+                    categoriesVisible = false;
+                }
+                if (languageMenuVisible) {
+                    hideChipGroup(languageChipsGroup, languageChips);
+                    languageMenuVisible = false;
+                }
             }
         }
     }
-    
+
     // Función para crear las burbujas de mensaje (User/Model)
     function createMessageBubble(m) {
         const w = document.createElement('div');
-        
         const timeStr = m.timestamp ? formatTime(m.timestamp) : '';
+        
         // 🛑 CAMBIO CLAVE: Usamos contenedores con clases específicas para el alineamiento del timestamp
         let timeSpan = '';
-        
-        if (m.role === 'user') { 
-            w.className = 'flex justify-end mb-2'; 
+
+        if (m.role === 'user') {
+            w.className = 'flex justify-end mb-2';
             timeSpan = timeStr ? `<div class="user-timestamp-container"><span class="timestamp">${timeStr}</span></div>` : '';
             w.innerHTML = `
                 <div class="flex flex-col items-end">
                     <div class="user-bubble bg-black text-white p-3 shadow-md">${m.text}</div>
                     ${timeSpan}
                 </div>
-            `; 
-        } 
-        else if (m.role === 'model') {
+            `;
+        } else if (m.role === 'model') {
             w.className = 'flex flex-col justify-start w-full mb-2';
             timeSpan = timeStr ? `<div class="model-timestamp-container"><span class="timestamp">${timeStr}</span></div>` : '';
-            
             let content = '';
             let actionsBar = '';
-            
             const strings = UI_STRINGS[currentLanguage];
 
-            if (m.isStructured) { 
-                
+            if (m.isStructured) {
                 // 🛑 NUEVA LÓGICA: Comprobar si hay un sub-menú para esta ficha
                 const hasSubMenu = m.menuKey && SUBCATEGORIES_MAP[m.menuKey];
-                
+
                 // 1. Contenido de la burbuja (SIN CAMBIOS)
                 content = `<div class="model-bubble-wrapper p-3 shadow-md">${m.text || m.description}</div>`;
+
+                let actionsHTML = '';
+                const isPlace = m.type === 'place';
+                const entityName = isPlace ? (m.placeName || m.placeToSearch) : m.categoryName; 
                 
+                // 2. Lógica para Subcategorías (Chips dinámicos dentro de la burbuja)
                 if (hasSubMenu) {
-                    // --- REEMPLAZO POR CHIPS DE SUBCATEGORÍA (GLASS-CHIP) ---
+                    // Si tiene menuKey y el mapa tiene subcategorías, mostramos los sub-chips.
                     const subChips = SUBCATEGORIES_MAP[m.menuKey];
-                    let subChipsHTML = subChips.map(chip => {
-                        // Usamos la clase 'glass-chip' para el menú de subcategoría
-                        return `<div class="action-chip glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-query="${chip.query}">${chip.label}</div>`;
-                    }).join('');
+                    let subChipsHTML = '';
+                    subChips.forEach(chip => {
+                        // Usamos la clase glass-chip para los sub-chips
+                        subChipsHTML += `
+                            <div class="action-chip glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" 
+                                data-action="SUBMENU_QUERY" data-query="${chip.query}">
+                                ${chip.label}
+                            </div>
+                        `;
+                    });
 
                     actionsBar = `
                         <div class="action-bar-container">
@@ -1254,27 +1210,24 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                         </div>
                     `;
                 } else {
-                    // 🛑 REVERTIR LÓGICA: Ahora mostramos los botones de acción para lugares/resultados finales
-                    // que NO son un menú principal (i.e. no tienen menuKey)
-                    
-                    const isPlace = m.type === 'place';
-                    const entityName = isPlace 
-                        ? (m.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
-                        : (m.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
-                    
-                    let actionsHTML = '';
-                    
-                    // Botón principal: Ver en Mapa (si tiene URL de mapa)
-                    if (m.mapUrl) {
+                    // 3. Lógica para Botones de Acción (Ver en Mapa, Llamar, etc.)
+                    // Botón principal: Ver en Mapa (siempre que haya una URL o un placeToSearch)
+                    if (m.mapUrl || m.placeToSearch) {
+                        const mapTarget = m.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(entityName + " Nuevo Progreso Tamps")}`;
+                        
+                        // 🛑 CRÍTICO: Si es un lugar de salud, forzar solo el botón de mapa/google.
+                        const isHealthPlace = m.isHealthPlace === true;
+
                         actionsHTML += `
-                            <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="MAP" data-map-url="${m.mapUrl}">
+                            <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="MAP" data-map-url="${mapTarget}" data-is-health="${isHealthPlace}">
                                 ${strings.btnMap}
                             </div>
                         `;
                     }
                     
                     // Botón para Lugares Específicos (Llamar, Reseñas)
-                    if (isPlace) {
+                    // Solo si NO es un lugar de salud (isHealthPlace != true)
+                    if (isPlace && m.isHealthPlace !== true) {
                         if (m.placePhone) {
                             actionsHTML += `
                                 <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="PHONE" data-phone="${m.placePhone}">
@@ -1290,7 +1243,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                             `;
                         }
                     }
-                    
+
                     // Botón secundario: Buscar en Google (usa el nombre de la entidad)
                     if (entityName) {
                         actionsHTML += `
@@ -1300,8 +1253,9 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                         `;
                     }
 
+
                     if (actionsHTML.length > 0) {
-                         actionsBar = `
+                        actionsBar = `
                             <div class="action-bar-container">
                                 <div class="inline-flex space-x-3 p-1">
                                     ${actionsHTML}
@@ -1312,7 +1266,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                         actionsBar = '';
                     }
                 }
-                
+
                 w.innerHTML = `
                     <div class="flex flex-col items-start">
                         ${content}
@@ -1334,56 +1288,54 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         }
         return w;
     }
-    
+
     // 🛑 NUEVA FUNCIÓN: Adjuntar listeners a los sub-chips dinámicamente creados
     function attachSubMenuListeners() {
-        // Selecciona chips de SUBMENÚ (glass-chip)
-        const subMenuChips = messageContainer.querySelectorAll('.action-bar-container .glass-chip');
-        
-        subMenuChips.forEach(chip => {
-            if (chip.classList.contains('listener-attached')) return; 
-            
-            chip.addEventListener('click', function() {
-                vibrateDevice();
-                const query = this.getAttribute('data-query');
-                handleSend(query); 
-            });
-            
-            chip.classList.add('listener-attached');
-        });
-        
-        // 🛑 NUEVA LÓGICA: Adjuntar listeners a los botones de ACCIÓN (blue-glass-chip)
-        const actionButtons = messageContainer.querySelectorAll('.action-bar-container .blue-glass-chip');
-        
-        actionButtons.forEach(button => {
-            if (button.classList.contains('listener-attached')) return; 
-            
+        // Selecciona chips de SUBMENÚ y botones de ACCIÓN (blue-glass-chip) dentro de la burbuja
+        const subMenuAndActionChips = messageContainer.querySelectorAll('.action-bar-container .action-chip:not(.listener-attached)');
+
+        subMenuAndActionChips.forEach(button => {
+            const action = button.getAttribute('data-action');
             button.addEventListener('click', function() {
                 vibrateDevice();
-                const action = this.getAttribute('data-action');
                 
-                if (action === 'MAP' && this.getAttribute('data-map-url')) {
-                    window.open(this.getAttribute('data-map-url'), '_blank');
+                // 1. Acciones de Sub-menú (chips glass-chip)
+                if (action === 'SUBMENU_QUERY') {
+                    const query = this.getAttribute('data-query');
+                    handleSend(query);
+                    // Ocultar chips dinámicos si estaban visibles
+                    hideChipGroup(dynamicChipsGroup); 
+                    
+                // 2. Botones de Acción (chips blue-glass-chip)
+                } else if (action === 'MAP') {
+                    const mapUrl = this.getAttribute('data-map-url');
+                    window.open(mapUrl, '_blank');
                     alertUser(currentLanguage === 'es' ? 'Abriendo mapa en nueva ventana.' : 'Opening map in new window.', 'i', 'news');
-                } else if (action === 'SEARCH' && this.getAttribute('data-entity-name')) {
+                    
+                } else if (action === 'SEARCH') {
                     const entityName = this.getAttribute('data-entity-name');
-                    // Buscamos con el nombre de la entidad + ubicación fija
-                    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(entityName + " Nuevo Progreso Tamps")}`;
-                    window.open(searchUrl, '_blank');
+                    // Usar la URL de búsqueda de Google Maps si es un lugar, o búsqueda normal si es categoría.
+                    const searchTarget = `https://www.google.com/search?q=${encodeURIComponent(entityName + " Nuevo Progreso Tamps")}`;
+                    window.open(searchTarget, '_blank');
                     alertUser(currentLanguage === 'es' ? `Buscando "${entityName}" en Google.` : `Searching for "${entityName}" on Google.`, 'i', 'news');
-                } else if (action === 'PHONE' && this.getAttribute('data-phone')) {
-                    const phone = this.getAttribute('data-phone').replace(/\D/g, ''); // Limpiar el número
-                    window.location.href = `tel:${phone}`;
-                    alertUser(currentLanguage === 'es' ? `Llamando a ${this.getAttribute('data-phone')}.` : `Calling ${this.getAttribute('data-phone')}.`, 'i', 'news');
-                } else if (action === 'REVIEW' && this.getAttribute('data-review-url')) {
-                    window.open(this.getAttribute('data-review-url'), '_blank');
-                    alertUser(currentLanguage === 'es' ? 'Abriendo reseña en nueva ventana.' : 'Opening review in new window.', 'i', 'news');
+                    
+                } else if (action === 'PHONE') {
+                    const phone = this.getAttribute('data-phone');
+                    // Formato tel: funciona en móviles y Skype/Apps en escritorio
+                    window.open(`tel:${phone}`);
+                    alertUser(currentLanguage === 'es' ? `Intentando llamar a ${phone}.` : `Attempting to call ${phone}.`, 'i', 'news');
+                    
+                } else if (action === 'REVIEW') {
+                    if (this.getAttribute('data-review-url')) {
+                        window.open(this.getAttribute('data-review-url'), '_blank');
+                        alertUser(currentLanguage === 'es' ? 'Abriendo reseña en nueva ventana.' : 'Opening review in new window.', 'i', 'news');
+                    }
                 }
             });
-            
             button.classList.add('listener-attached');
         });
     }
+
 
     function renderChat() {
         if (messageContainer) {
@@ -1393,25 +1345,25 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             messages.forEach(msg => msg.remove());
 
             // Renderizar el historial
-            chatHistory.forEach((m) => { 
+            chatHistory.forEach((m) => {
                 const messageElement = createMessageBubble(m);
                 // Insertar el mensaje antes de la burbuja de escritura del modelo
-                messageContainer.insertBefore(messageElement, modelTypingBubble); 
+                messageContainer.insertBefore(messageElement, modelTypingBubble);
             });
-            
+
             scrollToBottom();
             
             // 🛑 NUEVO: Adjuntar listeners a los chips y botones después de renderizar
-            attachSubMenuListeners(); 
+            attachSubMenuListeners();
         }
     }
-    
+
     // --- NUEVA FUNCIÓN PARA RENDERIZAR CHIPS DINÁMICOS (se mantiene, pero la lógica de subcategorías va dentro de la burbuja ahora) ---
     function renderDynamicChips(chips) {
         dynamicChipsList.innerHTML = ''; // Limpiar cualquier chip anterior
         
         // Ocultar cualquier otro chip de acción
-        quickActionFullList.classList.add('hidden'); 
+        quickActionFullList.classList.add('hidden');
         hideChipGroup(categoryChipsGroup, categoryChips);
         categoriesVisible = false;
         hideChipGroup(languageChipsGroup, languageChips);
@@ -1422,72 +1374,59 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         chips.forEach((chipData, index) => {
             const chip = document.createElement('div');
             // Usamos la clase glass-chip que ya tiene buen estilo
-            chip.className = 'dynamic-chip action-chip glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer'; 
+            chip.className = 'dynamic-chip action-chip glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer';
             chip.textContent = chipData.label;
             chip.setAttribute('data-query', chipData.query);
-            
+
             chip.addEventListener('click', function() {
                 vibrateDevice();
                 const query = this.getAttribute('data-query');
-                // Al hacer clic, enviamos la nueva consulta, que el backend transformará en FICHA CATEGORÍA
-                handleSend(query); 
-                // Ocultamos los chips dinámicos después de la acción
-                dynamicChipsGroup.classList.add('hidden'); 
+                // Al hacer clic, enviamos la nueva consulta
+                handleSend(query);
+                // Y ocultamos los chips dinámicos
+                hideChipGroup(dynamicChipsGroup); 
             });
 
-            // Aplicar el efecto de "Ola"
-            chip.style.opacity = '0';
-            chip.style.transform = 'translateY(20px)';
+            dynamicChipsList.appendChild(chip);
+
+            // Efecto ola
             chip.style.transition = 'none';
-
-            void chip.offsetWidth; 
-
+            chip.classList.remove('visible-chip');
+            void chip.offsetWidth;
             setTimeout(() => {
                 chip.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
-                chip.style.opacity = '1';
-                chip.style.transform = 'translateY(0)';
-            }, index * 100); 
-
-            dynamicChipsList.appendChild(chip);
+                chip.classList.add('visible-chip');
+            }, index * 100);
         });
-        
-        // Aseguramos que el chat baje para ver los nuevos chips
-        scrollToBottom();
     }
 
-
-    // --- CÓDIGO DE CONEXIÓN AL BACKEND (SIN CAMBIOS) ---
-
-    async function getGeminiResponse(userPrompt, chatHistoryForAPI) {
-        
-        const historyForAPI = chatHistoryForAPI.map(m => {
-            const textContent = m.isStructured && m.description ? m.description : m.text;
-            
-            return {
-                role: m.role,
-                parts: [{ text: textContent }]
-            };
-        });
-
+    // --- Lógica de Comunicación con el Servidor (Chat.js) ---
+    async function getGeminiResponse(userPrompt, history) {
         try {
-            const response = await fetch(BACKEND_URL, { 
+            const response = await fetch('/chat', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    history: historyForAPI, 
-                    userPrompt: userPrompt, 
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    userPrompt: userPrompt,
+                    history: history,
                     currentLanguage: currentLanguage
-                }) 
+                }),
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`Error HTTP: ${response.status}. Mensaje: ${errorData.message || 'El servicio de chat falló.'}`);
+                // Si el servidor devuelve un error HTTP (ej: 500)
+                throw new Error(`Error en el servidor: ${response.statusText}. Por favor, intenta de nuevo o borra el historial.`);
+            }
+
+            // Si la respuesta es 200 pero el body está vacío
+            if (response.headers.get('content-length') === '0') {
+                 throw new Error(`El servicio de chat falló.'}`);
             }
 
             const data = await response.json();
-            return data.responseText; 
-
+            return data.responseText;
         } catch (error) {
             console.error("Fallo del Proxy o API de Gemini:", error);
             // ALERTA DE ERROR USA 'error' (SIEMPRE SE MUESTRA)
@@ -1496,11 +1435,12 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         }
     }
 
+
     // --- Lógica Principal del Chatbot (handleSend) ---
     async function handleSend(userPromptInput = null) {
         const userPrompt = userPromptInput || inputElement.value.trim();
         if (!userPrompt) return;
-        
+
         hideChipGroup(categoryChipsGroup, categoryChips);
         categoriesVisible = false;
         hideChipGroup(languageChipsGroup, languageChips);
@@ -1513,19 +1453,21 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         lastApiQuery = null;
 
         // Utilizamos showLoadingIndicator para el nuevo efecto de status/input
-        showLoadingIndicator(); 
-        
+        showLoadingIndicator();
+
         chatHistory.push({ role: 'user', text: userPrompt, timestamp: new Date() }); // Añade el mensaje del usuario
+
         if (typeof renderChat === 'function') renderChat();
+        
         inputElement.value = '';
 
-        const MAX_HISTORY_TO_SEND = 10; 
-        const previousHistory = chatHistory.slice(0, -1); 
+        const MAX_HISTORY_TO_SEND = 10;
+        const previousHistory = chatHistory.slice(0, -1);
         const startIndex = Math.max(0, previousHistory.length - MAX_HISTORY_TO_SEND);
         const limitedHistory = previousHistory.slice(startIndex);
-        
+
         let modelResponseText = await getGeminiResponse(userPrompt, limitedHistory);
-        
+
         // **IMPORTANTE**: Ocultar el estado de carga tan pronto como recibimos la respuesta.
         hideLoadingIndicator(); 
 
@@ -1534,125 +1476,118 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             return;
         }
 
-        
         let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date(), isStructured: false };
-        let totalCount = 0; 
-        let apiQuery = null; 
-        let dynamicChipsData = null; // Para guardar los datos de los chips
+        let fichasParaMostrar = [];
+        let conversationText = '';
+        let dynamicChipsData = null;
+        let totalCount = 0;
+        let apiQuery = null;
 
         try {
-            const jsonStart = modelResponseText.indexOf('{');
-            const jsonEnd = modelResponseText.lastIndexOf('}');
-            
-            if (jsonStart !== -1 && jsonEnd !== -1) {
-                const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
-                const parsedJson = JSON.parse(jsonString);
+            const parsedJson = JSON.parse(modelResponseText);
 
-                // *** INICIO DE LA LÓGICA DE PROCESAMIENTO DE RESPUESTA (ACTUALIZADA) ***
+            if (parsedJson.isMultiStructured === true && Array.isArray(parsedJson.response)) {
+                // 1. Caso de Respuesta Multi-Estructurada (Array de Fichas)
+                fichasParaMostrar = parsedJson.response;
+                conversationText = parsedJson.conversationText || '';
                 
-                let fichasParaMostrar = [];
-                // Separar el texto conversacional del JSON
-                let conversationText = modelResponseText.replace(jsonString, '').trim();
-
-                // 1. Manejo de Múltiples Fichas (NUEVO)
-                if (parsedJson.isMultiStructured === true && Array.isArray(parsedJson.response)) {
-                    fichasParaMostrar = parsedJson.response;
-                    if (parsedJson.conversationText) conversationText = parsedJson.conversationText;
-                } 
-                // 2. Manejo de Respuesta Estructurada Única
-                else if (parsedJson.isStructured === true) {
-                    fichasParaMostrar = [parsedJson];
-                } 
-                // 3. Manejo de Recomendación Local (Texto Plano Forzado con metadatos)
-                else if (parsedJson.isLocalRecommendation === true) {
-                    totalCount = parsedJson.totalCount || 0;
-                    apiQuery = parsedJson.apiQueryForChip || null;
-                    
-                    // Solo mantenemos el texto conversacional
-                    finalMessage.text = conversationText;
-                    if (finalMessage.text.length < 5) finalMessage.text = modelResponseText;
-                }
+            } else if (parsedJson.isStructured === true) {
+                // 2. Caso de Respuesta Estructurada Única (Ficha Individual)
+                fichasParaMostrar = [parsedJson];
                 
-                // 4. Manejo de Chips Dinámicos (solo se usa para el caso de chips en la barra inferior)
-                else if (parsedJson.isDynamicChips === true) {
-                    dynamicChipsData = parsedJson.chips;
-                    finalMessage.text = conversationText;
-                    if (finalMessage.text.length < 5) finalMessage.text = modelResponseText;
-                }
+            } else if (parsedJson.isStructured === false && parsedJson.isDynamicChips === true && Array.isArray(parsedJson.chips)) {
+                // 3. Caso de Chips Dinámicos (No usado en este proyecto, pero listo)
+                dynamicChipsData = parsedJson.chips;
+                conversationText = parsedJson.conversationText || '';
                 
-                // 🛑 LÓGICA CLAVE: Control de Subcategorías. 
-                // Solo si el prompt ES UNA CATEGORÍA PRINCIPAL, inyectamos el menúKey.
-                // Si el prompt NO ES UNA CATEGORÍA PRINCIPAL (i.e. es "Mejores dentistas..."), 
-                // el menúKey NO se añade, lo que dispara los botones de acción en createMessageBubble.
+            } else if (parsedJson.isStructured === false && parsedJson.isSearchSummary === true) {
+                // 4. Caso de Resumen de Búsqueda de Resultados Múltiples
+                totalCount = parsedJson.totalCount || 0;
+                apiQuery = parsedJson.apiQuery || null;
+                conversationText = parsedJson.description || modelResponseText; // Si no hay descripción, usa el texto conversacional
                 
-                let shouldAddMenuKey = SUBCATEGORIES_MAP[userPrompt];
-
-                // Procesar Fichas (si hay una o varias)
-                if (fichasParaMostrar.length > 0) {
-                    // Si hay fichas, el primer mensaje es el texto conversacional (si existe)
-                    if (conversationText.length > 0) {
-                        chatHistory.push({ role: 'model', text: conversationText, timestamp: new Date(), isStructured: false });
-                    }
-                    
-                    // Insertar cada ficha como un mensaje separado
-                    fichasParaMostrar.forEach(ficha => {
-                        
-                        // Determinar si esta ficha es una categoría con submenú
-                        let menuKey = null;
-                        if (ficha.type === 'category' && shouldAddMenuKey) {
-                            menuKey = userPrompt; // Usamos el prompt del usuario como clave
-                        }
-                        
-                        chatHistory.push({ 
-                            role: 'model', 
-                            isStructured: true,
-                            type: ficha.type, 
-                            text: ficha.description || ficha.text, 
-                            placeName: ficha.placeName, 
-                            placePhone: ficha.placePhone || null, 
-                            mapUrl: ficha.mapUrl || null,
-                            reviewUrl: ficha.reviewUrl || null,
-                            categoryName: ficha.categoryName || null,
-                            menuKey: menuKey, // <--- PROPIEDAD CLAVE AÑADIDA (SÓLO si es categoría principal)
-                            timestamp: new Date()
-                        });
-                        
-                        // Disparar la alerta (solo para la primera ficha para evitar spam)
-                        if (fichasParaMostrar.indexOf(ficha) === 0) {
-                           const isPlace = ficha.type === 'place';
-                           const entityName = isPlace 
-                                ? (ficha.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
-                                : (ficha.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
-
-                           const alertText = isPlace 
-                               ? UI_STRINGS[currentLanguage].alertStructured(entityName)
-                               : UI_STRINGS[currentLanguage].alertCategory(entityName);
-                           
-                           if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
-                        }
-                    });
-
-                    // Como ya pusheamos todos los mensajes, salimos del resto de la función.
-                    saveHistory(); 
-                    if (typeof renderChat === 'function') renderChat();
-                    return; // 🛑 FINALIZA la ejecución de handleSend
-                }
+                finalMessage.text = conversationText;
+                if (finalMessage.text.length < 5) finalMessage.text = modelResponseText;
                 
-                // Si no hay fichas, el finalMessage ya tiene el texto plano.
-
+            } else {
+                // Si el JSON se parsea pero no tiene la estructura esperada, o es texto plano
+                finalMessage.text = modelResponseText; 
             }
-        } catch (e) {
-            console.error("Error al parsear JSON estructurado, de chip o array:", e);
-            // Si hay error de parseo, cae a texto plano (modelResponseText)
-            finalMessage.text = modelResponseText;
-        }
 
+            // 🛑 LÓGICA CLAVE: Control de Subcategorías.
+            // Solo si el prompt ES UNA CATEGORÍA PRINCIPAL, inyectamos el menúKey.
+            // Si el prompt NO ES UNA CATEGORÍA PRINCIPAL (i.e. es "Mejores dentistas..."), 
+            // el menúKey NO se añade, lo que dispara los botones de acción en createMessageBubble.
+            let shouldAddMenuKey = SUBCATEGORIES_MAP[userPrompt];
+
+            // Procesar Fichas (si hay una o varias)
+            if (fichasParaMostrar.length > 0) {
+                
+                // Si hay fichas, el primer mensaje es el texto conversacional (si existe)
+                if (conversationText.length > 0) {
+                    chatHistory.push({ role: 'model', text: conversationText, timestamp: new Date(), isStructured: false });
+                }
+
+                // Insertar cada ficha como un mensaje separado
+                fichasParaMostrar.forEach(ficha => {
+                    
+                    // Determinar si esta ficha es una categoría con submenú
+                    let menuKey = null;
+
+                    // 🛑 CORRECCIÓN CRÍTICA 1: Solo aplicamos menuKey si es type: 'category' Y fue una búsqueda de menú principal.
+                    if (ficha.type === 'category' && shouldAddMenuKey) {
+                        menuKey = userPrompt; // Usamos el prompt del usuario como clave
+                    }
+
+                    // 🛑 CORRECCIÓN CRÍTICA 2: Si es un lugar específico, nos aseguramos de que menuKey sea null para que se muestren los botones.
+                    if (ficha.type === 'place') {
+                        menuKey = null; 
+                    }
+
+                    chatHistory.push({
+                        role: 'model',
+                        isStructured: true,
+                        type: ficha.type,
+                        text: ficha.description || ficha.text,
+                        placeName: ficha.placeName,
+                        placeToSearch: ficha.placeToSearch,
+                        placePhone: ficha.placePhone || null,
+                        mapUrl: ficha.mapUrl || null,
+                        reviewUrl: ficha.reviewUrl || null,
+                        categoryName: ficha.categoryName,
+                        isHealthPlace: ficha.isHealthPlace === true,
+                        menuKey: menuKey, // Usa el valor corregido
+                        timestamp: new Date()
+                    });
+                });
+                
+                // Finalizamos la función aquí, ya se insertaron todos los mensajes y fichas
+                saveHistory();
+                renderChat();
+                
+                // Lógica de Alerta de Ficha Estructurada (solo para la última ficha)
+                const lastFicha = fichasParaMostrar[fichasParaMostrar.length - 1];
+                const isPlace = lastFicha.type === 'place';
+                const entityName = isPlace ? (lastFicha.placeName || lastFicha.placeToSearch || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) : (lastFicha.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
+                const alertText = isPlace ? UI_STRINGS[currentLanguage].alertStructured(entityName) : UI_STRINGS[currentLanguage].alertCategory(entityName);
+                if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
+
+                return; // 🛑 Salir de handleSend para evitar que se ejecute la parte final
+
+            } else {
+                // Si se parseó pero no había fichas, se usará el texto simple (finalMessage)
+            }
+
+        } catch (e) {
+            // Error de parseo, cae a texto plano (modelResponseText)
+            finalMessage.text = modelResponseText;
+        } 
+        
         // *** FIN DE LA LÓGICA DE PROCESAMIENTO DE RESPUESTA ***
 
-        chatHistory.push(finalMessage); // <- Esta es la línea que antes estaba duplicada y ahora está corregida.
-        
+        chatHistory.push(finalMessage); // <- Añade el mensaje (texto simple o resumen de búsqueda)
+
         // --- LÓGICA DE ACTIVACIÓN DE CHIPS Y ALERTA ---
-        
         // Limpiamos los estados de las variables globales antes de reasignar
         lastTotalCount = 0;
         lastApiQuery = null;
@@ -1666,58 +1601,55 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             // Caso de FICHA ESTRUCTURADA (SOLO SI LLEGÓ UNA AQUÍ, si no, ya salió antes)
             // La lógica de los chips de submenú ocurre en createMessageBubble y no aquí.
             const isPlace = finalMessage.type === 'place';
-            const entityName = isPlace 
-                ? (finalMessage.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
-                : (finalMessage.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
-
-            const alertText = isPlace 
-                ? UI_STRINGS[currentLanguage].alertStructured(entityName)
-                : UI_STRINGS[currentLanguage].alertCategory(entityName);
-
+            const entityName = isPlace ? (finalMessage.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) : (finalMessage.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
+            const alertText = isPlace ? UI_STRINGS[currentLanguage].alertStructured(entityName) : UI_STRINGS[currentLanguage].alertCategory(entityName);
             if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
-            
             quickActionFullList.classList.add('hidden');
 
-        } else if (totalCount > MAX_CHAT_RESULTS && apiQuery) {
+        } else if (totalCount > 0 && apiQuery) {
             // Caso de Recomendación Local Forzada (Texto Plano) con más de 4 resultados
-            
             // Guardar en las variables globales para el listener del botón
             lastTotalCount = totalCount;
             lastApiQuery = apiQuery;
             
             // Actualizar el texto del botón con el conteo
-            btnViewAllPlaces.innerHTML = currentLanguage === 'es' 
-                ? `➡️ Ver todos los ${totalCount} lugares` 
-                : `➡️ View all ${totalCount} places`;
-
-            // Mostrar el botón de acción rápida
+            btnViewAllPlaces.innerHTML = currentLanguage === 'es' ? 
+                `➡️ Ver los ${totalCount} lugares` : 
+                `➡️ View all ${totalCount} places`;
+            
             quickActionFullList.classList.remove('hidden');
-
         } else {
-            // Otros casos de texto plano (ej. preguntas generales, menos de 4 resultados, o error)
+            // Si es un mensaje de texto plano normal, solo aseguramos que el botón Ver Todos esté oculto
             quickActionFullList.classList.add('hidden');
         }
-        
-        saveHistory(); 
-        
-        if (typeof renderChat === 'function') renderChat();
-    }
-    
-    // --- Event Listeners e Inicio (ACTUALIZADO) ---
-    if (sendButton) sendButton.addEventListener('click', () => handleSend());
-    if (inputElement) inputElement.addEventListener('keypress', function(e) { if (e.key === 'Enter') { handleSend(); } });
-    
-    // NUEVO LISTENER: Para el efecto de escritura del usuario y habilitar/deshabilitar el botón
-    if (inputElement) {
-        inputElement.addEventListener('input', () => {
-            // Habilitar/Deshabilitar el botón de envío
-            sendButton.disabled = inputElement.value.trim() === '';
-            // Manejar la burbuja de escritura del usuario
-            handleTypingIndicator();
-        });
+
+        saveHistory();
+        renderChat();
     }
 
-    // Listeners para botones del menú principal (Categorías, Lenguaje, etc.)
+
+    // --- Event Listeners y Setup Inicial ---
+
+    // 1. Manejo del Input
+    inputElement.addEventListener('input', checkInput);
+    inputElement.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') {
+            handleSend();
+        }
+        handleTypingIndicator(); // Maneja la burbuja de "escribiendo..."
+    });
+
+    // Maneja la burbuja de "escribiendo..."
+    inputElement.addEventListener('focus', handleTypingIndicator);
+    inputElement.addEventListener('blur', hideUserTypingBubble); // Oculta al perder foco
+
+    // 2. Botón de Enviar
+    sendButton.addEventListener('click', () => {
+        vibrateDevice();
+        handleSend();
+    });
+
+    // 3. Botones de Menú Principal (Categoría, Idioma, Info, Cómo llegar)
     menuActionChips.forEach(chip => {
         chip.addEventListener('click', function() {
             handleMenuAction(this);
@@ -1727,7 +1659,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     // Conexión del nuevo botón flotante superior
     if (btnClearTop) {
         btnClearTop.addEventListener('click', function() {
-            handleMenuAction(this); 
+            handleMenuAction(this);
         });
     }
 
@@ -1736,7 +1668,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         chip.addEventListener('click', function() {
             const lang = currentLanguage;
             const query = this.getAttribute(`data-query-${lang}`);
-            handleSend(query); 
+            handleSend(query);
             hideChipGroup(categoryChipsGroup, categoryChips);
             categoriesVisible = false;
         });
@@ -1754,61 +1686,48 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     if (btnViewAllPlaces) {
         btnViewAllPlaces.addEventListener('click', () => {
             vibrateDevice();
-            
             // Ocultar después de hacer clic, independientemente del éxito.
-            quickActionFullList.classList.add('hidden'); 
-
-            if (lastApiQuery) {
-                
-                // 🛑 LÓGICA DUAL: El botón usa la consulta API completa para buscar en Google (Local + Genérica).
-                
-                // 1. Codificar el query completo (ej: 'Taquerías y Tacos en Nuevo Progreso')
-                const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(lastApiQuery + " Nuevo Progreso Tamps")}`;
-
-                // 2. Abrir la búsqueda en una nueva pestaña/ventana (complementando la lista local)
-                window.open(searchUrl, '_blank'); 
-                
-                alertUser(currentLanguage === 'es' 
-                    ? `Abriendo la lista completa en Google: "${lastApiQuery}"` 
-                    : `Opening the full list on Google: "${lastApiQuery}"`, 
-                'i', 'news');
-            } else {
-                alertUser(currentLanguage === 'es' 
-                    ? 'No se encontró la consulta de lugares. Por favor, intenta de nuevo.' 
-                    : 'Place query not found. Please try again.', 
-                'error');
-            }
+            quickActionFullList.classList.add('hidden');
             
-            // Limpiar el estado de las variables globales
-            lastTotalCount = 0;
-            lastApiQuery = null;
+            if (lastApiQuery) {
+                // Simula una consulta del usuario, forzando la búsqueda
+                const queryToSend = currentLanguage === 'es' ? 
+                    `Búsqueda avanzada de ${lastApiQuery}` : 
+                    `Advanced search for ${lastApiQuery}`;
+                
+                // Nota: Esto envía la query original (ej. 'Taquerias en Progreso') al modelo, que debe interpretar 
+                // que es una búsqueda final y devolver un listado.
+                handleSend(lastApiQuery); 
+            } else {
+                alertUser(currentLanguage === 'es' ? 'No se encontró una búsqueda pendiente.' : 'No pending search found.', 'error');
+            }
         });
     }
+    
+    // --- Lógica del Modal de Notificaciones ---
 
-    // NUEVOS LISTENERS PARA EL PANEL DE NOTIFICACIONES
     if (btnNotifications) {
         btnNotifications.addEventListener('click', () => {
             vibrateDevice();
-            loadNotificationPreferences(); // Cargar preferencias al abrir el modal
             notificationModal.classList.add('show');
+            // Asegurar que los toggles reflejen el estado actual de las preferencias
+            if (toggleNews) toggleNews.checked = notificationPreferences.news;
+            if (toggleReminders) toggleReminders.checked = notificationPreferences.reminders;
         });
     }
 
-    // Cerrar el modal al hacer clic fuera del panel (overlay)
     if (notificationModal) {
-        notificationModal.addEventListener('click', (e) => {
-            if (e.target === notificationModal) { 
-                notificationModal.classList.remove('show');
-            }
+        notificationModal.addEventListener('click', () => {
+            notificationModal.classList.remove('show');
         });
     }
 
-    // Botones dentro del modal
     if (btnDiscardChanges) {
         btnDiscardChanges.addEventListener('click', () => {
             vibrateDevice();
             notificationModal.classList.remove('show');
-            // No guarda, simplemente cierra
+            // Recargar el estado guardado para descartar cambios
+            loadNotificationPreferences(); 
         });
     }
 
