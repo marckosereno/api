@@ -448,6 +448,42 @@ font-family:Spline Sans Light;
             box-shadow: none !important; 
         }
 
+        /* 🛑 NUEVO ESTILO: Glass Chip Azulado para Botones de Acción (Mapa, Google, etc.) */
+        .blue-glass-chip {
+            /* Tono Azul Claro para el fondo */
+            background: linear-gradient(90deg, rgb(215 236 255 / 50%) 0%, rgb(230 245 255 / 80%) 90%) !important;
+            
+            backdrop-filter: blur(8px); 
+            -webkit-backdrop-filter: blur(8px);
+            
+            /* Borde más definido y color de texto */
+            border: 1px solid rgba(130, 180, 255, 0.8) !important; 
+            color: #1e40af !important; /* Texto Azul Oscuro */
+            font-weight: 600; /* Un poco más de peso para que se destaque */
+            
+            /* Asegurar que se vean como chips de submenú */
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            border-radius: 9999px; 
+            padding: 8px 12px;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .blue-glass-chip:hover {
+            background: linear-gradient(90deg, rgb(190 220 255 / 70%) 0%, rgb(210 235 255 / 90%) 100%) !important;
+            box-shadow: 
+                0 2px 4px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 1),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        .blue-glass-chip:active {
+            background: rgb(180 210 255 / 90%) !important;
+            box-shadow: none !important; 
+        }
+
+
         /* Anular el fondo gris de Tailwind en los chips de menú principales */
         #menu-actions .menu-action-chip {
             background-color: transparent !important;
@@ -752,6 +788,10 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             chipShopping: "🛍️ Compras",
             chipEntertainment: "🎺 Entretenimiento",
             chipDental: "🦷 Top 10 Dental",
+            btnMap: "Ver en Mapa 🧭",
+            btnSearch: "Buscar en Google 🕶",
+            btnPhone: "Llamar Ahora 📞",
+            btnReview: "Reseñas ⭐",
         },
         en: {
             header: "PROGRESO TOUR GUIDE",
@@ -768,6 +808,10 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             chipShopping: "🛍️ Shopping",
             chipEntertainment: "🎺 Entertainment",
             chipDental: "🦷 Top 10 Dental",
+            btnMap: "View on Map 🧭",
+            btnSearch: "Search on Google 🕶",
+            btnPhone: "Call Now 📞",
+            btnReview: "Reviews ⭐",
         }
     };
 
@@ -1183,10 +1227,12 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             
             let content = '';
             let actionsBar = '';
+            
+            const strings = UI_STRINGS[currentLanguage];
 
             if (m.isStructured) { 
                 
-                // 🛑 NUEVA LÓGICA: Comprobar si hay un sub-menú para esta ficha (solo si es estructurada)
+                // 🛑 NUEVA LÓGICA: Comprobar si hay un sub-menú para esta ficha
                 const hasSubMenu = m.menuKey && SUBCATEGORIES_MAP[m.menuKey];
                 
                 // 1. Contenido de la burbuja (SIN CAMBIOS)
@@ -1196,7 +1242,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                     // --- REEMPLAZO POR CHIPS DE SUBCATEGORÍA (GLASS-CHIP) ---
                     const subChips = SUBCATEGORIES_MAP[m.menuKey];
                     let subChipsHTML = subChips.map(chip => {
-                        // Usamos las mismas clases CSS de glass-chip para el estilo deseado
+                        // Usamos la clase 'glass-chip' para el menú de subcategoría
                         return `<div class="action-chip glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-query="${chip.query}">${chip.label}</div>`;
                     }).join('');
 
@@ -1208,14 +1254,63 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                         </div>
                     `;
                 } else {
-                    // 🛑 REEMPLAZO FORZADO: Si NO hay sub-menú de categoría, no se renderizan los botones de Mapa/Google,
-                    // cumpliendo la solicitud de ELIMINARLOS en favor de los chips de subcategoría.
-                    actionsBar = '';
+                    // 🛑 REVERTIR LÓGICA: Ahora mostramos los botones de acción para lugares/resultados finales
+                    // que NO son un menú principal (i.e. no tienen menuKey)
                     
-                    /*
-                    // Código original de botones de acción (Ver en Mapa, Llamar, Google) - ELIMINADO POR SOLICITUD DEL USUARIO
-                    // ... isPlace check and action buttons HTML generation was here ...
-                    */
+                    const isPlace = m.type === 'place';
+                    const entityName = isPlace 
+                        ? (m.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
+                        : (m.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
+                    
+                    let actionsHTML = '';
+                    
+                    // Botón principal: Ver en Mapa (si tiene URL de mapa)
+                    if (m.mapUrl) {
+                        actionsHTML += `
+                            <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="MAP" data-map-url="${m.mapUrl}">
+                                ${strings.btnMap}
+                            </div>
+                        `;
+                    }
+                    
+                    // Botón para Lugares Específicos (Llamar, Reseñas)
+                    if (isPlace) {
+                        if (m.placePhone) {
+                            actionsHTML += `
+                                <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="PHONE" data-phone="${m.placePhone}">
+                                    ${strings.btnPhone}
+                                </div>
+                            `;
+                        }
+                        if (m.reviewUrl) {
+                            actionsHTML += `
+                                <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="REVIEW" data-review-url="${m.reviewUrl}">
+                                    ${strings.btnReview}
+                                </div>
+                            `;
+                        }
+                    }
+                    
+                    // Botón secundario: Buscar en Google (usa el nombre de la entidad)
+                    if (entityName) {
+                        actionsHTML += `
+                            <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="SEARCH" data-entity-name="${entityName}">
+                                ${strings.btnSearch}
+                            </div>
+                        `;
+                    }
+
+                    if (actionsHTML.length > 0) {
+                         actionsBar = `
+                            <div class="action-bar-container">
+                                <div class="inline-flex space-x-3 p-1">
+                                    ${actionsHTML}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        actionsBar = '';
+                    }
                 }
                 
                 w.innerHTML = `
@@ -1242,21 +1337,51 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     
     // 🛑 NUEVA FUNCIÓN: Adjuntar listeners a los sub-chips dinámicamente creados
     function attachSubMenuListeners() {
-        // Selecciona solo los chips de submenú que están dentro de un contenedor de barra de acción
+        // Selecciona chips de SUBMENÚ (glass-chip)
         const subMenuChips = messageContainer.querySelectorAll('.action-bar-container .glass-chip');
         
         subMenuChips.forEach(chip => {
-            // Previene adjuntar listeners múltiples veces
             if (chip.classList.contains('listener-attached')) return; 
             
             chip.addEventListener('click', function() {
                 vibrateDevice();
                 const query = this.getAttribute('data-query');
                 handleSend(query); 
-                // El re-renderizado en handleSend se encarga de ocultar estos chips
             });
             
             chip.classList.add('listener-attached');
+        });
+        
+        // 🛑 NUEVA LÓGICA: Adjuntar listeners a los botones de ACCIÓN (blue-glass-chip)
+        const actionButtons = messageContainer.querySelectorAll('.action-bar-container .blue-glass-chip');
+        
+        actionButtons.forEach(button => {
+            if (button.classList.contains('listener-attached')) return; 
+            
+            button.addEventListener('click', function() {
+                vibrateDevice();
+                const action = this.getAttribute('data-action');
+                
+                if (action === 'MAP' && this.getAttribute('data-map-url')) {
+                    window.open(this.getAttribute('data-map-url'), '_blank');
+                    alertUser(currentLanguage === 'es' ? 'Abriendo mapa en nueva ventana.' : 'Opening map in new window.', 'i', 'news');
+                } else if (action === 'SEARCH' && this.getAttribute('data-entity-name')) {
+                    const entityName = this.getAttribute('data-entity-name');
+                    // Buscamos con el nombre de la entidad + ubicación fija
+                    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(entityName + " Nuevo Progreso Tamps")}`;
+                    window.open(searchUrl, '_blank');
+                    alertUser(currentLanguage === 'es' ? `Buscando "${entityName}" en Google.` : `Searching for "${entityName}" on Google.`, 'i', 'news');
+                } else if (action === 'PHONE' && this.getAttribute('data-phone')) {
+                    const phone = this.getAttribute('data-phone').replace(/\D/g, ''); // Limpiar el número
+                    window.location.href = `tel:${phone}`;
+                    alertUser(currentLanguage === 'es' ? `Llamando a ${this.getAttribute('data-phone')}.` : `Calling ${this.getAttribute('data-phone')}.`, 'i', 'news');
+                } else if (action === 'REVIEW' && this.getAttribute('data-review-url')) {
+                    window.open(this.getAttribute('data-review-url'), '_blank');
+                    alertUser(currentLanguage === 'es' ? 'Abriendo reseña en nueva ventana.' : 'Opening review in new window.', 'i', 'news');
+                }
+            });
+            
+            button.classList.add('listener-attached');
         });
     }
 
@@ -1276,7 +1401,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             
             scrollToBottom();
             
-            // 🛑 NUEVO: Adjuntar listeners a los sub-chips después de renderizar
+            // 🛑 NUEVO: Adjuntar listeners a los chips y botones después de renderizar
             attachSubMenuListeners(); 
         }
     }
@@ -1455,28 +1580,13 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                     if (finalMessage.text.length < 5) finalMessage.text = modelResponseText;
                 }
                 
-                // ** 🛑 NUEVA LÓGICA: Detección de Categoría General para Subcategorías Locales (FRONTEND) **
-                // Si el query del usuario coincide con una clave en SUBCATEGORIES_MAP, forzamos los chips dinámicos
-                else if (SUBCATEGORIES_MAP[userPrompt]) {
-                    // En este caso, ya sea que venga del backend o no, si el prompt es una categoría
-                    // que mapea a subcategorías, no disparamos renderDynamicChips aquí, sino que 
-                    // inyectamos un structured message para que el menú aparezca DENTRO de la burbuja.
-                    
-                    // Si el backend no envió una ficha estructurada pero sí envió texto, 
-                    // forzamos la creación de una ficha estructurada para que la burbuja la procese.
-                    if (fichasParaMostrar.length === 0) {
-                        fichasParaMostrar.push({
-                            isStructured: true,
-                            type: 'category',
-                            categoryName: userPrompt, // Usamos el prompt como nombre de la categoría temporal
-                            description: conversationText || modelResponseText // Usamos el texto como descripción
-                        });
-                        conversationText = ''; // Limpiamos el texto conversacional para que no se duplique
-                    }
-                    // Si ya había fichas, simplemente el menúKey se añadirá abajo.
-                }
-                // ** 🛑 FIN NUEVA LÓGICA **
+                // 🛑 LÓGICA CLAVE: Control de Subcategorías. 
+                // Solo si el prompt ES UNA CATEGORÍA PRINCIPAL, inyectamos el menúKey.
+                // Si el prompt NO ES UNA CATEGORÍA PRINCIPAL (i.e. es "Mejores dentistas..."), 
+                // el menúKey NO se añade, lo que dispara los botones de acción en createMessageBubble.
                 
+                let shouldAddMenuKey = SUBCATEGORIES_MAP[userPrompt];
+
                 // Procesar Fichas (si hay una o varias)
                 if (fichasParaMostrar.length > 0) {
                     // Si hay fichas, el primer mensaje es el texto conversacional (si existe)
@@ -1489,7 +1599,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                         
                         // Determinar si esta ficha es una categoría con submenú
                         let menuKey = null;
-                        if (ficha.type === 'category' && userPrompt && SUBCATEGORIES_MAP[userPrompt]) {
+                        if (ficha.type === 'category' && shouldAddMenuKey) {
                             menuKey = userPrompt; // Usamos el prompt del usuario como clave
                         }
                         
@@ -1503,7 +1613,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                             mapUrl: ficha.mapUrl || null,
                             reviewUrl: ficha.reviewUrl || null,
                             categoryName: ficha.categoryName || null,
-                            menuKey: menuKey, // <--- PROPIEDAD CLAVE AÑADIDA
+                            menuKey: menuKey, // <--- PROPIEDAD CLAVE AÑADIDA (SÓLO si es categoría principal)
                             timestamp: new Date()
                         });
                         
