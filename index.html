@@ -426,6 +426,13 @@ font-family:Spline Sans Light;
             color: #1f2937 !important; 
             
             transition: all 0.2s ease-in-out;
+            
+            /* Asegurar que se vean como chips de submenú */
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            border-radius: 9999px; /* Usar full rounded para los chips pequeños */
+            padding: 8px 12px;
         }
 
         .glass-chip:hover {
@@ -1179,73 +1186,37 @@ padding-bottom:40px; /* Devolvemos la altura automática */
 
             if (m.isStructured) { 
                 
-                const isPlace = m.type === 'place';
-                const isCategory = m.type === 'category';
-
-                const entityName = isPlace 
-                    ? (m.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
-                    : (m.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
+                // 🛑 NUEVA LÓGICA: Comprobar si hay un sub-menú para esta ficha (solo si es estructurada)
+                const hasSubMenu = m.menuKey && SUBCATEGORIES_MAP[m.menuKey];
                 
-                let directionsUrl = '#';
-                let searchUrl = '#';
-                let phoneUrl = null;
-                let reviewUrl = null;
-                
-                if (isPlace) {
-                    const query = encodeURIComponent(entityName + " Nuevo Progreso Tamps");
-                    // Aquí se espera que el backend haya insertado la URL correcta o la URL de búsqueda básica.
-                    directionsUrl = m.mapUrl || `https://www.google.com/maps/search/?api=1&query=${query}`;
-                    
-                    searchUrl = `https://www.google.com/search?q=${query}`;
-                    phoneUrl = m.placePhone ? `tel:${m.placePhone}` : `javascript:alert('${currentLanguage === 'es' ? 'Número no disponible.' : 'Number unavailable.'}')`;
-                    reviewUrl = m.reviewUrl || directionsUrl; 
-                    
-                } else if (isCategory) {
-                    const query = encodeURIComponent(entityName + " Nuevo Progreso Tamps");
-                    directionsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
-                    searchUrl = `https://www.google.com/search?q=${query}`;
-                }
-                
-                // 🛑 HTML MODIFICADO: Usamos el wrapper para el estilo de color
+                // 1. Contenido de la burbuja (SIN CAMBIOS)
                 content = `<div class="model-bubble-wrapper p-3 shadow-md">${m.text || m.description}</div>`;
                 
-                let actionsHTML = `
-                    <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:opacity-90 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Ver en Mapa 🧭' : 'View on Map 🧭'}</a>
-                `;
+                if (hasSubMenu) {
+                    // --- REEMPLAZO POR CHIPS DE SUBCATEGORÍA (GLASS-CHIP) ---
+                    const subChips = SUBCATEGORIES_MAP[m.menuKey];
+                    let subChipsHTML = subChips.map(chip => {
+                        // Usamos las mismas clases CSS de glass-chip para el estilo deseado
+                        return `<div class="action-chip glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-query="${chip.query}">${chip.label}</div>`;
+                    }).join('');
 
-                if (isPlace) {
-                    const phoneAvailable = !!m.placePhone;
-                    const reviewsAvailable = !!m.reviewUrl;
-                    
-                    // REGLA CRÍTICA DE SALUD EN EL FRONTEND: Si el backend bloqueó placePhone, no se muestra.
-                    if (phoneAvailable) {
-                        actionsHTML += `
-                            <a href="${phoneUrl}" class="action-btn bg-blue-500 hover:opacity-90 text-white font-semibold py-2 px-4 rounded-lg transition flex-shrink-0 text-sm">
-                                ${currentLanguage === 'es' ? 'Llamar 📞' : 'Call 📞'}
-                            </a>
-                        `;
-                    }
-                    
-                    if (reviewsAvailable) {
-                        actionsHTML += `
-                            <a href="${reviewUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-yellow-400 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:opacity-90 transition flex-shrink-0 text-sm">
-                                ${currentLanguage === 'es' ? 'Reseñas ⭐' : 'Reviews ⭐'}
-                            </a>
-                        `;
-                    }
-                }
-
-                actionsHTML += `
-                    <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="action-btn bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg hover:opacity-90 transition flex-shrink-0 text-sm">${currentLanguage === 'es' ? 'Buscar en Google 🕶' : 'Search on Google 🕶'}</a>
-                `;
-
-                actionsBar = `
-                    <div class="action-bar-container">
-                        <div class="inline-flex space-x-3 p-1">
-                            ${actionsHTML}
+                    actionsBar = `
+                        <div class="action-bar-container">
+                            <div class="inline-flex space-x-3 p-1">
+                                ${subChipsHTML}
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                } else {
+                    // 🛑 REEMPLAZO FORZADO: Si NO hay sub-menú de categoría, no se renderizan los botones de Mapa/Google,
+                    // cumpliendo la solicitud de ELIMINARLOS en favor de los chips de subcategoría.
+                    actionsBar = '';
+                    
+                    /*
+                    // Código original de botones de acción (Ver en Mapa, Llamar, Google) - ELIMINADO POR SOLICITUD DEL USUARIO
+                    // ... isPlace check and action buttons HTML generation was here ...
+                    */
+                }
                 
                 w.innerHTML = `
                     <div class="flex flex-col items-start">
@@ -1268,6 +1239,26 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         }
         return w;
     }
+    
+    // 🛑 NUEVA FUNCIÓN: Adjuntar listeners a los sub-chips dinámicamente creados
+    function attachSubMenuListeners() {
+        // Selecciona solo los chips de submenú que están dentro de un contenedor de barra de acción
+        const subMenuChips = messageContainer.querySelectorAll('.action-bar-container .glass-chip');
+        
+        subMenuChips.forEach(chip => {
+            // Previene adjuntar listeners múltiples veces
+            if (chip.classList.contains('listener-attached')) return; 
+            
+            chip.addEventListener('click', function() {
+                vibrateDevice();
+                const query = this.getAttribute('data-query');
+                handleSend(query); 
+                // El re-renderizado en handleSend se encarga de ocultar estos chips
+            });
+            
+            chip.classList.add('listener-attached');
+        });
+    }
 
     function renderChat() {
         if (messageContainer) {
@@ -1283,13 +1274,14 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                 messageContainer.insertBefore(messageElement, modelTypingBubble); 
             });
             
-            // 🛑 ELIMINACIÓN CRÍTICA: NO mover las burbujas al final del contenedor.
-            
             scrollToBottom();
+            
+            // 🛑 NUEVO: Adjuntar listeners a los sub-chips después de renderizar
+            attachSubMenuListeners(); 
         }
     }
     
-    // --- NUEVA FUNCIÓN PARA RENDERIZAR CHIPS DINÁMICOS ---
+    // --- NUEVA FUNCIÓN PARA RENDERIZAR CHIPS DINÁMICOS (se mantiene, pero la lógica de subcategorías va dentro de la burbuja ahora) ---
     function renderDynamicChips(chips) {
         dynamicChipsList.innerHTML = ''; // Limpiar cualquier chip anterior
         
@@ -1456,7 +1448,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                     if (finalMessage.text.length < 5) finalMessage.text = modelResponseText;
                 }
                 
-                // 4. Manejo de Chips Dinámicos
+                // 4. Manejo de Chips Dinámicos (solo se usa para el caso de chips en la barra inferior)
                 else if (parsedJson.isDynamicChips === true) {
                     dynamicChipsData = parsedJson.chips;
                     finalMessage.text = conversationText;
@@ -1466,13 +1458,22 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                 // ** 🛑 NUEVA LÓGICA: Detección de Categoría General para Subcategorías Locales (FRONTEND) **
                 // Si el query del usuario coincide con una clave en SUBCATEGORIES_MAP, forzamos los chips dinámicos
                 else if (SUBCATEGORIES_MAP[userPrompt]) {
-                    dynamicChipsData = SUBCATEGORIES_MAP[userPrompt].map(chip => ({
-                        label: chip.label,
-                        query: chip.query
-                    }));
+                    // En este caso, ya sea que venga del backend o no, si el prompt es una categoría
+                    // que mapea a subcategorías, no disparamos renderDynamicChips aquí, sino que 
+                    // inyectamos un structured message para que el menú aparezca DENTRO de la burbuja.
                     
-                    // Si hay texto conversacional del bot, úsalo. Si no, usa el original.
-                    finalMessage.text = conversationText || modelResponseText;
+                    // Si el backend no envió una ficha estructurada pero sí envió texto, 
+                    // forzamos la creación de una ficha estructurada para que la burbuja la procese.
+                    if (fichasParaMostrar.length === 0) {
+                        fichasParaMostrar.push({
+                            isStructured: true,
+                            type: 'category',
+                            categoryName: userPrompt, // Usamos el prompt como nombre de la categoría temporal
+                            description: conversationText || modelResponseText // Usamos el texto como descripción
+                        });
+                        conversationText = ''; // Limpiamos el texto conversacional para que no se duplique
+                    }
+                    // Si ya había fichas, simplemente el menúKey se añadirá abajo.
                 }
                 // ** 🛑 FIN NUEVA LÓGICA **
                 
@@ -1485,6 +1486,13 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                     
                     // Insertar cada ficha como un mensaje separado
                     fichasParaMostrar.forEach(ficha => {
+                        
+                        // Determinar si esta ficha es una categoría con submenú
+                        let menuKey = null;
+                        if (ficha.type === 'category' && userPrompt && SUBCATEGORIES_MAP[userPrompt]) {
+                            menuKey = userPrompt; // Usamos el prompt del usuario como clave
+                        }
+                        
                         chatHistory.push({ 
                             role: 'model', 
                             isStructured: true,
@@ -1495,6 +1503,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                             mapUrl: ficha.mapUrl || null,
                             reviewUrl: ficha.reviewUrl || null,
                             categoryName: ficha.categoryName || null,
+                            menuKey: menuKey, // <--- PROPIEDAD CLAVE AÑADIDA
                             timestamp: new Date()
                         });
                         
@@ -1545,6 +1554,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             
         } else if (finalMessage.isStructured) {
             // Caso de FICHA ESTRUCTURADA (SOLO SI LLEGÓ UNA AQUÍ, si no, ya salió antes)
+            // La lógica de los chips de submenú ocurre en createMessageBubble y no aquí.
             const isPlace = finalMessage.type === 'place';
             const entityName = isPlace 
                 ? (finalMessage.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
