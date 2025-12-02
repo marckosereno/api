@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+// import { Client as PlacesClient } from '@googlemaps/google-maps-services-js'; // 🛑 COMENTADO
 import { Client as PlacesClient } from '@googlemaps/google-maps-services-js';
 
 // Usamos el modelo más rápido y económico para chat
@@ -18,9 +19,11 @@ const CATEGORY_MAP = {
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY; 
+// const placesClient = new PlacesClient({}); // 🛑 COMENTADO
 const placesClient = new PlacesClient({}); 
 
 // 2. Definimos la Instrucción del Sistema (ACTUALIZADA con formato MultiStructured)
+// ... (Resto de la instrucción del sistema, no hay cambios) ...
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 
@@ -87,6 +90,8 @@ async function getPlaceDetails(query) {
         return null;
     }
     
+    // 🛑 COMENTADO: Desactivamos el cliente de Places para evitar el crash.
+    /*
     // 1. Buscar el place_id
     try {
         const findPlaceResponse = await placesClient.findPlaceFromText({
@@ -127,6 +132,10 @@ async function getPlaceDetails(query) {
         console.error("Error al llamar a Google Places API:", e.response ? e.response.data : e.message);
         return null;
     }
+    */
+   
+   // Retornamos un objeto vacío cuando la lógica está comentada
+   return null;
 }
 
 
@@ -184,7 +193,7 @@ export default async function handler(req, res) {
         
         let finalResponseData = { responseText: modelResponseText };
 
-        // Lógica de ENRIQUECIMIENTO con Places API (CORREGIDA)
+        // Lógica de ENRIQUECIMIENTO con Places API (CORREGIDA PARA NO FALLAR)
         try {
             const jsonStart = modelResponseText.indexOf('{');
             const jsonEnd = modelResponseText.lastIndexOf('}');
@@ -217,7 +226,7 @@ export default async function handler(req, res) {
                             const placeNameSearch = ficha.placeToSearch.trim();
                             const isHealthPlace = ficha.isHealthPlace === true; 
 
-                            // 🛑 CORRECCIÓN CRÍTICA 1: Se corrige la sintaxis de la URL de fallback a un formato estándar de Google Maps Search API.
+                            // 🛑 CRÍTICO: Se corrigió la sintaxis de la URL de fallback.
                             const fallbackMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
                             
                             // Establecemos el fallback antes de cualquier lógica
@@ -235,19 +244,20 @@ export default async function handler(req, res) {
                                 };
 
                             } else {
-                                // SI NO ES SALUD: Procedemos con el enriquecimiento normal.
+                                // SI NO ES SALUD: Procedemos con el enriquecimiento normal (usando la función que ahora devuelve null).
                                 const placeData = await getPlaceDetails(placeNameSearch);
 
                                 if (placeData) {
+                                    // Esta parte NO SE EJECUTARÁ porque getPlaceDetails devuelve null, PERO MANTENEMOS LA ESTRUCTURA.
                                     enrichedFicha = {
                                         ...enrichedFicha,
                                         placeName: placeData.name,
                                         placePhone: placeData.phone,
-                                        mapUrl: placeData.mapUrl, // Esto SOBRESCRIBE el fallback con la URL DIRECTA del lugar
+                                        mapUrl: placeData.mapUrl, 
                                         reviewUrl: placeData.reviewUrl, 
                                     };
                                 } else {
-                                    // Si Places falla, conservamos placeToSearch y mapUrl usa el fallback.
+                                    // Si Places falla o devuelve null, se conservan placeToSearch y mapUrl usa el fallback (que ya se asignó arriba).
                                 }
                             }
                         }
