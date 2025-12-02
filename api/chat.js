@@ -217,8 +217,9 @@ export default async function handler(req, res) {
                             const placeNameSearch = ficha.placeToSearch.trim();
                             const isHealthPlace = ficha.isHealthPlace === true; 
 
-                            // 🛑 CORRECCIÓN CRÍTICA 1: Se corrige la sintaxis de la URL de fallback.
-                            const fallbackMapUrl = `https://www.google.com/maps/search/?api=1&query=$$${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
+                            // 🛑 CORRECCIÓN CRÍTICA 1: Se corrige la sintaxis de la URL de fallback a un formato estándar de Google Maps Search API.
+                            const fallbackMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
+                            
                             // Establecemos el fallback antes de cualquier lógica
                             enrichedFicha.mapUrl = fallbackMapUrl; 
 
