@@ -77,7 +77,8 @@ REGLAS DE FORMATO:
 
 
 /**
- * Función que busca el nombre de un lugar en la API de Google Places.
+ * Función que busca el nombre de un lugar en la API de Google Places,
+ * incluyendo ahora la referencia de la foto para generar la URL.
  * @param {string} query Nombre del lugar a buscar.
  * @returns {object|null} Objeto con detalles del lugar o null si falla.
  */
@@ -105,25 +106,35 @@ async function getPlaceDetails(query) {
             return null;
         }
 
-        // 2. Obtener los detalles del lugar (teléfono, URL, reseñas, y 'website')
+        // 2. Obtener los detalles del lugar (incluyendo 'website' y **'photos'**)
         const detailsResponse = await placesClient.placeDetails({
             params: {
                 key: placesApiKey,
                 place_id: placeId,
-                // <-- Solicitamos 'website' para redes sociales/sitio web
-                fields: ['name', 'formatted_phone_number', 'url', 'reviews', 'website'] 
+                // <-- Solicitamos 'website' y **'photos'**
+                fields: ['name', 'formatted_phone_number', 'url', 'reviews', 'website', 'photos'] 
             }
         });
 
         const place = detailsResponse.data.result;
+        
+        // 3. Generar la URL de la foto usando la Photo API
+        const photoReference = place.photos?.[0]?.photo_reference || null;
+        let imageUrl = null;
+
+        if (photoReference) {
+            // Usamos un tamaño maxwidth de 250px para el efecto apilado
+            imageUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=250&photoreference=${photoReference}&key=${placesApiKey}`;
+        }
         
         return {
             name: place.name,
             phone: place.formatted_phone_number || null,
             mapUrl: place.url || null,
             reviewUrl: place.url || null,
-            // <-- websiteUrl para el botón de redes sociales
-            websiteUrl: place.website || null 
+            websiteUrl: place.website || null,
+            // <-- ¡AÑADIDO: La URL de la imagen!
+            imageUrl: imageUrl 
         };
 
     } catch (e) {
@@ -230,7 +241,9 @@ export default async function handler(req, res) {
                                     ...enrichedFicha,
                                     placePhone: null, 
                                     reviewUrl: null,   
-                                    mapUrl: baseMapUrl 
+                                    websiteUrl: null,
+                                    mapUrl: baseMapUrl,
+                                    imageUrl: null // Imagen debe ser nula por seguridad/privacidad
                                 };
 
                             } else {
@@ -244,7 +257,9 @@ export default async function handler(req, res) {
                                         placePhone: placeData.phone,
                                         mapUrl: placeData.mapUrl,
                                         reviewUrl: placeData.reviewUrl, 
-                                        websiteUrl: placeData.websiteUrl // <-- DATOS AÑADIDOS
+                                        websiteUrl: placeData.websiteUrl,
+                                        // <-- ¡DATOS AÑADIDOS!
+                                        imageUrl: placeData.imageUrl 
                                     };
                                 } else {
                                     // Si falla Places
