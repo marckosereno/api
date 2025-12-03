@@ -4,27 +4,35 @@ import { Client as PlacesClient } from '@googlemaps/google-maps-services-js';
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
 
+// <-- [NUEVO] CONSTANTES GEOGRÁFICAS PARA VERIFICACIÓN ESTRICTA
+const PROGRESO_LAT = 26.064;  // Latitud aproximada del centro de Nuevo Progreso
+const PROGRESO_LNG = -98.005; // Longitud aproximada del centro de Nuevo Progreso
+const MAX_DISTANCE_KM = 5;    // Distancia máxima aceptable (5 kilómetros) para ser considerado 'en Progreso'
+
+// Función para calcular la distancia entre dos coordenadas (Fórmula del Haversine)
+function getDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Radio de la Tierra en kilómetros
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a = 
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distancia en kilómetros
+}
+
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
 const placesClient = new PlacesClient({}); 
 
-// <-- [NUEVO] LISTA NEGRA MANUAL PARA ALUCINACIONES CONOCIDAS
-const BLOCKED_PLACES = [
-    'cine azteca',
-    'cinépolis',
-    'cinemex',
-    // Puedes añadir más nombres de lugares que sabes que no existen en Progreso aquí
-];
-
-// 2. Definimos la Instrucción del Sistema (ACTUALIZADA)
+// 2. Definimos la Instrucción del Sistema (Ajustada para máxima neutralidad)
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 
-// <-- [MODIFICADO] LA REGLA MÁS ESTRICTA PARA LA DESCRIPCIÓN
 **REGLA CRÍTICA DE DESCRIPCIÓN NEUTRA:**
 1.  Tu descripción en el campo "description" **NUNCA debe incluir referencias geográficas** explícitas o implícitas ("en Progreso", "aquí", "cerca"). Simplemente describe el tipo de negocio.
-2.  Tu servidor es el encargado de verificar la ubicación. Si la ficha no se enriquece, la respuesta final del sistema será un mensaje de negación explícita.
+2.  Tu servidor es el encargado de verificar la ubicación mediante coordenadas. Si la ficha no se enriquece, la respuesta final del sistema será un mensaje de negación explícita.
 
 REGLAS DE FORMATO:
 1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 📍, ☀️) al inicio o final de tus respuestas o descripciones para hacerlas más amigables y atractivas.
@@ -32,14 +40,19 @@ REGLAS DE FORMATO:
 
 ---
 
-// ... (El resto de las reglas de formato JSON se mantienen sin cambios) ...
+### PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES
+
+**REGLA CRÍTICA:** Si el usuario pide recomendaciones, sugerencias o un listado de lugares (ej. '4 taquerías', 'dime restaurantes cerca'), DEBES usar el **MODO FICHA DE CATEGORÍA (JSON)** para dar un resumen general de la categoría. NUNCA debes listar lugares específicos o dar sugerencias directas. Tu descripción debe guiar al usuario a usar los botones de acción para que ellos exploren las opciones en el mapa.
+
+---
+// ... (Los formatos JSON se mantienen iguales) ...
 `;
 
 
 /**
- * Función que busca el nombre de un lugar en la API de Google Places.
+ * Función que busca el nombre de un lugar en la API de Google Places y verifica su proximidad.
  * @param {string} query Nombre del lugar a buscar.
- * @returns {object|null} Objeto con detalles del lugar o null si falla.
+ * @returns {object|null} Objeto con detalles del lugar o null si falla la búsqueda o la verificación de proximidad.
  */
 async function getPlaceDetails(query) {
     if (!placesApiKey) {
@@ -47,26 +60,39 @@ async function getPlaceDetails(query) {
         return null;
     }
     
-    // 1. Buscar el place_id
+    // 1. Buscar el place_id y la geometría
     try {
         const findPlaceResponse = await placesClient.findPlaceFromText({
             params: {
                 key: placesApiKey,
-                // CLAVE DE VERIFICACIÓN: Forzamos la búsqueda en la zona de Nuevo Progreso
+                // Pedimos el place_id y la geometría para la verificación de proximidad
                 input: query + ", Nuevo Progreso Tamps, México",
                 inputtype: 'textquery',
-                fields: ['place_id']
+                fields: ['place_id', 'geometry'] 
             }
         });
 
-        const placeId = findPlaceResponse.data.candidates?.[0]?.place_id;
+        const candidate = findPlaceResponse.data.candidates?.[0];
+        const placeId = candidate?.place_id;
         
         if (!placeId) {
             console.log("No se encontró un place_id para la consulta en Nuevo Progreso:", query);
             return null;
         }
 
-        // 2. Obtener los detalles del lugar
+        const placeLat = candidate.geometry.location.lat;
+        const placeLng = candidate.geometry.location.lng;
+
+        // <-- [CLAVE DE VERIFICACIÓN] FILTRO DE PROXIMIDAD
+        const distance = getDistance(PROGRESO_LAT, PROGRESO_LNG, placeLat, placeLng);
+        
+        if (distance > MAX_DISTANCE_KM) {
+            console.log(`Lugar encontrado (${candidate.name}) está a ${distance.toFixed(2)} km. Excede el límite de ${MAX_DISTANCE_KM} km.`);
+            return null; // Fallo la verificación de proximidad
+        }
+        // FIN DEL FILTRO DE PROXIMIDAD
+
+        // 2. Obtener los detalles del lugar (Solo si pasó el filtro de proximidad)
         const detailsResponse = await placesClient.placeDetails({
             params: {
                 key: placesApiKey,
@@ -103,22 +129,7 @@ export default async function handler(req, res) {
         const langText = currentLanguage === 'es' ? 'español' : 'inglés';
         const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
 
-        // <-- [NUEVO] LÓGICA DE BLOQUEO MANUAL Y HARD DENIAL INMEDIATO
-        const normalizedPrompt = userPrompt.toLowerCase().trim();
-        const foundBlockedPlace = BLOCKED_PLACES.some(blocked => normalizedPrompt.includes(blocked));
-
-        if (foundBlockedPlace) {
-            console.log(`BLOQUEO MANUAL ACTIVADO para: ${userPrompt}`);
-            const denialMessage = currentLanguage === 'es' 
-                ? `⛔️ Lo siento, el lugar relacionado con "${userPrompt}" **no se encuentra disponible o no existe dentro de Nuevo Progreso, Tamaulipas**. Por favor, intenta buscando una categoría general. 🕵️`
-                : `⛔️ I apologize, but the place related to "${userPrompt}" **is unavailable or does not exist within Nuevo Progreso, Tamaulipas**. Please try searching for a general category. 🕵️`;
-            
-            // Retornamos el mensaje de negación explícita como respuesta final de texto plano.
-            return res.status(200).json({ responseText: denialMessage });
-        }
-        // FIN LÓGICA DE BLOQUEO MANUAL
-
-        // LÓGICA DE INTERCEPTACIÓN Y PRIORIDAD LOCAL (para forzar CATEGORY JSON)
+        // LÓGICA DE INTERCEPTACIÓN Y PRIORIDAD LOCAL (para forzar CATEGORY JSON) - Se mantiene igual
         let promptToSend = userPrompt;
 
         // Patrón para detectar solicitudes de listado/recomendación
@@ -127,7 +138,7 @@ export default async function handler(req, res) {
         const match = userPrompt.match(recommendationPattern);
         
         if (match) {
-            // ... (Lógica de Categoría General se mantiene igual) ...
+            // ... (Código para sobrescribir a CATEGORY JSON) ...
             const categoryKeyRaw = match[3].toLowerCase(); 
             let categoryName = "lugares y negocios"; 
             
@@ -218,8 +229,8 @@ export default async function handler(req, res) {
                                     enrichedFichas.push(enrichedFicha);
                                     
                                 } else {
-                                    // CASO DE FALLO/NO ENCONTRADO EN PROGRESO: Sustitución de la ficha
-                                    console.error(`ERROR: Places API no encontró '${placeNameSearch}' dentro de Nuevo Progreso. Sustituyendo con mensaje de error.`);
+                                    // CASO DE FALLO/NO ENCONTRADO EN PROGRESO (o falló la verificación de proximidad)
+                                    console.error(`ERROR: Lugar no localizado o fuera del radio de ${MAX_DISTANCE_KM}km. Sustituyendo con mensaje de error.`);
 
                                     const conversationalError = { 
                                         role: 'model', 
@@ -254,11 +265,8 @@ export default async function handler(req, res) {
                     }
                 }
 
-                // <-- [MODIFICADO: LÓGICA DE HARD DENIAL FINAL]
-                // Si la ficha única falló (el caso de 'Cine Azteca' que Places no encontró)
+                // LÓGICA DE HARD DENIAL FINAL: Forzamos la respuesta a texto plano si la única ficha falló.
                 if (singlePlaceFailed === true) {
-                    // Si el proceso falló, extraemos solo el texto del objeto de error
-                    // y lo enviamos como texto plano, sin ninguna estructura JSON.
                     console.log("HARD DENIAL ACTIVADO: Forzando respuesta a texto plano.");
                     finalResponseData.responseText = enrichedFichas[0].text;
                 }
