@@ -4,24 +4,7 @@ import { Client as PlacesClient } from '@googlemaps/google-maps-services-js';
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
 
-// CONSTANTES GEOGRÁFICAS
-const PROGRESO_LAT = 26.064;
-const PROGRESO_LNG = -98.005; 
-const MAX_DISTANCE_KM = 5;    // 5 kilómetros
-
-// FUNCIÓN DE DISTANCIA
-function getDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371; 
-    const dLat = (lat2 - lat1) * (Math.PI / 180);
-    const dLon = (lon2 - lon1) * (Math.PI / 180);
-    const a = 
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; 
-}
-
-// Mapeo de intención de usuario a Categoría (Simplificado) - Se mantiene igual
+// Mapeo de intención de usuario a Categoría (Simplificado)
 const CATEGORY_MAP = {
     'tacos': 'Taquerías y Tacos',
     'taqueria': 'Taquerías y Tacos',
@@ -37,7 +20,7 @@ const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
 const placesClient = new PlacesClient({}); 
 
-// 2. Definimos la Instrucción del Sistema - Se mantiene igual
+// 2. Definimos la Instrucción del Sistema (ACTUALIZADA con formato MultiStructured)
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 
@@ -104,45 +87,30 @@ async function getPlaceDetails(query) {
         return null;
     }
     
-    // 1. Buscar el place_id y la geometría
+    // 1. Buscar el place_id
     try {
         const findPlaceResponse = await placesClient.findPlaceFromText({
             params: {
                 key: placesApiKey,
                 input: query + ", Nuevo Progreso Tamps, México",
                 inputtype: 'textquery',
-                // SOLICITAMOS geometry para la verificación de 5km
-                fields: ['place_id', 'geometry'] 
+                fields: ['place_id']
             }
         });
 
-        const candidate = findPlaceResponse.data.candidates?.[0];
-        const placeId = candidate?.place_id;
+        const placeId = findPlaceResponse.data.candidates?.[0]?.place_id;
         
         if (!placeId) {
-            console.log("No se encontró un place_id para la consulta en Nuevo Progreso:", query);
+            console.log("No se encontró un place_id para la consulta:", query);
             return null;
         }
-        
-        // VERIFICACIÓN DE PROXIMIDAD
-        const placeLat = candidate.geometry.location.lat;
-        const placeLng = candidate.geometry.location.lng;
 
-        const distance = getDistance(PROGRESO_LAT, PROGRESO_LNG, placeLat, placeLng);
-        
-        if (distance > MAX_DISTANCE_KM) {
-            console.log(`Lugar encontrado (${candidate.name}) está a ${distance.toFixed(2)} km. Excede el límite de ${MAX_DISTANCE_KM} km.`);
-            return null; // El lugar no está en Nuevo Progreso
-        }
-        // FIN VERIFICACIÓN DE PROXIMIDAD
-
-        // 2. Obtener los detalles del lugar (teléfono, URL, reseñas, sitio web)
+        // 2. Obtener los detalles del lugar (teléfono, URL, reseñas)
         const detailsResponse = await placesClient.placeDetails({
             params: {
                 key: placesApiKey,
                 place_id: placeId,
-                // <-- [MODIFICADO] SOLICITAR 'website' para redes sociales/sitio web
-                fields: ['name', 'formatted_phone_number', 'url', 'reviews', 'website'] 
+                fields: ['name', 'formatted_phone_number', 'url', 'reviews'] 
             }
         });
 
@@ -152,9 +120,7 @@ async function getPlaceDetails(query) {
             name: place.name,
             phone: place.formatted_phone_number || null,
             mapUrl: place.url || null,
-            reviewUrl: place.url || null,
-            // <-- [NUEVO CAMPO] URL del sitio web (para redes sociales)
-            websiteUrl: place.website || null 
+            reviewUrl: place.url || null 
         };
 
     } catch (e) {
@@ -176,7 +142,7 @@ export default async function handler(req, res) {
         const langText = currentLanguage === 'es' ? 'español' : 'inglés';
         const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
 
-        // LÓGICA DE INTERCEPTACIÓN Y PRIORIDAD LOCAL (MODIFICADA para forzar CATEGORY JSON) - Se mantiene igual
+        // LÓGICA DE INTERCEPTACIÓN Y PRIORIDAD LOCAL (MODIFICADA para forzar CATEGORY JSON)
         let promptToSend = userPrompt;
 
         // Patrón para detectar solicitudes de listado/recomendación
@@ -200,7 +166,7 @@ export default async function handler(req, res) {
             
             console.log("PROTOCOLO CATEGORÍA GENERAL ACTIVADO para:", categoryName);
         }
-        // FIN DE LÓGICA DE INTERCEPTACIÓN
+        // FIN DE LÓGICA DE INTERCEPTACIÓN (MODIFICADA)
 
 
         // Inicializar el chat con el historial y la instrucción de sistema
@@ -218,7 +184,7 @@ export default async function handler(req, res) {
         
         let finalResponseData = { responseText: modelResponseText };
 
-        // Lógica de ENRIQUECIMIENTO con Places API (MODIFICADA para Array de Fichas) - Se mantiene igual
+        // Lógica de ENRIQUECIMIENTO con Places API (MODIFICADA para Array de Fichas)
         try {
             const jsonStart = modelResponseText.indexOf('{');
             const jsonEnd = modelResponseText.lastIndexOf('}');
@@ -228,7 +194,6 @@ export default async function handler(req, res) {
                 const parsedJson = JSON.parse(jsonString);
                 
                 let fichasToProcess = [];
-                let hasPlaceToSearchFailed = false; // Bandera para rastrear fallos de lugares
 
                 // 1. Caso de Múltiples Fichas (Array)
                 if (parsedJson.isMultiStructured === true && Array.isArray(parsedJson.response)) {
@@ -269,37 +234,24 @@ export default async function handler(req, res) {
                                 const placeData = await getPlaceDetails(placeNameSearch);
 
                                 if (placeData) {
-                                    // <-- [MODIFICADO] Añadir todos los datos enriquecidos (incluyendo websiteUrl)
                                     enrichedFicha = {
                                         ...enrichedFicha,
                                         placeName: placeData.name,
                                         placePhone: placeData.phone,
                                         mapUrl: placeData.mapUrl,
                                         reviewUrl: placeData.reviewUrl, 
-                                        websiteUrl: placeData.websiteUrl // <-- [NUEVO CAMPO]
                                     };
                                 } else {
-                                    // Si falla Places (o la verificación de 5km)
-                                    // El frontend puede usar esta bandera para decidir si muestra el mensaje de "no encontrado"
-                                    enrichedFicha.enrichmentFailed = true; 
-                                    hasPlaceToSearchFailed = true; 
+                                    // Si falla Places
+                                    delete enrichedFicha.placeToSearch;
                                 }
                             }
                         }
                         enrichedFichas.push(enrichedFicha);
                     }
-                    
-                    // LÓGICA DE HARD DENIAL (Ficha única fallida)
-                    // Si solo había una ficha y falló, revertimos a texto plano.
-                    if (fichasToProcess.length === 1 && hasPlaceToSearchFailed) {
-                        const denialMessage = currentLanguage === 'es' 
-                            ? `⛔️ Lo siento, el lugar **${fichasToProcess[0].placeName}** no pudo ser verificado ni localizado por Google Maps **dentro de Nuevo Progreso, Tamaulipas** (o está fuera del radio de ${MAX_DISTANCE_KM}km). Por favor, verifica el nombre o intenta con una categoría general. 🕵️`
-                            : `⛔️ I apologize, but the place **${fichasToProcess[0].placeName}** could not be verified or located by Google Maps **within Nuevo Progreso, Tamaulipas** (or is outside the ${MAX_DISTANCE_KM}km radius). Please verify the name or try a general category. 🕵️`;
-                            
-                        finalResponseData.responseText = modelResponseText.replace(jsonString, '').trim() + '\n\n' + denialMessage;
-                        console.log("HARD DENIAL ACTIVADO para ficha fallida.");
 
-                    } else if (parsedJson.isMultiStructured === true) {
+                    // Después de procesar todas las fichas, reconstruir la respuesta final.
+                    if (parsedJson.isMultiStructured === true) {
                          // Si fue MultiStructured, respondemos con el array completo y la propiedad "isMultiStructured"
                          finalResponseData.responseText = JSON.stringify({
                              isMultiStructured: true,
@@ -308,7 +260,7 @@ export default async function handler(req, res) {
                              conversationText: modelResponseText.replace(jsonString, '').trim() || ''
                          });
                     } else {
-                         // Si fue una ficha única (exitosa)
+                         // Si fue una ficha única, respondemos con la ficha enriquecida directamente.
                          finalResponseData.responseText = JSON.stringify(enrichedFichas[0]);
                     }
                 }
