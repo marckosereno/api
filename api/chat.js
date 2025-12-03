@@ -20,7 +20,7 @@ const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
 const placesClient = new PlacesClient({}); 
 
-// 2. Definimos la Instrucción del Sistema (ACTUALIZADA con formato MultiStructured)
+// 2. Definimos la Instrucción del Sistema
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 
@@ -105,12 +105,13 @@ async function getPlaceDetails(query) {
             return null;
         }
 
-        // 2. Obtener los detalles del lugar (teléfono, URL, reseñas)
+        // 2. Obtener los detalles del lugar (teléfono, URL, reseñas, y 'website')
         const detailsResponse = await placesClient.placeDetails({
             params: {
                 key: placesApiKey,
                 place_id: placeId,
-                fields: ['name', 'formatted_phone_number', 'url', 'reviews'] 
+                // <-- Solicitamos 'website' para redes sociales/sitio web
+                fields: ['name', 'formatted_phone_number', 'url', 'reviews', 'website'] 
             }
         });
 
@@ -120,7 +121,9 @@ async function getPlaceDetails(query) {
             name: place.name,
             phone: place.formatted_phone_number || null,
             mapUrl: place.url || null,
-            reviewUrl: place.url || null 
+            reviewUrl: place.url || null,
+            // <-- websiteUrl para el botón de redes sociales
+            websiteUrl: place.website || null 
         };
 
     } catch (e) {
@@ -166,7 +169,7 @@ export default async function handler(req, res) {
             
             console.log("PROTOCOLO CATEGORÍA GENERAL ACTIVADO para:", categoryName);
         }
-        // FIN DE LÓGICA DE INTERCEPTACIÓN (MODIFICADA)
+        // FIN DE LÓGICA DE INTERCEPTACIÓN
 
 
         // Inicializar el chat con el historial y la instrucción de sistema
@@ -220,6 +223,7 @@ export default async function handler(req, res) {
                             // **** REGLA DE SALUD DINÁMICA: Bloqueo de Enriquecimiento ****
                             if (isHealthPlace) {
                                 console.log(`Regla de Salud Aplicada: Bloqueando enriquecimiento Places para ${placeNameSearch}`);
+                                // URL de mapa genérica (para mantener el botón)
                                 const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
 
                                 enrichedFicha = {
@@ -230,7 +234,7 @@ export default async function handler(req, res) {
                                 };
 
                             } else {
-                                // SI NO ES SALUD: Procedemos con el enriquecimiento normal.
+                                // SI NO ES SALUD: Procedemos con el enriquecimiento completo.
                                 const placeData = await getPlaceDetails(placeNameSearch);
 
                                 if (placeData) {
@@ -240,13 +244,23 @@ export default async function handler(req, res) {
                                         placePhone: placeData.phone,
                                         mapUrl: placeData.mapUrl,
                                         reviewUrl: placeData.reviewUrl, 
+                                        websiteUrl: placeData.websiteUrl // <-- DATOS AÑADIDOS
                                     };
                                 } else {
                                     // Si falla Places
                                     delete enrichedFicha.placeToSearch;
                                 }
                             }
+                        } else if (ficha.type === 'category') {
+                             // ENRIQUECIMIENTO PARA CATEGORÍA (Permitir "Ver en Mapa")
+                             
+                             // Generamos URL de búsqueda en Google Maps para la categoría
+                             const categorySearch = ficha.categoryName.replace(/en Progreso/i, '').trim();
+                             const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(categorySearch + " Nuevo Progreso Tamps")}`;
+                             
+                             enrichedFicha.mapUrl = mapUrl; // Añadimos mapUrl para el botón "Ver en Mapa"
                         }
+                        
                         enrichedFichas.push(enrichedFicha);
                     }
 
