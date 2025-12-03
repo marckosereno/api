@@ -789,9 +789,10 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             chipEntertainment: "🎺 Entretenimiento",
             chipDental: "🦷 Top 10 Dental",
             btnMap: "Ver en Mapa 🧭",
-            btnSearch: "Buscar en Google 🕶",
+            btnSearch: "Resultados en Google 🔍", // 🛑 CAMBIO SOLICITADO
             btnPhone: "Llamar Ahora 📞",
             btnReview: "Reseñas ⭐",
+            btnWebsite: "Sitio Web/Redes 🌐", // 🛑 NUEVO
         },
         en: {
             header: "PROGRESO TOUR GUIDE",
@@ -809,9 +810,10 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             chipEntertainment: "🎺 Entertainment",
             chipDental: "🦷 Top 10 Dental",
             btnMap: "View on Map 🧭",
-            btnSearch: "Search on Google 🕶",
+            btnSearch: "Search Results on Google 🔍", // 🛑 CAMBIO SOLICITADO
             btnPhone: "Call Now 📞",
             btnReview: "Reviews ⭐",
+            btnWebsite: "Website/Social 🌐", // 🛑 NUEVO
         }
     };
 
@@ -1254,17 +1256,26 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                         </div>
                     `;
                 } else {
-                    // 🛑 REVERTIR LÓGICA: Ahora mostramos los botones de acción para lugares/resultados finales
-                    // que NO son un menú principal (i.e. no tienen menuKey)
+                    // 🛑 LÓGICA DE BOTONES DE ACCIÓN PARA FICHAS ENRIQUECIDAS
                     
                     const isPlace = m.type === 'place';
+                    const isHealthPlace = m.isHealthPlace === true; // Nuevo check de salud
                     const entityName = isPlace 
                         ? (m.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
                         : (m.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
                     
                     let actionsHTML = '';
                     
-                    // Botón principal: Ver en Mapa (si tiene URL de mapa)
+                    // 1. Botón de Sitio Web / Redes Sociales (NUEVO)
+                    if (isPlace && m.websiteUrl) {
+                        actionsHTML += `
+                            <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="WEBSITE" data-website-url="${m.websiteUrl}">
+                                ${strings.btnWebsite}
+                            </div>
+                        `;
+                    }
+                    
+                    // 2. Botón principal: Ver en Mapa
                     if (m.mapUrl) {
                         actionsHTML += `
                             <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="MAP" data-map-url="${m.mapUrl}">
@@ -1273,8 +1284,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                         `;
                     }
                     
-                    // Botón para Lugares Específicos (Llamar, Reseñas)
-                    if (isPlace) {
+                    // 3. Botón Llamar y Reseñas (SOLO si es Lugar y NO es de Salud)
+                    if (isPlace && !isHealthPlace) {
                         if (m.placePhone) {
                             actionsHTML += `
                                 <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="PHONE" data-phone="${m.placePhone}">
@@ -1291,7 +1302,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                         }
                     }
                     
-                    // Botón secundario: Buscar en Google (usa el nombre de la entidad)
+                    // 4. Botón secundario: Resultados en Google (para todos los casos)
                     if (entityName) {
                         actionsHTML += `
                             <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="SEARCH" data-entity-name="${entityName}">
@@ -1378,6 +1389,9 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                 } else if (action === 'REVIEW' && this.getAttribute('data-review-url')) {
                     window.open(this.getAttribute('data-review-url'), '_blank');
                     alertUser(currentLanguage === 'es' ? 'Abriendo reseña en nueva ventana.' : 'Opening review in new window.', 'i', 'news');
+                } else if (action === 'WEBSITE' && this.getAttribute('data-website-url')) { // 🛑 NUEVA ACCIÓN
+                    window.open(this.getAttribute('data-website-url'), '_blank');
+                    alertUser(currentLanguage === 'es' ? 'Abriendo sitio web en nueva ventana.' : 'Opening website in new window.', 'i', 'news');
                 }
             });
             
@@ -1612,7 +1626,9 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                             placePhone: ficha.placePhone || null, 
                             mapUrl: ficha.mapUrl || null,
                             reviewUrl: ficha.reviewUrl || null,
+                            websiteUrl: ficha.websiteUrl || null, // 🛑 NUEVO: Propiedad Website/Social
                             categoryName: ficha.categoryName || null,
+                            isHealthPlace: ficha.isHealthPlace || false, // 🛑 NUEVO: Propiedad isHealthPlace
                             menuKey: menuKey, // <--- PROPIEDAD CLAVE AÑADIDA (SÓLO si es categoría principal)
                             timestamp: new Date()
                         });
