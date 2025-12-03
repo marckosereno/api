@@ -4,7 +4,7 @@ import { Client as PlacesClient } from '@googlemaps/google-maps-services-js';
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
 
-// Mapeo de intención de usuario a Categoría (Simplificado) - Se mantiene igual
+// Mapeo de intención de usuario a Categoría (Simplificado)
 const CATEGORY_MAP = {
     'tacos': 'Taquerías y Tacos',
     'taqueria': 'Taquerías y Tacos',
@@ -20,16 +20,16 @@ const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
 const placesClient = new PlacesClient({}); 
 
-// 2. Definimos la Instrucción del Sistema (ACTUALIZADA)
+// 2. Definimos la Instrucción del Sistema (ACTUALIZADA con el aprendizaje)
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 
-// <-- [MODIFICADO: REGLA DE ANTI-ALUCINACIÓN]
+// <-- [MODIFICADO] AJUSTE A LAS REGLAS DE VERIFICACIÓN
 **REGLA CRÍTICA DE VERIFICACIÓN GEOGRÁFICA:**
-Cuando el usuario pida un lugar específico (ej. "Dental Care"):
-1.  Tu única tarea es **extraer el nombre más preciso** y colocarlo en el campo "placeToSearch".
-2.  **NUNCA debes confirmar ni negar la existencia del lugar.** Simplemente proporciona una descripción corta y neutra del tipo de negocio.
-3.  Tu servidor es el encargado de verificar la ubicación con Google Maps. Si la ficha de lugar no se muestra enriquecida con los botones de acción, es porque **no pudo ser localizado dentro de Nuevo Progreso.**
+Cuando el usuario pida un lugar específico:
+1.  Tu tarea es **extraer el nombre más preciso** y colocarlo en "placeToSearch" y dar una descripción neutral del tipo de negocio.
+2.  **NUNCA debes confirmar la existencia del lugar.** La confirmación la hace el servidor.
+3.  Si el servidor no puede localizarlo (es decir, la ficha no se enriquece), la respuesta final del sistema **será un mensaje de negación explícita** para evitar confusiones al usuario.
 
 REGLAS DE FORMATO:
 1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 📍, ☀️) al inicio o final de tus respuestas o descripciones para hacerlas más amigables y atractivas.
@@ -99,7 +99,7 @@ async function getPlaceDetails(query) {
         const findPlaceResponse = await placesClient.findPlaceFromText({
             params: {
                 key: placesApiKey,
-                // <-- [CLAVE ANTI-ALUCINACIÓN] Forzamos la búsqueda solo en Nuevo Progreso
+                // <-- CLAVE DE VERIFICACIÓN: Forzamos la búsqueda en la zona de Nuevo Progreso
                 input: query + ", Nuevo Progreso Tamps, México",
                 inputtype: 'textquery',
                 fields: ['place_id']
@@ -109,12 +109,12 @@ async function getPlaceDetails(query) {
         const placeId = findPlaceResponse.data.candidates?.[0]?.place_id;
         
         if (!placeId) {
-            // No se encontró un place_id en Nuevo Progreso
-            console.log("No se encontró un place_id para la consulta:", query);
+            // Si Places no encuentra el lugar, incluso con el hint geográfico, asumimos que no es relevante.
+            console.log("No se encontró un place_id para la consulta en Nuevo Progreso:", query);
             return null;
         }
 
-        // 2. Obtener los detalles del lugar (teléfono, URL, reseñas)
+        // 2. Obtener los detalles del lugar
         const detailsResponse = await placesClient.placeDetails({
             params: {
                 key: placesApiKey,
@@ -133,7 +133,6 @@ async function getPlaceDetails(query) {
         };
 
     } catch (e) {
-        // Error de conexión o API, retornamos null para activar el mensaje de error
         console.error("Error al llamar a Google Places API:", e.response ? e.response.data : e.message);
         return null;
     }
@@ -193,8 +192,9 @@ export default async function handler(req, res) {
         let modelResponseText = result.text.trim();
         
         let finalResponseData = { responseText: modelResponseText };
+        let singlePlaceFailed = false; // Bandera para el Hard Denial
 
-        // Lógica de ENRIQUECIMIENTO con Places API (MODIFICADA para Fallos y Anti-Alucinación)
+        // Lógica de ENRIQUECIMIENTO con Places API
         try {
             const jsonStart = modelResponseText.indexOf('{');
             const jsonEnd = modelResponseText.lastIndexOf('}');
@@ -229,23 +229,22 @@ export default async function handler(req, res) {
                             // **** REGLA DE SALUD DINÁMICA: Bloqueo de Enriquecimiento ****
                             if (isHealthPlace) {
                                 console.log(`Regla de Salud Aplicada: Bloqueando enriquecimiento Places para ${placeNameSearch}`);
-                                // La URL base simula el mapa de búsqueda, pero bloquea datos sensibles
                                 const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
 
                                 enrichedFicha = {
                                     ...enrichedFicha,
                                     placePhone: null, 
                                     reviewUrl: null,   
-                                    mapUrl: baseMapUrl // Usamos una URL de búsqueda simple
+                                    mapUrl: baseMapUrl 
                                 };
-                                enrichedFichas.push(enrichedFicha); // Se añade la ficha limitada
+                                enrichedFichas.push(enrichedFicha);
 
                             } else {
                                 // SI NO ES SALUD: Procedemos con el enriquecimiento normal.
                                 const placeData = await getPlaceDetails(placeNameSearch);
 
                                 if (placeData) {
-                                    // <-- [MODIFICADO: CASO DE ÉXITO] El lugar existe y se enriquece.
+                                    // CASO DE ÉXITO: El lugar existe y se enriquece.
                                     enrichedFicha = {
                                         ...enrichedFicha,
                                         placeName: placeData.name,
@@ -256,19 +255,24 @@ export default async function handler(req, res) {
                                     enrichedFichas.push(enrichedFicha);
                                     
                                 } else {
-                                    // <-- [MODIFICADO: ANTI-ALUCINACIÓN Y FALLO] El lugar no fue encontrado en Progreso.
+                                    // <-- [MODIFICADO] CASO DE FALLO/NO ENCONTRADO EN PROGRESO: Sustitución de la ficha
                                     console.error(`ERROR: Places API no encontró '${placeNameSearch}' dentro de Nuevo Progreso. Sustituyendo con mensaje de error.`);
 
                                     // Creamos un mensaje conversacional de error para el usuario.
                                     const conversationalError = { 
                                         role: 'model', 
                                         text: currentLanguage === 'es' 
-                                            ? `Lo siento, el lugar **${ficha.placeName}** no pudo ser verificado ni localizado por Google Maps **dentro de Nuevo Progreso, Tamaulipas**. 😔 Te pido que verifiques el nombre. Si el lugar existe en otra ciudad, te recomiendo usar la función de búsqueda de Google. 🕵️`
-                                            : `I apologize, but the place **${ficha.placeName}** could not be verified or located by Google Maps **within Nuevo Progreso, Tamaulipas**. 😔 I recommend verifying the name. If the place exists in another city, I recommend using the Google search feature. 🕵️`,
+                                            ? `⛔️ Lo siento, el lugar **${ficha.placeName}** no pudo ser verificado ni localizado por Google Maps **dentro de Nuevo Progreso, Tamaulipas**. Por favor, verifica el nombre o intenta con una categoría general. 🕵️`
+                                            : `⛔️ I apologize, but the place **${ficha.placeName}** could not be verified or located by Google Maps **within Nuevo Progreso, Tamaulipas**. Please verify the name or try a general category. 🕵️`,
                                         isStructured: false 
                                     };
                                     
                                     enrichedFichas.push(conversationalError);
+                                    
+                                    // Si la única ficha que se procesó falló, activamos el Hard Denial
+                                    if (fichasToProcess.length === 1) {
+                                        singlePlaceFailed = true;
+                                    }
                                 }
                             }
                         } else {
@@ -283,14 +287,23 @@ export default async function handler(req, res) {
                          finalResponseData.responseText = JSON.stringify({
                              isMultiStructured: true,
                              response: enrichedFichas,
-                             // Opcional: El texto conversacional
                              conversationText: modelResponseText.replace(jsonString, '').trim() || ''
                          });
                     } else {
-                         // Si fue una ficha única, respondemos con la ficha enriquecida directamente (o el error conversacional si falló)
+                         // Si fue una ficha única (Exitosa O Fallida con isStructured: false)
                          finalResponseData.responseText = JSON.stringify(enrichedFichas[0]);
                     }
                 }
+
+                // <-- [MODIFICADO: LÓGICA DE HARD DENIAL]
+                // Si detectamos que se intentó responder con una sola ficha de lugar y esta falló
+                if (singlePlaceFailed === true) {
+                    // Extraemos solo el texto del objeto de error y lo enviamos como texto plano.
+                    // Esto garantiza que el frontend NO pueda renderizar Quick Actions.
+                    console.log("HARD DENIAL ACTIVADO: Forzando respuesta a texto plano.");
+                    finalResponseData.responseText = enrichedFichas[0].text;
+                }
+                // FIN LÓGICA DE HARD DENIAL
             }
         } catch (jsonError) {
             console.error("Fallo en el parseo o enriquecimiento del JSON:", jsonError);
