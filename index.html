@@ -408,6 +408,7 @@ font-family:Spline Sans Light;
           transform: rotate(2deg); 
           transition: transform 0.3s ease;
           margin-bottom: 12px; /* Espacio antes del texto del lugar */
+          margin-right: 32px; /* Espacio para que las sombras sobresalgan del wrapper */
         }
 
         /* Opcional: Quitar la rotación y el apilamiento en pantallas pequeñas */
@@ -418,7 +419,7 @@ font-family:Spline Sans Light;
             width: 100%;
             height: auto;
             max-width: 250px; /* Limita el ancho para que no ocupe todo */
-            margin-left: 0;
+            margin-right: 0; /* Quitar margen derecho en móvil */
           }
         }
         
@@ -1271,6 +1272,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                 
                 // 🛑 NUEVO CÓDIGO: Insertar la imagen si existe
                 if (m.imageUrl) {
+                    // La clase 'stacked-photo' proporciona el estilo de apilamiento
                     imageHTML = `<img src="${m.imageUrl}" class="stacked-photo" alt="Imagen del lugar">`;
                 }
                 
@@ -1278,8 +1280,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                 // Ahora, la burbuja (wrapper) contiene la imagen Y el texto.
                 content = `
                     <div class="model-bubble-wrapper p-3 shadow-md">
-                        ${imageHTML}
-                        ${m.text || m.description}
+                        ${imageHTML} ${m.text || m.description}
                     </div>
                 `;
                 
