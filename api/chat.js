@@ -4,7 +4,7 @@ import { Client as PlacesClient } from '@googlemaps/google-maps-services-js';
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
 
-// Mapeo de intención de usuario a Categoría (Simplificado)
+// Mapeo de intención de usuario a Categoría (Simplificado) - Se mantiene igual
 const CATEGORY_MAP = {
     'tacos': 'Taquerías y Tacos',
     'taqueria': 'Taquerías y Tacos',
@@ -20,9 +20,16 @@ const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
 const placesClient = new PlacesClient({}); 
 
-// 2. Definimos la Instrucción del Sistema (ACTUALIZADA con formato MultiStructured)
+// 2. Definimos la Instrucción del Sistema (ACTUALIZADA)
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
+
+// <-- [MODIFICADO: REGLA DE ANTI-ALUCINACIÓN]
+**REGLA CRÍTICA DE VERIFICACIÓN GEOGRÁFICA:**
+Cuando el usuario pida un lugar específico (ej. "Dental Care"):
+1.  Tu única tarea es **extraer el nombre más preciso** y colocarlo en el campo "placeToSearch".
+2.  **NUNCA debes confirmar ni negar la existencia del lugar.** Simplemente proporciona una descripción corta y neutra del tipo de negocio.
+3.  Tu servidor es el encargado de verificar la ubicación con Google Maps. Si la ficha de lugar no se muestra enriquecida con los botones de acción, es porque **no pudo ser localizado dentro de Nuevo Progreso.**
 
 REGLAS DE FORMATO:
 1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 📍, ☀️) al inicio o final de tus respuestas o descripciones para hacerlas más amigables y atractivas.
@@ -64,7 +71,7 @@ REGLAS DE FORMATO:
    }
    
    // REGLA CLAVE: Si la respuesta requiere MÚLTIPLES FICHAS, debes envolver todas las fichas en un array y añadir la propiedad "isMultiStructured": true.
-   // Ejemplo para múltiples categorías (la respuesta al usuario debe ser el JSON completo, texto conversacional opcional):
+   // Ejemplo para múltiples categorías:
    {
      "isMultiStructured": true,
      "response": [
@@ -92,6 +99,7 @@ async function getPlaceDetails(query) {
         const findPlaceResponse = await placesClient.findPlaceFromText({
             params: {
                 key: placesApiKey,
+                // <-- [CLAVE ANTI-ALUCINACIÓN] Forzamos la búsqueda solo en Nuevo Progreso
                 input: query + ", Nuevo Progreso Tamps, México",
                 inputtype: 'textquery',
                 fields: ['place_id']
@@ -101,6 +109,7 @@ async function getPlaceDetails(query) {
         const placeId = findPlaceResponse.data.candidates?.[0]?.place_id;
         
         if (!placeId) {
+            // No se encontró un place_id en Nuevo Progreso
             console.log("No se encontró un place_id para la consulta:", query);
             return null;
         }
@@ -124,6 +133,7 @@ async function getPlaceDetails(query) {
         };
 
     } catch (e) {
+        // Error de conexión o API, retornamos null para activar el mensaje de error
         console.error("Error al llamar a Google Places API:", e.response ? e.response.data : e.message);
         return null;
     }
@@ -142,7 +152,7 @@ export default async function handler(req, res) {
         const langText = currentLanguage === 'es' ? 'español' : 'inglés';
         const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
 
-        // LÓGICA DE INTERCEPTACIÓN Y PRIORIDAD LOCAL (MODIFICADA para forzar CATEGORY JSON)
+        // LÓGICA DE INTERCEPTACIÓN Y PRIORIDAD LOCAL (para forzar CATEGORY JSON)
         let promptToSend = userPrompt;
 
         // Patrón para detectar solicitudes de listado/recomendación
@@ -151,7 +161,7 @@ export default async function handler(req, res) {
         const match = userPrompt.match(recommendationPattern);
         
         if (match) {
-            // 1. Determinar el nombre de la categoría para el JSON y el prompt
+            // Lógica de Categoría General (Se mantiene igual)
             const categoryKeyRaw = match[3].toLowerCase(); 
             let categoryName = "lugares y negocios"; 
             
@@ -161,12 +171,12 @@ export default async function handler(req, res) {
             else if (categoryKeyRaw.includes('barbacoa')) categoryName = "Barbacoa y Birria";
             else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = "Salud y Estética";
             
-            // 2. SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA
+            // SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA
             promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría ${categoryName} en Nuevo Progreso. La descripción debe guiar al usuario a usar los botones de acción ('Ver en Mapa' y 'Buscar en Google') para que ellos decidan qué lugar visitar, cumpliendo con la restricción de no recomendar lugares específicos.`;
             
             console.log("PROTOCOLO CATEGORÍA GENERAL ACTIVADO para:", categoryName);
         }
-        // FIN DE LÓGICA DE INTERCEPTACIÓN (MODIFICADA)
+        // FIN DE LÓGICA DE INTERCEPTACIÓN
 
 
         // Inicializar el chat con el historial y la instrucción de sistema
@@ -184,7 +194,7 @@ export default async function handler(req, res) {
         
         let finalResponseData = { responseText: modelResponseText };
 
-        // Lógica de ENRIQUECIMIENTO con Places API (MODIFICADA para Array de Fichas)
+        // Lógica de ENRIQUECIMIENTO con Places API (MODIFICADA para Fallos y Anti-Alucinación)
         try {
             const jsonStart = modelResponseText.indexOf('{');
             const jsonEnd = modelResponseText.lastIndexOf('}');
@@ -198,7 +208,6 @@ export default async function handler(req, res) {
                 // 1. Caso de Múltiples Fichas (Array)
                 if (parsedJson.isMultiStructured === true && Array.isArray(parsedJson.response)) {
                     fichasToProcess = parsedJson.response;
-                    console.log("Detectado formato MultiStructured. Fichas:", fichasToProcess.length);
                 } 
                 // 2. Caso de Ficha Única
                 else if (parsedJson.isStructured === true) {
@@ -220,20 +229,23 @@ export default async function handler(req, res) {
                             // **** REGLA DE SALUD DINÁMICA: Bloqueo de Enriquecimiento ****
                             if (isHealthPlace) {
                                 console.log(`Regla de Salud Aplicada: Bloqueando enriquecimiento Places para ${placeNameSearch}`);
+                                // La URL base simula el mapa de búsqueda, pero bloquea datos sensibles
                                 const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
 
                                 enrichedFicha = {
                                     ...enrichedFicha,
                                     placePhone: null, 
                                     reviewUrl: null,   
-                                    mapUrl: baseMapUrl 
+                                    mapUrl: baseMapUrl // Usamos una URL de búsqueda simple
                                 };
+                                enrichedFichas.push(enrichedFicha); // Se añade la ficha limitada
 
                             } else {
                                 // SI NO ES SALUD: Procedemos con el enriquecimiento normal.
                                 const placeData = await getPlaceDetails(placeNameSearch);
 
                                 if (placeData) {
+                                    // <-- [MODIFICADO: CASO DE ÉXITO] El lugar existe y se enriquece.
                                     enrichedFicha = {
                                         ...enrichedFicha,
                                         placeName: placeData.name,
@@ -241,26 +253,41 @@ export default async function handler(req, res) {
                                         mapUrl: placeData.mapUrl,
                                         reviewUrl: placeData.reviewUrl, 
                                     };
+                                    enrichedFichas.push(enrichedFicha);
+                                    
                                 } else {
-                                    // Si falla Places
-                                    delete enrichedFicha.placeToSearch;
+                                    // <-- [MODIFICADO: ANTI-ALUCINACIÓN Y FALLO] El lugar no fue encontrado en Progreso.
+                                    console.error(`ERROR: Places API no encontró '${placeNameSearch}' dentro de Nuevo Progreso. Sustituyendo con mensaje de error.`);
+
+                                    // Creamos un mensaje conversacional de error para el usuario.
+                                    const conversationalError = { 
+                                        role: 'model', 
+                                        text: currentLanguage === 'es' 
+                                            ? `Lo siento, el lugar **${ficha.placeName}** no pudo ser verificado ni localizado por Google Maps **dentro de Nuevo Progreso, Tamaulipas**. 😔 Te pido que verifiques el nombre. Si el lugar existe en otra ciudad, te recomiendo usar la función de búsqueda de Google. 🕵️`
+                                            : `I apologize, but the place **${ficha.placeName}** could not be verified or located by Google Maps **within Nuevo Progreso, Tamaulipas**. 😔 I recommend verifying the name. If the place exists in another city, I recommend using the Google search feature. 🕵️`,
+                                        isStructured: false 
+                                    };
+                                    
+                                    enrichedFichas.push(conversationalError);
                                 }
                             }
+                        } else {
+                            // Si es una ficha de Categoría, se añade directamente.
+                            enrichedFichas.push(enrichedFicha);
                         }
-                        enrichedFichas.push(enrichedFicha);
                     }
 
                     // Después de procesar todas las fichas, reconstruir la respuesta final.
                     if (parsedJson.isMultiStructured === true) {
-                         // Si fue MultiStructured, respondemos con el array completo y la propiedad "isMultiStructured"
+                         // Si fue MultiStructured, respondemos con el array completo
                          finalResponseData.responseText = JSON.stringify({
                              isMultiStructured: true,
                              response: enrichedFichas,
-                             // Opcional: El texto conversacional (si el modelo lo incluyó antes del JSON)
+                             // Opcional: El texto conversacional
                              conversationText: modelResponseText.replace(jsonString, '').trim() || ''
                          });
                     } else {
-                         // Si fue una ficha única, respondemos con la ficha enriquecida directamente.
+                         // Si fue una ficha única, respondemos con la ficha enriquecida directamente (o el error conversacional si falló)
                          finalResponseData.responseText = JSON.stringify(enrichedFichas[0]);
                     }
                 }
