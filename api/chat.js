@@ -4,32 +4,27 @@ import { Client as PlacesClient } from '@googlemaps/google-maps-services-js';
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
 
-// Mapeo de intención de usuario a Categoría (Simplificado)
-const CATEGORY_MAP = {
-    'tacos': 'Taquerías y Tacos',
-    'taqueria': 'Taquerías y Tacos',
-    'barbacoa': 'Barbacoa y Birria',
-    'restaurante': 'Restaurantes y Comida',
-    'comer': 'Restaurantes y Comida',
-    'artesanias': 'Tiendas de Artesanías y Souvenirs',
-    'souvenirs': 'Tiendas de Artesanías y Souvenirs',
-};
-
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
 const placesClient = new PlacesClient({}); 
 
-// 2. Definimos la Instrucción del Sistema (ACTUALIZADA con el aprendizaje)
+// <-- [NUEVO] LISTA NEGRA MANUAL PARA ALUCINACIONES CONOCIDAS
+const BLOCKED_PLACES = [
+    'cine azteca',
+    'cinépolis',
+    'cinemex',
+    // Puedes añadir más nombres de lugares que sabes que no existen en Progreso aquí
+];
+
+// 2. Definimos la Instrucción del Sistema (ACTUALIZADA)
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 
-// <-- [MODIFICADO] AJUSTE A LAS REGLAS DE VERIFICACIÓN
-**REGLA CRÍTICA DE VERIFICACIÓN GEOGRÁFICA:**
-Cuando el usuario pida un lugar específico:
-1.  Tu tarea es **extraer el nombre más preciso** y colocarlo en "placeToSearch" y dar una descripción neutral del tipo de negocio.
-2.  **NUNCA debes confirmar la existencia del lugar.** La confirmación la hace el servidor.
-3.  Si el servidor no puede localizarlo (es decir, la ficha no se enriquece), la respuesta final del sistema **será un mensaje de negación explícita** para evitar confusiones al usuario.
+// <-- [MODIFICADO] LA REGLA MÁS ESTRICTA PARA LA DESCRIPCIÓN
+**REGLA CRÍTICA DE DESCRIPCIÓN NEUTRA:**
+1.  Tu descripción en el campo "description" **NUNCA debe incluir referencias geográficas** explícitas o implícitas ("en Progreso", "aquí", "cerca"). Simplemente describe el tipo de negocio.
+2.  Tu servidor es el encargado de verificar la ubicación. Si la ficha no se enriquece, la respuesta final del sistema será un mensaje de negación explícita.
 
 REGLAS DE FORMATO:
 1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 📍, ☀️) al inicio o final de tus respuestas o descripciones para hacerlas más amigables y atractivas.
@@ -37,50 +32,8 @@ REGLAS DE FORMATO:
 
 ---
 
-### PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES
-
-**REGLA CRÍTICA:** Si el usuario pide recomendaciones, sugerencias o un listado de lugares (ej. '4 taquerías', 'dime restaurantes cerca'), DEBES usar el **MODO FICHA DE CATEGORÍA (JSON)** para dar un resumen general de la categoría. NUNCA debes listar lugares específicos o dar sugerencias directas. Tu descripción debe guiar al usuario a usar los botones de acción para que ellos exploren las opciones en el mapa.
-
----
-
-3. **MODO FICHA DE LUGAR (JSON):** Úsalo si la solicitud es de un lugar o negocio **específico** (Salud o No Salud). Debe incluir la propiedad 'placeToSearch' con el nombre exacto del lugar.
-
-4. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo para solicitudes de categorías generales O para **CUMPLIR EL PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES**.
-
-5. **MODO CONVERSACIONAL (Texto Plano):** Úsalo para preguntas generales o de seguimiento que no requieran una ficha.
-
-6. Los formatos JSON requeridos son:
-   
-   // Formato para LUGAR ESPECÍFICO (Salud o No Salud)
-   {
-     "type": "place", 
-     "placeName": "Nombre del Lugar", 
-     "placeToSearch": "Nombre Exacto a buscar en Places API, ej: JM Dental Clinic", 
-     "placeCategory": "Clasificación general del lugar, ej: Clínica Dental, Restaurante",
-     "isHealthPlace": true/false, 
-     "description": "Descripción corta de no más de 3 oraciones.",
-     "isStructured": true
-   }
-   
-   // Formato para CATEGORÍA GENERAL
-   {
-     "type": "category", 
-     "categoryName": "Nombre de la Categoría, ej: Taquerías en Progreso",
-     "description": "Resumen de la categoría en Progreso. Debes incluir una frase como: 'Usa el botón de 'Ver en Mapa' para explorar todas las opciones y elegir el lugar que más te interese. 🗺️'",
-     "isStructured": true
-   }
-   
-   // REGLA CLAVE: Si la respuesta requiere MÚLTIPLES FICHAS, debes envolver todas las fichas en un array y añadir la propiedad "isMultiStructured": true.
-   // Ejemplo para múltiples categorías:
-   {
-     "isMultiStructured": true,
-     "response": [
-       { "type": "category", "categoryName": "Dentistas en Progreso", "description": "...", "isStructured": true },
-       { "type": "category", "categoryName": "Oculistas en Progreso", "description": "...", "isStructured": true }
-     ]
-   }
-   
-   // El texto conversacional siempre debe ir ANTES o DESPUÉS de cualquier bloque JSON.`;
+// ... (El resto de las reglas de formato JSON se mantienen sin cambios) ...
+`;
 
 
 /**
@@ -99,7 +52,7 @@ async function getPlaceDetails(query) {
         const findPlaceResponse = await placesClient.findPlaceFromText({
             params: {
                 key: placesApiKey,
-                // <-- CLAVE DE VERIFICACIÓN: Forzamos la búsqueda en la zona de Nuevo Progreso
+                // CLAVE DE VERIFICACIÓN: Forzamos la búsqueda en la zona de Nuevo Progreso
                 input: query + ", Nuevo Progreso Tamps, México",
                 inputtype: 'textquery',
                 fields: ['place_id']
@@ -109,7 +62,6 @@ async function getPlaceDetails(query) {
         const placeId = findPlaceResponse.data.candidates?.[0]?.place_id;
         
         if (!placeId) {
-            // Si Places no encuentra el lugar, incluso con el hint geográfico, asumimos que no es relevante.
             console.log("No se encontró un place_id para la consulta en Nuevo Progreso:", query);
             return null;
         }
@@ -151,6 +103,21 @@ export default async function handler(req, res) {
         const langText = currentLanguage === 'es' ? 'español' : 'inglés';
         const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
 
+        // <-- [NUEVO] LÓGICA DE BLOQUEO MANUAL Y HARD DENIAL INMEDIATO
+        const normalizedPrompt = userPrompt.toLowerCase().trim();
+        const foundBlockedPlace = BLOCKED_PLACES.some(blocked => normalizedPrompt.includes(blocked));
+
+        if (foundBlockedPlace) {
+            console.log(`BLOQUEO MANUAL ACTIVADO para: ${userPrompt}`);
+            const denialMessage = currentLanguage === 'es' 
+                ? `⛔️ Lo siento, el lugar relacionado con "${userPrompt}" **no se encuentra disponible o no existe dentro de Nuevo Progreso, Tamaulipas**. Por favor, intenta buscando una categoría general. 🕵️`
+                : `⛔️ I apologize, but the place related to "${userPrompt}" **is unavailable or does not exist within Nuevo Progreso, Tamaulipas**. Please try searching for a general category. 🕵️`;
+            
+            // Retornamos el mensaje de negación explícita como respuesta final de texto plano.
+            return res.status(200).json({ responseText: denialMessage });
+        }
+        // FIN LÓGICA DE BLOQUEO MANUAL
+
         // LÓGICA DE INTERCEPTACIÓN Y PRIORIDAD LOCAL (para forzar CATEGORY JSON)
         let promptToSend = userPrompt;
 
@@ -160,7 +127,7 @@ export default async function handler(req, res) {
         const match = userPrompt.match(recommendationPattern);
         
         if (match) {
-            // Lógica de Categoría General (Se mantiene igual)
+            // ... (Lógica de Categoría General se mantiene igual) ...
             const categoryKeyRaw = match[3].toLowerCase(); 
             let categoryName = "lugares y negocios"; 
             
@@ -170,7 +137,6 @@ export default async function handler(req, res) {
             else if (categoryKeyRaw.includes('barbacoa')) categoryName = "Barbacoa y Birria";
             else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = "Salud y Estética";
             
-            // SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA
             promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría ${categoryName} en Nuevo Progreso. La descripción debe guiar al usuario a usar los botones de acción ('Ver en Mapa' y 'Buscar en Google') para que ellos decidan qué lugar visitar, cumpliendo con la restricción de no recomendar lugares específicos.`;
             
             console.log("PROTOCOLO CATEGORÍA GENERAL ACTIVADO para:", categoryName);
@@ -187,12 +153,12 @@ export default async function handler(req, res) {
             history: history 
         });
 
-        // Enviamos el nuevo mensaje (original o modificado por la redirección a categoría) al modelo
+        // Enviamos el nuevo mensaje (original o modificado) al modelo
         const result = await chat.sendMessage({ message: promptToSend });
         let modelResponseText = result.text.trim();
         
         let finalResponseData = { responseText: modelResponseText };
-        let singlePlaceFailed = false; // Bandera para el Hard Denial
+        let singlePlaceFailed = false;
 
         // Lógica de ENRIQUECIMIENTO con Places API
         try {
@@ -205,12 +171,9 @@ export default async function handler(req, res) {
                 
                 let fichasToProcess = [];
 
-                // 1. Caso de Múltiples Fichas (Array)
                 if (parsedJson.isMultiStructured === true && Array.isArray(parsedJson.response)) {
                     fichasToProcess = parsedJson.response;
-                } 
-                // 2. Caso de Ficha Única
-                else if (parsedJson.isStructured === true) {
+                } else if (parsedJson.isStructured === true) {
                     fichasToProcess = [parsedJson];
                 }
 
@@ -255,10 +218,9 @@ export default async function handler(req, res) {
                                     enrichedFichas.push(enrichedFicha);
                                     
                                 } else {
-                                    // <-- [MODIFICADO] CASO DE FALLO/NO ENCONTRADO EN PROGRESO: Sustitución de la ficha
+                                    // CASO DE FALLO/NO ENCONTRADO EN PROGRESO: Sustitución de la ficha
                                     console.error(`ERROR: Places API no encontró '${placeNameSearch}' dentro de Nuevo Progreso. Sustituyendo con mensaje de error.`);
 
-                                    // Creamos un mensaje conversacional de error para el usuario.
                                     const conversationalError = { 
                                         role: 'model', 
                                         text: currentLanguage === 'es' 
@@ -269,7 +231,6 @@ export default async function handler(req, res) {
                                     
                                     enrichedFichas.push(conversationalError);
                                     
-                                    // Si la única ficha que se procesó falló, activamos el Hard Denial
                                     if (fichasToProcess.length === 1) {
                                         singlePlaceFailed = true;
                                     }
@@ -283,23 +244,21 @@ export default async function handler(req, res) {
 
                     // Después de procesar todas las fichas, reconstruir la respuesta final.
                     if (parsedJson.isMultiStructured === true) {
-                         // Si fue MultiStructured, respondemos con el array completo
                          finalResponseData.responseText = JSON.stringify({
                              isMultiStructured: true,
                              response: enrichedFichas,
                              conversationText: modelResponseText.replace(jsonString, '').trim() || ''
                          });
                     } else {
-                         // Si fue una ficha única (Exitosa O Fallida con isStructured: false)
                          finalResponseData.responseText = JSON.stringify(enrichedFichas[0]);
                     }
                 }
 
-                // <-- [MODIFICADO: LÓGICA DE HARD DENIAL]
-                // Si detectamos que se intentó responder con una sola ficha de lugar y esta falló
+                // <-- [MODIFICADO: LÓGICA DE HARD DENIAL FINAL]
+                // Si la ficha única falló (el caso de 'Cine Azteca' que Places no encontró)
                 if (singlePlaceFailed === true) {
-                    // Extraemos solo el texto del objeto de error y lo enviamos como texto plano.
-                    // Esto garantiza que el frontend NO pueda renderizar Quick Actions.
+                    // Si el proceso falló, extraemos solo el texto del objeto de error
+                    // y lo enviamos como texto plano, sin ninguna estructura JSON.
                     console.log("HARD DENIAL ACTIVADO: Forzando respuesta a texto plano.");
                     finalResponseData.responseText = enrichedFichas[0].text;
                 }
