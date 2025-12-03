@@ -4,12 +4,12 @@ import { Client as PlacesClient } from '@googlemaps/google-maps-services-js';
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
 
-// <-- [NUEVO] CONSTANTES GEOGRÁFICAS PARA VERIFICACIÓN ESTRICTA
-const PROGRESO_LAT = 26.064;  // Latitud aproximada del centro de Nuevo Progreso
-const PROGRESO_LNG = -98.005; // Longitud aproximada del centro de Nuevo Progreso
-const MAX_DISTANCE_KM = 5;    // Distancia máxima aceptable (5 kilómetros) para ser considerado 'en Progreso'
+// [NUEVO] CONSTANTES PARA SALUDOS Y PROXIMIDAD
+const PROGRESO_LAT = 26.064;
+const PROGRESO_LNG = -98.005; 
+const MAX_DISTANCE_KM = 5;    // 5 kilómetros
 
-// Función para calcular la distancia entre dos coordenadas (Fórmula del Haversine)
+// Función de Distancia (Fórmula del Haversine) - Se mantiene igual
 function getDistance(lat1, lon1, lat2, lon2) {
     const R = 6371; // Radio de la Tierra en kilómetros
     const dLat = (lat2 - lat1) * (Math.PI / 180);
@@ -26,23 +26,24 @@ const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
 const placesClient = new PlacesClient({}); 
 
-// 2. Definimos la Instrucción del Sistema (Ajustada para máxima neutralidad)
+// 2. Definimos la Instrucción del Sistema (AJUSTADA para Imprecisión)
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 
-**REGLA CRÍTICA DE DESCRIPCIÓN NEUTRA:**
-1.  Tu descripción en el campo "description" **NUNCA debe incluir referencias geográficas** explícitas o implícitas ("en Progreso", "aquí", "cerca"). Simplemente describe el tipo de negocio.
-2.  Tu servidor es el encargado de verificar la ubicación mediante coordenadas. Si la ficha no se enriquece, la respuesta final del sistema será un mensaje de negación explícita.
+**REGLA CRÍTICA DE DESCRIPCIÓN NEUTRA Y CLASIFICACIÓN:**
+1.  Tu descripción en el campo "description" NUNCA debe incluir referencias geográficas explícitas o implícitas. Simplemente describe el tipo de negocio.
+2.  Si el lugar es una clínica dental, farmacia u óptica, DEBES CLASIFICARLO CORRECTAMENTE y ser lo más neutral posible en la descripción. Evita clasificar como Óptica si es un servicio dental. **Si tienes dudas sobre la clasificación, usa una categoría general como 'Salud y Estética'.**
+3.  Tu servidor es el encargado de verificar la ubicación y te quitará el JSON si fallas la verificación de proximidad.
 
 REGLAS DE FORMATO:
-1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 📍, ☀️) al inicio o final de tus respuestas o descripciones para hacerlas más amigables y atractivas.
-2. **REGLA CRÍTICA DE SALUD Y PRIVACIDAD:** Para cualquier lugar o categoría relacionado con la salud (clínicas, farmacias, ópticas, etc.), DEBES establecer el campo "isHealthPlace" en "true". NUNCA debes incluir precios, dar recomendaciones directas, o proporcionar detalles de contacto en la descripción. El servidor se encargará de limitar los botones de acción solo a "Ver en Mapa" y "Buscar en Google" para garantizar el cumplimiento.
+1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y utiliza emojis relevantes.
+2. **REGLA CRÍTICA DE SALUD Y PRIVACIDAD:** Para cualquier lugar o categoría relacionado con la salud (clínicas, farmacias, ópticas, etc.), DEBES establecer el campo "isHealthPlace" en "true". El servidor se encargará de limitar los botones de acción.
 
 ---
 
 ### PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES
 
-**REGLA CRÍTICA:** Si el usuario pide recomendaciones, sugerencias o un listado de lugares (ej. '4 taquerías', 'dime restaurantes cerca'), DEBES usar el **MODO FICHA DE CATEGORÍA (JSON)** para dar un resumen general de la categoría. NUNCA debes listar lugares específicos o dar sugerencias directas. Tu descripción debe guiar al usuario a usar los botones de acción para que ellos exploren las opciones en el mapa.
+**REGLA CRÍTICA:** Si el usuario pide recomendaciones, sugerencias o un listado de lugares, DEBES usar el **MODO FICHA DE CATEGORÍA (JSON)** para dar un resumen general. NUNCA debes listar lugares específicos o dar sugerencias directas.
 
 ---
 // ... (Los formatos JSON se mantienen iguales) ...
@@ -51,8 +52,6 @@ REGLAS DE FORMATO:
 
 /**
  * Función que busca el nombre de un lugar en la API de Google Places y verifica su proximidad.
- * @param {string} query Nombre del lugar a buscar.
- * @returns {object|null} Objeto con detalles del lugar o null si falla la búsqueda o la verificación de proximidad.
  */
 async function getPlaceDetails(query) {
     if (!placesApiKey) {
@@ -65,7 +64,6 @@ async function getPlaceDetails(query) {
         const findPlaceResponse = await placesClient.findPlaceFromText({
             params: {
                 key: placesApiKey,
-                // Pedimos el place_id y la geometría para la verificación de proximidad
                 input: query + ", Nuevo Progreso Tamps, México",
                 inputtype: 'textquery',
                 fields: ['place_id', 'geometry'] 
@@ -83,7 +81,7 @@ async function getPlaceDetails(query) {
         const placeLat = candidate.geometry.location.lat;
         const placeLng = candidate.geometry.location.lng;
 
-        // <-- [CLAVE DE VERIFICACIÓN] FILTRO DE PROXIMIDAD
+        // FILTRO DE PROXIMIDAD
         const distance = getDistance(PROGRESO_LAT, PROGRESO_LNG, placeLat, placeLng);
         
         if (distance > MAX_DISTANCE_KM) {
@@ -125,26 +123,23 @@ export default async function handler(req, res) {
     try {
         const { history = [], userPrompt, currentLanguage } = req.body;
         
-        // Configuramos el idioma
         const langText = currentLanguage === 'es' ? 'español' : 'inglés';
         const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
 
-        // LÓGICA DE INTERCEPTACIÓN Y PRIORIDAD LOCAL (para forzar CATEGORY JSON) - Se mantiene igual
+        // LÓGICA DE INTERCEPTACIÓN Y PRIORIDAD LOCAL (MODIFICADA para incluir Compras/Tiendas)
         let promptToSend = userPrompt;
 
-        // Patrón para detectar solicitudes de listado/recomendación
-        const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra).*\\s+(\\d+|unos cuantos)?\\s*(taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias|clinica|farmacia|dental|optica)s?`, 'i');
+        const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra).*\\s+(\\d+|unos cuantos)?\\s*(taquería|restaurante|tienda|compra|barbacoa|lugar|souvenirs|artesanias|clinica|farmacia|dental|optica)s?`, 'i');
         
         const match = userPrompt.match(recommendationPattern);
         
         if (match) {
-            // ... (Código para sobrescribir a CATEGORY JSON) ...
             const categoryKeyRaw = match[3].toLowerCase(); 
-            let categoryName = "lugares y negocios"; 
+            let categoryName = "Lugares y Negocios"; 
             
             if (categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('tacos')) categoryName = "Taquerías y Tacos";
             else if (categoryKeyRaw.includes('restaurante') || categoryKeyRaw.includes('comer')) categoryName = "Restaurantes y Comida";
-            else if (categoryKeyRaw.includes('artesanias') || categoryKeyRaw.includes('souvenirs')) categoryName = "Tiendas de Artesanías y Souvenirs";
+            else if (categoryKeyRaw.includes('artesanias') || categoryKeyRaw.includes('souvenirs') || categoryKeyRaw.includes('tienda') || categoryKeyRaw.includes('compra')) categoryName = "Tiendas y Compras"; // <-- [AJUSTE DE CATEGORÍA]
             else if (categoryKeyRaw.includes('barbacoa')) categoryName = "Barbacoa y Birria";
             else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = "Salud y Estética";
             
@@ -155,7 +150,7 @@ export default async function handler(req, res) {
         // FIN DE LÓGICA DE INTERCEPTACIÓN
 
 
-        // Inicializar el chat con el historial y la instrucción de sistema
+        // Inicializar el chat y enviar el prompt
         const chat = ai.chats.create({
             model: MODEL_NAME, 
             config: {
@@ -164,7 +159,6 @@ export default async function handler(req, res) {
             history: history 
         });
 
-        // Enviamos el nuevo mensaje (original o modificado) al modelo
         const result = await chat.sendMessage({ message: promptToSend });
         let modelResponseText = result.text.trim();
         
@@ -218,7 +212,7 @@ export default async function handler(req, res) {
                                 const placeData = await getPlaceDetails(placeNameSearch);
 
                                 if (placeData) {
-                                    // CASO DE ÉXITO: El lugar existe y se enriquece.
+                                    // CASO DE ÉXITO
                                     enrichedFicha = {
                                         ...enrichedFicha,
                                         placeName: placeData.name,
@@ -229,7 +223,7 @@ export default async function handler(req, res) {
                                     enrichedFichas.push(enrichedFicha);
                                     
                                 } else {
-                                    // CASO DE FALLO/NO ENCONTRADO EN PROGRESO (o falló la verificación de proximidad)
+                                    // CASO DE FALLO (No encontrado o fuera de radio)
                                     console.error(`ERROR: Lugar no localizado o fuera del radio de ${MAX_DISTANCE_KM}km. Sustituyendo con mensaje de error.`);
 
                                     const conversationalError = { 
@@ -258,15 +252,28 @@ export default async function handler(req, res) {
                          finalResponseData.responseText = JSON.stringify({
                              isMultiStructured: true,
                              response: enrichedFichas,
+                             // Opcional: El texto conversacional del modelo
                              conversationText: modelResponseText.replace(jsonString, '').trim() || ''
                          });
                     } else {
-                         finalResponseData.responseText = JSON.stringify(enrichedFichas[0]);
+                        // Es una ficha única (Exitosa o Fallida)
+                        const finalFicha = enrichedFichas[0];
+                        const conversationText = modelResponseText.replace(jsonString, '').trim();
+                        
+                        if (finalFicha.isStructured === true) {
+                             // <-- [AJUSTE: AÑADIR SALUDO PROGRAMÁTICO si no hay texto]
+                            const greeting = currentLanguage === 'es' ? '¡Claro! Aquí tienes la información sobre lo que encontré: ' : 'Sure! Here is the information I found: ';
+                            finalResponseData.responseText = (conversationText || greeting) + JSON.stringify(finalFicha);
+                        } else {
+                            // Es el mensaje de error conversacional. Se añade al final.
+                            finalResponseData.responseText = (conversationText ? conversationText + '\n\n' : '') + JSON.stringify(finalFicha);
+                        }
                     }
                 }
 
                 // LÓGICA DE HARD DENIAL FINAL: Forzamos la respuesta a texto plano si la única ficha falló.
                 if (singlePlaceFailed === true) {
+                    // Si el proceso falló, extraemos solo el texto del objeto de error y lo enviamos como texto plano.
                     console.log("HARD DENIAL ACTIVADO: Forzando respuesta a texto plano.");
                     finalResponseData.responseText = enrichedFichas[0].text;
                 }
