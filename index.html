@@ -391,8 +391,9 @@ font-family:Spline Sans Light;
         /* 🛑 NUEVO ESTILO: EFECTO DE IMAGEN APILADA (STACKED PHOTO) */
         .stacked-photo {
           /* Propiedades de la foto real */
-          width: 120px;
-          height: 120px; 
+          width: 100%; /* Ajustamos al 100% para que se vea bien en el contenedor */
+          max-width: 250px; /* Limite el ancho */
+          height: auto; 
           object-fit: cover; /* Asegura que la imagen cubra el área */
           border-radius: 12px; /* Bordes redondeados */
           position: relative;
@@ -406,23 +407,43 @@ font-family:Spline Sans Light;
 
           /* Rotación ligera para el estilo flotante */
           transform: rotate(356deg); 
-          transition: transform 0.3s ease;
+          transition: transform 0.15s ease-out;
           margin-bottom: 12px; /* Espacio antes del texto del lugar */
-          margin-right: 32px; /* Espacio para que las sombras sobresalgan del wrapper */
-padding:0px;
-left:14px;
-border:4px solid #333;
+          border: 4px solid white; /* Borde interior blanco */
+          
+          /* CRÍTICO: Asegura que la sombra tenga espacio */
+          margin-left: 10px;
+          margin-right: 32px; 
+        }
+        
+        /* 🛑 NUEVO ESTILO: Contenedor del enlace de la imagen */
+        .image-link {
+            display: block; /* Para que ocupe su propio espacio */
+            width: fit-content; /* Se ajusta al tamaño de la imagen */
+            /* Mueve todo el contenedor de la imagen al centro/izquierda */
+        }
+        
+        /* 🛑 NUEVO ESTILO: EFECTO DE MOVIMIENTO DE PRESIÓN AL HACER CLIC */
+        .stacked-photo.clickable-effect:active {
+            /* Reduce el tamaño y lo mueve ligeramente hacia abajo */
+            transform: scale(0.98) translateY(2px) rotate(356deg); 
+            /* La rotación se mantiene para evitar que salte */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); 
+            cursor: grabbing;
         }
 
+
         /* Opcional: Quitar la rotación y el apilamiento en pantallas pequeñas */
-        @medi (max-width:) {
-          .tacked-photo {
-            transform: rotate(0deg);
+        @media (max-width: 640px) {
+          .stacked-photo {
+            transform: rotate(0deg) !important;
             box-shadow: none;
             width: 100%;
             height: auto;
-            max-width: 250px; /* Limita el ancho para que no ocupe todo */
+            max-width: 90vw; /* Limita el ancho para que no ocupe todo */
             margin-right: 0; /* Quitar margen derecho en móvil */
+            margin-left: 0;
+            border: none;
           }
         }
         
@@ -1275,15 +1296,27 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                 
                 // 🛑 NUEVO CÓDIGO: Insertar la imagen si existe
                 if (m.imageUrl) {
-                    // La clase 'stacked-photo' proporciona el estilo de apilamiento
-                    imageHTML = `<img src="${m.imageUrl}" class="stacked-photo" alt="Imagen del lugar">`;
+                    // CRÍTICO: Envolver la imagen en el <a> con el URL del mapa para el enlace al hacer click
+                    imageHTML = `
+                        <a href="${m.mapUrl || '#'}" target="_blank" rel="noopener noreferrer" class="image-link">
+                            <img 
+                                src="${m.imageUrl}" 
+                                class="stacked-photo clickable-effect" 
+                                alt="Imagen del lugar ${m.placeName || m.categoryName || ''}"
+                                loading="lazy" 
+                            >
+                        </a>
+                    `;
                 }
                 
                 // 1. Contenido de la burbuja (COMBINANDO IMAGEN Y TEXTO)
                 // Ahora, la burbuja (wrapper) contiene la imagen Y el texto.
                 content = `
                     <div class="model-bubble-wrapper p-3 shadow-md">
-                        ${imageHTML} ${m.text || m.description}
+                        ${imageHTML} 
+                        <div class="model-bubble">
+                            ${m.text || m.description}
+                        </div>
                     </div>
                 `;
                 
@@ -1447,6 +1480,19 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             
             button.classList.add('listener-attached');
         });
+        
+        // 🛑 NUEVA LÓGICA: Adjuntar listeners al contenedor <a> de la imagen.
+        // El listener ya se aplica al elemento <a> dentro de createMessageBubble
+        // con target="_blank", pero aquí aseguramos el efecto visual y el listener si fuera necesario
+        const imageLinks = messageContainer.querySelectorAll('.image-link');
+        imageLinks.forEach(link => {
+            const img = link.querySelector('.stacked-photo');
+            if(img && !img.classList.contains('listener-attached')) {
+                // El listener ya está implícito en la etiqueta <a>, solo aseguramos el efecto 'active'
+                img.classList.add('listener-attached');
+            }
+        });
+
     }
 
     function renderChat() {
