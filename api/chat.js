@@ -90,9 +90,9 @@ REGLAS DE FORMATO:
 
 /**
  * Función que busca el nombre de un lugar en la API de Google Places,
- * aplicando el filtro geográfico estricto.
+ * aplicando el filtro geográfico estricto y la validación de nombre.
  * @param {string} query Nombre del lugar a buscar.
- * @returns {object|null} Objeto con detalles del lugar o null si NO existe en Nuevo Progreso.
+ * @returns {object|null} Objeto con detalles del lugar o null si NO existe el lugar exacto en Nuevo Progreso.
  */
 async function getPlaceDetails(query) {
     if (!placesApiKey) {
@@ -100,29 +100,43 @@ async function getPlaceDetails(query) {
         return null;
     }
     
-    // **** MODIFICACIÓN CLAVE 1: APLICACIÓN DEL FILTRO GEOGRÁFICO ESTRICTO ****
-    const searchInput = query + GEOGRAPHIC_CONTEXT;
+    // Coordenadas aproximadas de Nuevo Progreso para locationBias (26.064, -98.005)
+    const LOCATION_BIAS = { lat: 26.064, lng: -98.005 };
+    // Normalizamos el nombre para comparación
+    const normalizedQuery = query.toLowerCase().trim();
 
-    // 1. Buscar el place_id
+    // 1. Buscar el place_id usando el nombre del lugar.
     try {
         const findPlaceResponse = await placesClient.findPlaceFromText({
             params: {
                 key: placesApiKey,
-                input: searchInput, // <-- Búsqueda restringida
+                input: query, // Solo el nombre del lugar
                 inputtype: 'textquery',
-                fields: ['place_id']
+                fields: ['place_id', 'name'], // Necesitamos el nombre para validar
+                locationBias: `point:${LOCATION_BIAS.lat},${LOCATION_BIAS.lng}` // Sesgo a la ubicación
             }
         });
 
-        // Si no hay candidatos (es decir, no se encontró en Nuevo Progreso), retorna null
-        const placeId = findPlaceResponse.data.candidates?.[0]?.place_id;
+        // Verificamos si hay candidatos
+        const candidate = findPlaceResponse.data.candidates?.[0];
+        const placeId = candidate?.place_id;
+        const foundName = candidate?.name.toLowerCase().trim();
         
         if (!placeId) {
-            console.log("No se encontró un place_id en Nuevo Progreso para:", query);
-            return null; // <-- DEVOLUCIÓN NULA (¡NO EXISTE LOCALMENTE!)
+            console.log("No se encontró un place_id en Nuevo Progreso (cero candidatos).");
+            return null; // NO EXISTE LOCALMENTE
         }
-        
-        // 2. Obtener los detalles del lugar (incluyendo 'website' y **'photos'**)
+
+        // **** VALIDACIÓN ESTRICTA DE NOMBRE ****
+        // Si el nombre encontrado es demasiado diferente del nombre buscado (ej: Benavides vs Guadalajara), lo rechazamos.
+        // Se compara que los primeros 5 caracteres de la búsqueda estén incluidos en el nombre encontrado.
+        if (!foundName.includes(normalizedQuery.substring(0, Math.min(normalizedQuery.length, 5)))) { 
+             console.log(`Filtro estricto: El lugar encontrado "${foundName}" no coincide estrictamente con la búsqueda "${normalizedQuery}".`);
+             return null; // NO EXISTE EL LUGAR EXACTO
+        }
+
+
+        // 2. Obtener los detalles del lugar 
         const detailsResponse = await placesClient.placeDetails({
             params: {
                 key: placesApiKey,
@@ -264,7 +278,7 @@ export default async function handler(req, res) {
                                         imageUrl: null // Bloqueado
                                     };
                                 } else {
-                                    // **** MODIFICACIÓN CLAVE 2a: RESPUESTA DE LUGAR NO ENCONTRADO (ALUCINACIÓN/FUERA DE ZONA) ****
+                                    // **** RESPUESTA DE LUGAR NO ENCONTRADO (ALUCINACIÓN/FUERA DE ZONA) ****
                                     enrichedFicha = {
                                         type: "place_not_found", 
                                         placeToSearch: placeNameSearch, 
@@ -289,7 +303,7 @@ export default async function handler(req, res) {
                                         imageUrl: placeData.imageUrl 
                                     };
                                 } else {
-                                     // **** MODIFICACIÓN CLAVE 2b: RESPUESTA DE LUGAR NO ENCONTRADO (ALUCINACIÓN/FUERA DE ZONA) ****
+                                     // **** RESPUESTA DE LUGAR NO ENCONTRADO (ALUCINACIÓN/FUERA DE ZONA) ****
                                     enrichedFicha = {
                                         type: "place_not_found", 
                                         placeToSearch: placeNameSearch, 
@@ -303,7 +317,7 @@ export default async function handler(req, res) {
                              
                              // Generamos URL de búsqueda en Google Maps para la categoría
                              const categorySearch = ficha.categoryName.replace(/en Progreso/i, '').trim();
-                             // **** MODIFICACIÓN CLAVE 3: CONTEXTO GEOGRÁFICO EN LA URL DEL MAPA ****
+                             // **** CONTEXTO GEOGRÁFICO EN LA URL DEL MAPA ****
                              const mapUrlQuery = categorySearch + GEOGRAPHIC_CONTEXT;
                              const mapUrl = `https://www.google.com/maps/search/?api=1&query=$${encodeURIComponent(mapUrlQuery)}`;
                              
