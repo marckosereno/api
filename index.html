@@ -1,205 +1,1655 @@
-import { GoogleGenAI } from '@google/genai';
-import { Client as PlacesClient } from '@googlemaps/google-maps-services-js';
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progreso Tour Guide</title>
+<link href="https://db.onlinewebfonts.com/c/0991fb109ac529a8f639460d21e766cf?family=Spline+Sans+Light" rel="stylesheet">
+<link href="https://db.onlinewebfonts.com/c/c583d0702911444628b39c6d070d99c4?family=Spline+Sans+Medium" rel="stylesheet">
+<link href="https://fonts.cdnfonts.com/css/avenir" rel="stylesheet">
+         <link href="https://db.onlinewebfonts.com/c/ddadf4e5d67469bf2fb13ca47ac078ba?family=FH+Oscar+Test+Medium" rel="stylesheet">       
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        /* Estilos base */
+        html, body { 
+            font-family:Spline Sans Medium; 
+            height: 100%; 
+            margin: 0; 
+            padding: 0; 
+            /* Fondo sutil para que el Glassmorphim funcione */
+            background: linear-gradient(179deg, rgb(224 235 251 / 4%) 0%, #eff6ff 100% 60%);
+        }
+        .chat-window { 
+            height: 100%; 
+            width: 100vw; 
+            display: flex; 
+            flex-direction: column; 
+            background-color: transparent; 
+            overflow: hidden;
+font-weight:200;
+line-height:0.5cm;
+font-family:Spline Sans Light;
+        }
+        .user-bubble { border-radius: 18px 18px 0 18px; max-width: 90% }
+        /* 🛑 CAMBIO CLAVE 1: Eliminamos el estilo anterior de la burbuja del modelo, ahora usa el wrapper */
+        .model-bubble { border-radius: 18px 18px 18px 0; max-width: 90%; padding-left:8px; backgroud-color: transparent; }
+        
+        /* 🛑 NUEVO: Wrapper para aplicar el color de fondo y el relleno, manteniendo el padding-left del div interno */
+        .model-bubble-wrapper {
+            /* Colores de la paleta: #3A4EFB / #334AFA */
+            background: linear-gradient(127deg, #ffffff85, #fff); 
+            color: #373737; /* Texto negro */
+            border-radius: 18px 18px 18px 0;
+            padding: 12px; /* Mantiene el padding uniforme de la burbuja */
+            box-sha: 0 4px 6px rgba(0, 0, 0, 0.6);
+            max-width: 90%;
+            width: fit-content;
+        }
 
-// Usamos el modelo más rápido y económico para chat
-const MODEL_NAME = "gemini-2.5-flash"; 
+        .action-bar-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 10px; padding-bottom: 5px }
+        .action-btn { 
+            white-space: nowrap;
+            /* 🛑 CAMBIO CLAVE 3: Estilos de Botón Glassmorphism */
+            border-radius: 23px; /* Bordes muy redondeados (SOLICITADO) */
+            font-weight: 500;   /* Fuente delgada (SOLICITADO) */
+            
+            /* EFECTO GLASSMORHPISM COMPLETO */
+            background: rgba(255, 255, 255, 0.1); /* Fondo muy transparente */
+            border: 1px solid rgba(255, 255, 255, 0.3); /* Borde sutil */
+            backdrop-filter: blur(8px); /* Desenfoque clave del efecto */
+            -webkit-backdrop-filter: blur(8px); /* Para compatibilidad */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Sombra sutil */
+            color: #FFFFFF !important; /* Texto blanco por defecto */
+            
+            /* Anulamos la transición específica de color de fondo para que Glassmorphism funcione */
+            transition: all 0.3s ease; 
+        }
 
-// Mapeo de intención de usuario a Categoría (Simplificado)
-const CATEGORY_MAP = {
-    'tacos': 'Taquerías y Tacos',
-    'taqueria': 'Taquerías y Tacos',
-    'barbacoa': 'Barbacoa y Birria',
-    'restaurante': 'Restaurantes y Comida',
-    'comer': 'Restaurantes y Comida',
-    'artesanias': 'Tiendas de Artesanías y Souvenirs',
-    'souvenirs': 'Tiendas de Artesanías y Souvenirs',
-};
+        /* 🛑 Ajustes de los botones con color específico para que funcionen con Glassmorphism (Aseguramos la visibilidad) */
+        .action-bar-container .action-btn.bg-green-500 {
+            background-color: #000 !important; /* Verde sólido para el principal */
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            border: none;
+        }
+        .action-bar-container .action-btn.bg-blue-500 {
+            background-color: #3B82F6 !important; /* Azul sólido */
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            border: none;
+        }
+        .action-bar-container .action-btn.bg-yellow-400 {
+            background-color: #FBBF24 !important; /* Amarillo sólido */
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            border: none;
+            color: #1F2937 !important; /* Texto oscuro para el amarillo */
+        }
+        .action-bar-container .action-btn.bg-gray-600 {
+            /* Dejamos este como Glassmorphism o un gris oscuro */
+            background: rgba(75, 85, 99, 0.75) !important;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #FFFFFF !important;
+        }
 
-// 1. Inicializamos los clientes
-const ai = new GoogleGenAI({});
-const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
-const placesClient = new PlacesClient({}); 
+        .chip-group-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 10px; padding-bottom: 5px }
+        
+        /* Estilo de la barra de chat NUEVO (GLASSMOPRHISM) */
+        .map-search-bar {
+            background-color: #ffffffb8; /* Fondo blanco con 72% de opacidad (Glassmorphism) */
+            border-radius: 20px;
+            box-shadow: 1px 2px 2px 2px #000, 0 2px 4px -2px rgba(0, 0, 0, 0.06); /* Sombra personalizada */
+            border: 1px solid #e5e7eb; /* Mantenemos el borde para definición */
+            display: flex;
+            align-items: center;
+            padding: 4px; 
+            width: 100%; 
+            box-sizing: border-box; 
+        }
+        
+        .map-input {
+            flex-grow: 1;
+            padding: 0.75rem 0.75rem; 
+            color: #9ca3af;
+            font-size: 1.125rem;
+            background: transparent;
+            border: none;
+            min-width: 0; 
+            outline: none !important;
+            box-shadow: none !important;
+        }
+        .go-button {
+            background-color: black;
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 15px;
+            padding: 0.5rem 1rem; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: hover:opacity-90 disabled:opacity-50;
+            flex-shrink: 0;
+            min-width: 60px;
+            height: 44px;
+            box-sizing: border-box;
+            margin-right: 4px;
+            outline: none !important;
+        }
+        .go-button svg {
+            margin-right: 0.25rem;
+            width: 1.25rem; 
+            height: 1.25rem;
+            fill: currentColor;
+        }
 
-// 2. Definimos la Instrucción del Sistema
-const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
-Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
+        /* --- Eliminación de Efecto Celeste/Ring/Highlight en TODOS los botones y chips --- */
+        
+        /* 1. Para navegadores basados en Webkit (Chrome, Safari, Android) */
+        * {
+            -webkit-tap-highlight-color: transparent !important; 
+        }
+        
+        /* 2. Asegura la eliminación del outline/ring en estados focus/active */
+        .action-chip, .category-chip, .language-chip, .go-button, .map-input, .dynamic-chip {
+            outline: none !important;
+            box-shadow: none !important;
+            --tw-ring-color: transparent !important;
+        }
+        .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active, .go-button:focus, .go-button:active, .dynamic-chip:focus, .dynamic-chip:active {
+            outline: none !important;
+            box-shadow: none !important;
+            --tw-ring-color: transparent !important;
+        }
+        .hover\:bg-gray-300:active {
+            background-color: #d1d5db; 
+        }
+        
+        /* --- Efecto Ola y Transición para los Chips --- */
+        .category-chip, .language-chip, .dynamic-chip {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+        }
+        .visible-chip {
+            opacity: 1;
+            transform: translateY(0);
+        }
 
-REGLAS DE FORMATO:
-1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 📍, ☀️) al inicio o final de tus respuestas o descripciones para hacerlas más amigables y atractivas.
-2. **REGLA CRÍTICA DE SALUD Y PRIVACIDAD:** Para cualquier lugar o categoría relacionado con la salud (clínicas, farmacias, ópticas, etc.), DEBES establecer el campo "isHealthPlace" en "true". NUNCA debes incluir precios, dar recomendaciones directas, o proporcionar detalles de contacto en la descripción. El servidor se encargará de limitar los botones de acción solo a "Ver en Mapa" y "Buscar en Google" para garantizar el cumplimiento.
+        /* 🛑 Ajustes de los timestamp */
+        .timestamp {
+            font-size: 0.7rem; 
+            color: #9ca3af; 
+            margin-top: 2px;
+            /* Se alinea automáticamente por el padre flex-col */
+        }
+        .user-timestamp-container { 
+            align-self: flex-end; /* Mueve el timestamp del usuario al lado derecho (end) */
+            margin-right: 4px; /* Espacio para que no esté pegado al borde */
+        }
+        .model-timestamp-container { 
+            align-self: flex-start; /* Mueve el timestamp del modelo al lado izquierdo (start) */
+            margin-left: 4px; /* Espacio para que no esté pegado al borde */
+        }
+        /* FIN CAMBIOS SOLICITADOS EN TIMESTAMP */
 
----
+        /* AJUSTE CRÍTICO PARA EL NUEVO HEADER FLOTANTE */
+        #message-container {
+            padding-top: 6rem; 
+        }
+        #btn-clear-top {
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+            outline: none !important;
+        }
 
-### PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES
+        /* NUEVOS ESTILOS PARA LA TARJETA DE NOTIFICACIÓN */
+        .notification-card {
+            background-color: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.05);
+            color: #1f2937; 
+            padding: 12px 16px;
+            max-width: 90%;
+            min-width: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 10px; 
+            transform: translateY(-100%);
+            transition: transform 0.4s ease-out, opacity 0.4s ease-out;
+            opacity: 0;
+        }
 
-**REGLA CRÍTICA:** Si el usuario pide recomendaciones, sugerencias o un listado de lugares (ej. '4 taquerías', 'dime restaurantes cerca'), DEBES usar el **MODO FICHA DE CATEGORÍA (JSON)** para dar un resumen general de la categoría. NUNCA debes listar lugares específicos o dar sugerencias directas. Tu descripción debe guiar al usuario a usar los botones de acción para que ellos exploren las opciones en el mapa.
+        .notification-card.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
 
----
+        .notification-card .message-content {
+            flex-grow: 1;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            line-height:16px;
+        }
 
-3. **MODO FICHA DE LUGAR (JSON):** Úsalo si la solicitud es de un lugar o negocio **específico** (Salud o No Salud). Debe incluir la propiedad 'placeToSearch' con el nombre exacto del lugar.
+        .notification-card .close-btn {
+            background: none;
+            border: none;
+            color: #9ca3af; 
+            font-size: 1.2rem;
+            cursor: pointer;
+            margin-left: 15px;
+            padding: 0;
+            outline: none;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+        
+        .notification-card .close-btn:active {
+            color: #4b5563; 
+        }
 
-4. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo para solicitudes de categorías generales O para **CUMPLIR EL PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES**.
+        /* Botón de Notificaciones (SIN CAMBIOS) */
+        #btn-notifications {
+            background-color: white;
+            color: #4b5563; 
+            border: 1px solid #d1d5db; 
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+            outline: none !important;
+            padding: 8px 12px; 
+            border-radius: 9999px; 
+            font-size: 1.1rem; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+        }
+        #btn-notifications:hover {
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        #btn-notifications:active {
+            background-color: #e5e7eb;
+            color: #000;
+        }
 
-5. **MODO CONVERSACIONAL (Texto Plano):** Úsalo para preguntas generales o de seguimiento que no requieran una ficha.
+        /* Panel de Preferencias (SIN CAMBIOS) */
+        .notification-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100; 
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+        }
 
-6. Los formatos JSON requeridos son:
-   
-   // Formato para LUGAR ESPECÍFICO (Salud o No Salud)
-   {
-     "type": "place", 
-     "placeName": "Nombre del Lugar", 
-     "placeToSearch": "Nombre Exacto a buscar en Places API, ej: JM Dental Clinic", 
-     "placeCategory": "Clasificación general del lugar, ej: Clínica Dental, Restaurante",
-     "isHealthPlace": true/false, 
-     "description": "Descripción corta de no más de 3 oraciones.",
-     "isStructured": true
-   }
-   
-   // Formato para CATEGORÍA GENERAL
-   {
-     "type": "category", 
-     "categoryName": "Nombre de la Categoría, ej: Taquerías en Progreso",
-     "description": "Resumen de la categoría en Progreso. Debes incluir una frase como: 'Usa el botón de 'Ver en Mapa' para explorar todas las opciones y elegir el lugar que más te interese. 🗺️'",
-     "isStructured": true
-   }
-   
-   // REGLA CLAVE: Si la respuesta requiere MÚLTIPLES FICHAS, debes envolver todas las fichas en un array y añadir la propiedad "isMultiStructured": true.
-   // Ejemplo para múltiples categorías (la respuesta al usuario debe ser el JSON completo, texto conversacional opcional):
-   {
-     "isMultiStructured": true,
-     "response": [
-       { "type": "category", "categoryName": "Dentistas en Progreso", "description": "...", "isStructured": true },
-       { "type": "category", "categoryName": "Oculistas en Progreso", "description": "...", "isStructured": true }
-     ],
-     "conversationText": "Hola, encontré varias opciones para ti:"
-   }
-   
-   // El texto conversacional siempre debe ir ANTES o DESPUÉS de cualquier bloque JSON.`;
+        .notification-modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .notification-panel {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2), 0 5px 10px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 400px; 
+            transform: translateY(20px); 
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+            opacity: 0;
+            padding: 20px;
+            pointer-events: auto; 
+        }
+
+        .notification-modal-overlay.show .notification-panel {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Toggles (Switch) - (SIN CAMBIOS) */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 40px; 
+            height: 20px; 
+            flex-shrink: 0;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc; 
+            transition: .4s;
+            border-radius: 20px; 
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px; 
+            width: 16px; 
+            left: 2px; 
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2); 
+        }
+
+        input:checked + .slider {
+            background-color: #2563eb; 
+        }
+
+        input:focus + .slider {
+            box-shadow: 0 0 1px #2563eb;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px); 
+        }
+
+        /* Info card dentro del panel (SIN CAMBIOS) */
+        .info-card-panel {
+            background-color: #eff6ff; 
+            color: #1e40af; 
+            border-left: 4px solid #3b82f6; 
+            border-radius: 4px;
+            padding: 12px;
+            font-size: 0.9rem;
+            display: none;
+            align-items: flex-start;
+            margin-top: 20px;
+        }
+        .info-card-panel span {
+            margin-right: 8px;
+            font-size: 1.1rem;
+        }
+        
+        /* 🛑 NUEVO ESTILO: EFECTO DE IMAGEN APILADA (STACKED PHOTO) */
+        .stacked-photo {
+          /* Propiedades de la foto real */
+          width: 100%; /* Ajustamos al 100% para que se vea bien en el contenedor */
+          max-width: 120px; /* Limite el ancho */
+          height: auto; 
+          object-fit: cover; /* Asegura que la imagen cubra el área */
+          border-radius: 12px; /* Bordes redondeados */
+          position: relative;
+          
+          /* El truco: Simulación de las capas traseras con box-shadow */
+          box-shadow: 
+            /* Capa 1: Sombra sutil desplazada */
+            6px -4px 0 0 rgba(0, 0, 0, 0.15),
+            /* Capa 2: Sombra más clara y desplazada */
+            3px -5px 0 0 rgba(0, 0, 0, 0.08);
+
+          /* Rotación ligera para el estilo flotante */
+          transform: rotate(356deg); 
+          transition: transform 0.15s ease-out;
+          margin-bottom: 12px; /* Espacio antes del texto del lugar */
+          border: 4px solid white; /* Borde interior blanco */
+          
+          /* CRÍTICO: Asegura que la sombra tenga espacio */
+          margin-left: 10px;
+          margin-right: 32px; 
+        }
+        
+        /* 🛑 NUEVO ESTILO: Contenedor del enlace de la imagen */
+        .image-link {
+            display: block; /* Para que ocupe su propio espacio */
+            width: fit-content; /* Se ajusta al tamaño de la imagen */
+            /* Mueve todo el contenedor de la imagen al centro/izquierda */
+        }
+        
+        /* 🛑 NUEVO ESTILO: EFECTO DE MOVIMIENTO DE PRESIÓN AL HACER CLIC */
+        .stacked-photo.clickable-effect:active {
+            /* Reduce el tamaño y lo mueve ligeramente hacia abajo */
+            transform: scale(0.98) translateY(2px) rotate(356deg); 
+            /* La rotación se mantiene para evitar que salte */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); 
+            cursor: grabbing;
+        }
 
 
-/**
- * Función que busca el nombre de un lugar en la API de Google Places,
- * incluyendo ahora la referencia de la foto para generar la URL.
- * @param {string} query Nombre del lugar a buscar.
- * @returns {object|null} Objeto con detalles del lugar o null si falla.
- */
-async function getPlaceDetails(query) {
-    if (!placesApiKey) {
-        console.error("GOOGLE_PLACES_API_KEY no definida.");
-        return null;
+        /* Opcional: Quitar la rotación y el apilamiento en pantallas pequeñas */
+        @med (max-width:) {
+          .stacked-photo {
+            transform: rotate(0deg) !important;
+            box-shadow: none;
+            width: 100%;
+            height: auto;
+            max-width: 90vw; /* Limita el ancho para que no ocupe todo */
+            margin-right: 0; /* Quitar margen derecho en móvil */
+            margin-left: 0;
+            border: none;
+          }
+        }
+        
+        /* --- CAMBIOS SOLICITADOS EN CSS --- */
+        
+        /* NUEVO: ESTILO PARA EL CONTENEDOR INFERIOR COMPLETO (Quick Replies + Chat Bar) */
+        .bottom-action-area {
+            border-top: 1px solid #e5e7eb;
+            background: linear-gradient(90deg, rgba(196, 228, 242, 0.35) 0%, #eff6ff 40%, #eff6ff 100%);
+            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
+            z-index: 10;
+            padding-bottom: 0; /* Ajustamos con los p-4 internos */
+        }
+
+        /* 1. 🎨 FONDO PARA EL QUICK REPLIES CONTAINER (Adaptado para usar el fondo del padre) */
+        #quick-replies-container {
+            border-top: none; /* El padre (bottom-action-area) ya tiene un borde superior */
+            background: transparent; /* Fondo transparente para que use el del padre */
+            padding: 0.5rem; 
+            box-shadow: none; /* La sombra la maneja el padre */
+            z-index: 10;
+        }
+
+
+        /* --- NUEVOS ESTILOS GLASS CHIP (SIN CAMBIOS) --- */
+        .glass-chip {
+            /* 2. 🎨 FONDO PARA LOS BOTONES (Menu Action Chip) */
+            background: linear-gradient(90deg, rgb(226 246 255 / 35%) 0%, #fffafb 90%) !important; 
+            
+            backdrop-filter: blur(8px); 
+            -webkit-backdrop-filter: blur(8px);
+            
+            border: 1px solid rgba(255, 255, 255, 0.8) !important; 
+            
+            box-shadow: 
+                inset 0 1px 0 rgba(255, 255, 255, 0.9),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+            
+            color: #1f2937 !important; 
+            
+            transition: all 0.2s ease-in-out;
+            
+            /* Asegurar que se vean como chips de submenú */
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            border-radius: 9999px; /* Usar full rounded para los chips pequeños */
+            padding: 8px 12px;
+        }
+
+        .glass-chip:hover {
+            background: linear-gradient(90deg, rgb(226 246 255 / 50%) 0%, #ffffff 100%) !important;
+            box-shadow: 
+                0 2px 4px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 1),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        .glass-chip:active {
+            background: rgb(226 246 255 / 80%) !important;
+            box-shadow: none !important; 
+        }
+
+        /* 🛑 NUEVO ESTILO: Glass Chip Azulado para Botones de Acción (Mapa, Google, etc.) */
+        .blue-glass-chip {
+            /* Tono Azul Claro para el fondo */
+            background: linear-gradient(90deg, rgb(215 236 255 / 50%) 0%, rgb(230 245 255 / 80%) 90%) !important;
+            
+            backdrop-filter: blur(8px); 
+            -webkit-backdrop-filter: blur(8px);
+            
+            /* Borde más definido y color de texto */
+            border: 1px solid rgba(130, 180, 255, 0.8) !important; 
+            color: #1e40af !important; /* Texto Azul Oscuro */
+            font-weight: 600; /* Un poco más de peso para que se destaque */
+            
+            /* Asegurar que se vean como chips de submenú */
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            border-radius: 9999px; 
+            padding: 8px 12px;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .blue-glass-chip:hover {
+            background: linear-gradient(90deg, rgb(190 220 255 / 70%) 0%, rgb(210 235 255 / 90%) 100%) !important;
+            box-shadow: 
+                0 2px 4px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 1),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        .blue-glass-chip:active {
+            background: rgb(180 210 255 / 90%) !important;
+            box-shadow: none !important; 
+        }
+
+
+        /* Anular el fondo gris de Tailwind en los chips de menú principales */
+        #menu-actions .menu-action-chip {
+            background-color: transparent !important;
+        }
+        
+        /* --- ESTILOS ADICIONALES PARA EL EFECTO TYPING DEL USUARIO Y MODELO --- */
+        
+        /* 🛑 CRÍTICO: Estilos base de las burbujas de typing para ocultarlas sin ocupar espacio */
+        #user-typing-bubble, #model-typing-bubble {
+            opacity: 0;
+            visibility: hidden;
+            /* Transición para un efecto de colapso suave */
+            transition: opacity 0.2s ease-out, visibility 0.2s ease-out, height 0.2s ease-out, margin-bottom 0.2s ease-out;
+            margin-bottom: 0 !important; /* CLAVE 1: Eliminamos el margen para que se colapse */
+            height: 0; /* CLAVE 2: Colapsamos la altura */
+            overflow: hidden; /* Ocultamos el contenido durante el colapso */
+            /* Mantenemos el justify-end/start definido en el HTML para el alineamiento */
+        }
+        
+        /* Estilos para el estado VISIBLE */
+        #user-typing-bubble.show, #model-typing-bubble.show {
+            opacity: 1;
+            visibility: visible;
+            height: auto; 
+padding-bottom:40px; /* Devolvemos la altura automática */
+            margin-bottom: 18px !important; /* Restauramos el margen para que se vea bien */
+        }
+        
+        .typing-dots {
+            display: flex;
+            align-items: center;
+            height:8px;
+        }
+        .typing-dots .dot {
+            width: 8px;
+            height: 6px;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        /* 🛑 COLOR DE LOS PUNTOS: NEGRO para el bot (fondo blanco) */
+        #model-typing-bubble .dot { background-color: black; }
+        /* 🛑 COLOR DE LOS PUNTOS: BLANCO para el usuario (fondo negro) */
+        #user-typing-bubble .dot { background-color: white; }
+
+        .typing-dots .dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dots .dot:nth-child(2) { animation-delay: -0.16s; }
+        .typing-dots .dot:nth-child(3) { animation-delay: 0s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+    </style>
+    <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
+</head>
+<body>
+    <div id="chat-window" class="chat-window h-screen w-full"> 
+        
+        <div class="fixed top-0 left-0 w-full z-50 p-4 pt-6 flex justify-between bg-transparent">
+            <div id="top-action-bar-left" class="flex items-center space-x-3">
+                <div id="btn-clear-top" class="action-chip flex items-center p-2 rounded-full text-sm font-semibold bg-white text-red-700 cursor-pointer transition hover:bg-gray-100 shadow-md border border-red-300" data-action="CLEAR_HISTORY">❌ Borrar Chat</div>
+            </div>
+            <div id="top-action-bar-right" class="flex items-center space-x-3">
+                <button id="btn-notifications" class="action-chip flex items-center text-sm font-semibold cursor-pointer">🔔</button>
+            </div>
+        </div>
+        <div id="app-alert-container" class="fixed top-0 w-full flex justify-center z-50 pointer-events-none"></div>
+
+        <div id="message-container" class="flex-grow overflow-y-auto p-4 flex flex-col">
+            
+            <div id="model-typing-bubble" class="flex justify-start">
+                <div class="flex flex-col items-start">
+                    <div class="model-bubble-wrapper p-3 shadow-md">
+                        <div class="typing-dots">
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="user-typing-bubble" class="flex justify-end">
+                <div class="flex flex-col items-end max-w-xs sm:max-w-md lg:max-w-lg">
+                    <div class="user-bubble bg-black text-white p-3 shadow-md">
+                        <div class="typing-dots">
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-action-area flex-shrink-0 flex flex-col space-y-2">
+            
+            <div id="quick-action-full-list" class="px-4 pt-0 pb-2 hidden">
+                <div id="btn-view-all-places" class="action-chip flex items-center p-3 rounded-xl text-lg font-bold cursor-pointer transition glass-chip justify-center">
+                    ➡️ Ver todos los lugares
+                </div>
+            </div>
+            
+            <div id="quick-replies-container" class="quick-replies-container flex-shrink-0 flex flex-col space-y-2">
+                
+                <div id="dynamic-chips-group" class="chip-group-scroll hidden px-4 pt-0">
+                    <div id="dynamic-chips-list" class="inline-flex space-x-3 pt-2 br-4"> 
+                        </div>
+                </div>
+                
+                <div id="category-chips-group" class="chip-group-scroll hidden px-4">
+                    <div id="category-chips-list" class="inline-flex space-x-3 pb-3 border-b border-gray-200"> 
+                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-green-500 bg-green-50 text-green-700 cursor-pointer transition hover:bg-green-100" data-query-es="Dime sobre la Categoría Salud y Estética en Progreso" data-query-en="Tell me about the Health and Beauty Category in Progreso">🏥 Salud & Estética</div>
+                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-blue-500 bg-blue-50 text-blue-700 cursor-pointer transition hover:bg-blue-100" data-query-es="Dime sobre la Categoría Compras y Tiendas en Progreso" data-query-en="Tell me about the Shopping and Stores Category in Progreso">🛍️ Compras</div>
+                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-purple-500 bg-purple-50 text-purple-700 cursor-pointer transition hover:bg-purple-100" data-query-es="Dime sobre la Categoría Entretenimiento y Atracciones en Progreso" data-query-en="Tell me about the Entertainment and Attractions Category in Progreso">🎺 Entretenimiento</div>
+                        <div class="category-chip flex items-center p-2 rounded-xl text-sm border border-yellow-500 bg-yellow-50 text-yellow-700 cursor-pointer transition hover:bg-yellow-100" data-query-es="Top 10 Dentistas en Progreso" data-query-en="Top 10 Dentists in Progreso">🦷 Top 10 Dental</div>
+                    </div>
+                </div>
+
+                <div id="language-chips-group" class="chip-group-scroll hidden px-4">
+                    <div class="inline-flex space-x-3 pb-3 border-b border-gray-200"> 
+                        <div class="language-chip flex items-center p-2 rounded-full text-sm font-semibold border border-gray-400 bg-white text-gray-800 cursor-pointer transition hover:bg-gray-100" data-lang="es">🇲🇽 Español</div>
+                        <div class="language-chip flex items-center p-2 rounded-full text-sm font-semibold border border-gray-400 bg-white text-gray-800 cursor-pointer transition hover:bg-gray-100" data-lang="en">🇺🇸 English</div>
+                    </div>
+                </div>
+                
+                <div id="menu-actions" class="chip-group-scroll px-4">
+                    <div class="inline-flex space-x-3 pt-2">
+                        <div id="btn-categorias" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="CATEGORIES">✨️ Categorías</div>
+                        <div id="btn-lenguaje" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="LANGUAGE">🧢 Idioma</div>
+                        <div id="btn-comollegar" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="GET_THERE" data-query-es="Dime cómo llegar a Progreso, Tamaulipas." data-query-en="Tell me how to get to Progreso, Tamaulipas.">🚀 Cómo Llegar</div>
+                        <div id="btn-info" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="INFO" data-query-es="Información general sobre Nuevo Progreso." data-query-en="General information about Nuevo Progreso.">ℹ️ Info</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-4 flex-shrink-0 pt-2"> 
+                <div class="map-search-bar w-full">
+                    <input type="text" id="user-input" class="map-input focus:outline-none focus:ring-0" placeholder="Ask the map">
+                    
+                    <button id="go-button" class="go-button transition hover:opacity-90 disabled:opacity-50">
+                        <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 122.88 122.88" class="h-5 w-5"><g><path class="st0" d="M62.43,122.88h-1.98c0-16.15-6.04-30.27-18.11-42.34C30.27,68.47,16.16,62.43,0,62.43v-1.98 c16.16,0,30.27-6.04,42.34-18.14C54.41,30.21,60.45,16.1,60.45,0h1.98c0,16.15,6.04,30.27,18.11,42.34 c12.07,12.07,26.18,18.11,42.34,18.11v1.98c-16.15,0-30.27,6.04-42.34,18.11C68.47,92.61,62.43,106.72,62.43,122.88L62.43,122.88z"/></g></svg>
+                        <span id="go-text">Ir</span> 
+                    </button>
+                </div>
+            </div>
+        </div>
+        </div>
+    
+    <div id="notification-preferences-modal" class="notification-modal-overlay">
+        <div class="notification-panel">
+            <h3 class="text-xl font-bold mb-2 text-gray-900">Preferencias de Notificaciones</h3>
+            <p class="text-sm text-gray-600 mb-6">Elige qué notificaciones quieres recibir.</p>
+
+            <div class="space-y-4">
+                
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="font-semibold text-gray-800">Noticias de Interfaz</p>
+                        <p class="text-sm text-gray-500">Alertas de cambios de idioma, historial y otros eventos de la aplicación. (Recomendado)</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-news" checked data-pref="news">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="font-semibold text-gray-800">Alertas de Ficha</p>
+                        <p class="text-sm text-gray-500">Notificaciones de confirmación cuando se muestra información de una ficha de lugar o categoría.</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-reminders" checked data-pref="reminders">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-between opacity-50 cursor-not-allowed">
+                    <div>
+                        <p class="font-semibold text-gray-800">Promociones y Ofertas</p>
+                        <p class="text-sm text-gray-500">Recibe notificaciones sobre promociones especiales. (Próximamente)</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-promotions" disabled data-pref="promotions">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="info-card-panel">
+                <span>ℹ️</span> Recuerda que las **alertas de error** (❌) siempre se mostrarán, independientemente de tus preferencias, para garantizar la usabilidad.
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-8">
+                <button id="btn-discard-changes" class="py-2 px-4 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition">Descartar</button>
+                <button id="btn-apply-changes" class="py-2 px-4 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition">Aplicar Cambios</button>
+            </div>
+        </div>
+    </div>
+    <script>
+    // --- BLOQUE JAVASCRIPT: SETUP Y UTILIDADES ---
+    
+    // **NOTA: Debe coincidir con el endpoint de Vercel/backend**
+    const BACKEND_URL = "/api/chat"; 
+    const MAX_CHAT_RESULTS = 4; // Límite de resultados mostrado en texto plano (DEBE COINCIDIR CON CHAT.JS)
+    
+    let chatHistory = [];
+    let currentLanguage = 'es'; 
+    let categoriesVisible = false; 
+    let languageMenuVisible = false; 
+    let isBotTyping = false; // NUEVA variable de estado del bot
+
+    // VARIABLES GLOBALES PARA EL PROTOCOLO DE RECOMENDACIÓN LOCAL
+    let lastTotalCount = 0; // Para guardar el conteo total de la última recomendación
+    let lastApiQuery = null; // Para guardar el query de Places para el chip
+
+
+    // Referencias a Elementos del DOM
+    const inputElement = document.getElementById('user-input');
+    const sendButton = document.getElementById('go-button'); 
+    const messageContainer = document.getElementById('message-container');
+    // const loadingIndicator = document.getElementById('loading-indicator'); // ELIMINADO: Ya no se usa el lottie
+    const appAlertContainer = document.getElementById('app-alert-container');
+    const categoryChipsGroup = document.getElementById('category-chips-group');
+    const languageChipsGroup = document.getElementById('language-chips-group');
+    const categoryChips = document.querySelectorAll('#category-chips-group .category-chip');
+    const languageChips = document.querySelectorAll('#language-chips-group .language-chip');
+    const menuActionChips = document.querySelectorAll('#menu-actions .menu-action-chip');
+    const btnClearTop = document.getElementById('btn-clear-top'); 
+    
+    // NUEVAS REFERENCIAS A ELEMENTOS DEL DOM para el panel de notificaciones
+    const btnNotifications = document.getElementById('btn-notifications');
+    const notificationModal = document.getElementById('notification-preferences-modal');
+    const notificationPanel = document.querySelector('#notification-preferences-modal .notification-panel');
+    const toggleNews = document.getElementById('toggle-news');
+    const toggleReminders = document.getElementById('toggle-reminders');
+    const togglePromotions = document.getElementById('toggle-promotions'); 
+    const btnDiscardChanges = document.getElementById('btn-discard-changes');
+    const btnApplyChanges = document.getElementById('btn-apply-changes');
+
+    // NUEVAS REFERENCIAS PARA EL BOTÓN DE ACCIÓN RÁPIDA "VER TODOS LOS LUGARES"
+    const quickActionFullList = document.getElementById('quick-action-full-list');
+    const btnViewAllPlaces = document.getElementById('btn-view-all-places');
+    
+    // NUEVAS REFERENCIAS PARA CHIPS DINÁMICOS
+    const dynamicChipsGroup = document.getElementById('dynamic-chips-group');
+    const dynamicChipsList = document.getElementById('dynamic-chips-list');
+
+    // NUEVA REFERENCIA PARA LA BURBUJA DE ESCRITURA DEL USUARIO Y MODELO
+    const userTypingBubble = document.getElementById('user-typing-bubble');
+    const modelTypingBubble = document.getElementById('model-typing-bubble'); 
+    
+    // 🛑 NUEVO: Objeto de mapeo de Subcategorías (Clave: Query del Chip de Categoría General)
+    const SUBCATEGORIES_MAP = {
+        // --- CATEGORÍA SALUD Y ESTÉTICA ---
+        "Dime sobre la Categoría Salud y Estética en Progreso": [
+            { label: "Dentistas 🦷", query: "Mejores dentistas en Progreso" },
+            { label: "Ópticas 👓", query: "Ópticas y lentes de contacto en Progreso" },
+            { label: "Farmacias 💊", query: "Farmacias con medicamento de patente en Progreso" },
+            { label: "Clínicas y Doctores 👨‍⚕️", query: "Clínicas y doctores en Progreso" },
+            { label: "Cirugía Estética ✨", query: "Cirujanos plásticos y estética en Progreso" },
+            { label: "Laboratorios 🧪", query: "Laboratorios de análisis clínicos en Progreso" },
+            { label: "Veterinarios 🐶", query: "Veterinarias en Progreso" },
+            { label: "Todos de Salud 🧭", query: "Todos los lugares de salud y estética en Progreso" }
+        ],
+        // --- CATEGORÍA COMPRAS Y TIENDAS ---
+        "Dime sobre la Categoría Compras y Tiendas en Progreso": [
+            { label: "Ropa y Moda 👕", query: "Tiendas de ropa y moda en Progreso" },
+            { label: "Artesanías 🎁", query: "Artesanías y souvenirs en Progreso" },
+            { label: "Vinos y Licores 🍾", query: "Tiendas de vinos y licores en Progreso" },
+            { label: "Joyería y Regalos 💍", query: "Joyerías y tiendas de regalos en Progreso" },
+            { label: "Todos de Compras 🛍️", query: "Todos los lugares de compras y tiendas en Progreso" }
+        ],
+        // --- CATEGORÍA ENTRETENIMIENTO Y ATRACCIONES ---
+        "Dime sobre la Categoría Entretenimiento y Atracciones en Progreso": [
+            { label: "Atracciones 🎡", query: "Atracciones turísticas en Progreso" },
+            { label: "Bares y Cantinas 🍺", query: "Bares y cantinas en Progreso" },
+            { label: "Hoteles y Hospedaje 🏨", query: "Hoteles y hospedaje en Progreso" },
+            { label: "Eventos y Fiestas 🎉", query: "Próximos eventos y fiestas en Progreso" }
+        ],
+        // Nota: No es necesario añadir el chip 'Top 10 Dentistas' ya que es una búsqueda directa.
+    };
+
+
+    // Objeto de Traducción y textos de chips (SIN CAMBIOS)
+    const UI_STRINGS = {
+        es: {
+            header: "PROGRESO TOUR GUIDE",
+            placeholder: "Pregúntale al mapa",
+            goButton: "Ir",
+            loadingStatus: "Respondiendo tu petición...", // NUEVO: Estado de carga
+            categories: "✨️ Categorías",
+            language: "🧢 Idioma",
+            getThere: "🚀 Cómo Llegar",
+            info: "ℹ️ Info",
+            alertStructured: (name) => `¡Ficha verificada de ${name}!`,
+            alertCategory: (name) => `Resumen de la categoría ${name}.`,
+            chipHealth: "🏥 Salud & Estética",
+            chipShopping: "🛍️ Compras",
+            chipEntertainment: "🎺 Entretenimiento",
+            chipDental: "🦷 Top 10 Dental",
+            btnMap: "Ver en el Mapa 🧭",
+            btnSearch: "Resultados en Google 🔍", // 🛑 CAMBIO SOLICITADO
+            btnPhone: "Llamar Ahora 📞",
+            btnReview: "Reseñas ⭐",
+            btnWebsite: "Sitio Web/Redes 🌐", // 🛑 NUEVO
+        },
+        en: {
+            header: "PROGRESO TOUR GUIDE",
+            placeholder: "Ask the map",
+            goButton: "Go",
+            loadingStatus: "Processing your request...", // NUEVO: Estado de carga
+            categories: "✨️ Categories",
+            language: "🧢 Language",
+            getThere: "🚀 How to get there",
+            info: "ℹ️ Info",
+            alertStructured: (name) => `Verified card for ${name}!`,
+            alertCategory: (name) => `Summary for ${name} category.`,
+            chipHealth: "🏥 Health & Beauty",
+            chipShopping: "🛍️ Shopping",
+            chipEntertainment: "🎺 Entertainment",
+            chipDental: "🦷 Top 10 Dental",
+            btnMap: "View on Map 🧭",
+            btnSearch: "Search Results on Google 🔍", // 🛑 CAMBIO SOLICITADO
+            btnPhone: "Call Now 📞",
+            btnReview: "Reviews ⭐",
+            btnWebsite: "Website/Social 🌐", // 🛑 NUEVO
+        }
+    };
+
+    // Estado inicial de las preferencias de notificación
+    let notificationPreferences = {
+        news: true,      // Alertas de interfaz, historial, etc.
+        reminders: true, // Alertas estructuradas (fichas de lugar/categoría)
+        promotions: false
+    };
+
+
+    // Inicialización del estado
+    if (inputElement) inputElement.disabled = false;
+    if (sendButton) sendButton.disabled = false;
+
+    // --- Funciones de PERSISTENCIA y CONTROL DE CHAT ---
+    
+    function saveHistory() {
+        try {
+            localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+        } catch (e) {
+            console.error("Error al guardar el historial en localStorage", e);
+        }
+    }
+
+    function clearChatHistory() {
+        vibrateDevice();
+        chatHistory = []; 
+        localStorage.removeItem('chatHistory'); 
+        
+        // **IMPORTANTE**: Limpiar el mensaje-container y dejar solo las burbujas de typing
+        if (messageContainer) {
+            // Obtener las referencias de las burbujas de typing
+            const typingBubbles = [userTypingBubble, modelTypingBubble];
+            
+            // Eliminar todos los hijos que NO son las burbujas de typing
+            Array.from(messageContainer.children).forEach(child => {
+                if (!typingBubbles.includes(child)) {
+                    messageContainer.removeChild(child);
+                }
+            });
+            
+            // 🛑 ELIMINACIÓN CRÍTICA: NO mover las burbujas al final del contenedor aquí.
+            
+            // Asegurar que las burbujas estén OCULTAS y sin ocupar espacio
+            hideUserTypingBubble();
+            hideModelTypingBubble();
+        }
+        
+        // ALERTA DE CLEAR HISTORY USA 'news'
+        alertUser(currentLanguage === 'es' ? '¡Conversación eliminada! Empecemos de cero. 👋' : 'Conversation cleared! Let\'s start fresh. 👋', 'i', 'news');
+        
+        scrollToBottom();
+        // OCULTAR BOTONES DE ACCIÓN RÁPIDA
+        quickActionFullList.classList.add('hidden');
+        dynamicChipsGroup.classList.add('hidden'); // Ocultar chips dinámicos
+        lastTotalCount = 0;
+        lastApiQuery = null;
     }
     
-    // 1. Buscar el place_id
-    try {
-        const findPlaceResponse = await placesClient.findPlaceFromText({
-            params: {
-                key: placesApiKey,
-                input: query + ", Nuevo Progreso Tamps, México",
-                inputtype: 'textquery',
-                fields: ['place_id']
+    function loadHistory() {
+        // Inicializa chatHistory como array vacío si no se encuentra o es inválido
+        let loaded = false;
+        try {
+            const savedHistory = localStorage.getItem('chatHistory');
+            if (savedHistory) {
+                const loadedHistory = JSON.parse(savedHistory);
+                if (Array.isArray(loadedHistory) && loadedHistory.length > 0) {
+                    chatHistory = loadedHistory; 
+                    renderChat(); 
+                    scrollToBottom();
+                    loaded = true;
+                }
             }
-        });
+        } catch (e) {
+            console.error("Error al cargar o parsear el historial de localStorage", e);
+            // Si hay un error de parseo, aseguramos que el historial esté vacío
+            chatHistory = []; 
+        }
+        // 3. ⚠️ CORRECCIÓN DE ERROR CLAVE: Asegurar que chatHistory esté listo.
+        if (!loaded) {
+            chatHistory = []; 
+        }
+        return loaded;
+    }
 
-        const placeId = findPlaceResponse.data.candidates?.[0]?.place_id;
+    // NUEVAS FUNCIONES PARA LA PERSISTENCIA DE NOTIFICACIONES
+    function saveNotificationPreferences() {
+        try {
+            localStorage.setItem('notificationPreferences', JSON.stringify(notificationPreferences));
+            alertUser('Preferencias de notificaciones guardadas. ✅', 'i', 'news');
+        } catch (e) {
+            console.error("Error al guardar las preferencias de notificación:", e);
+        }
+    }
+
+    function loadNotificationPreferences() {
+        try {
+            const savedPrefs = localStorage.getItem('notificationPreferences');
+            if (savedPrefs) {
+                notificationPreferences = JSON.parse(savedPrefs);
+            }
+            // Aplicar el estado guardado a los toggles del modal
+            if (toggleNews) toggleNews.checked = notificationPreferences.news;
+            if (toggleReminders) toggleReminders.checked = notificationPreferences.reminders;
+            // No aplicamos 'promotions' ya que está deshabilitado
+        } catch (e) {
+            console.error("Error al cargar las preferencias de notificación:", e);
+        }
+    }
+
+    // --- Funciones de utilidad de tiempo (SIN CAMBIOS) ---
+    function formatTime(date) {
+        if (!date) return '';
+        let hours = date.getHours();
+        const minutes = date.getMinutes();
+        const ampm = hours >= 12 ? 'pm' : 'am';
+        hours = hours % 12;
+        hours = hours ? hours : 12; 
+        const minutesStr = minutes < 10 ? '0'+minutes : minutes;
+        return hours + ':' + minutesStr + ' ' + ampm;
+    }
+    
+    // 🛑 NUEVA FUNCIÓN: Verificar si el usuario está cerca del fondo
+    function isScrolledToBottom() {
+        if (!messageContainer) return true;
+        // Permite un margen de 200px para considerarse "cerca del fondo"
+        // messageContainer.scrollHeight: Altura total del contenido
+        // messageContainer.scrollTop: Distancia del scroll desde la parte superior
+        // messageContainer.clientHeight: Altura visible del contenedor
+        const scrollDifference = messageContainer.scrollHeight - messageContainer.scrollTop;
+        const viewportHeight = messageContainer.clientHeight;
+        // Si la diferencia entre el final del contenido y el scroll está dentro de la altura visible + 200px
+        const isNearBottom = scrollDifference <= viewportHeight + 200;
+        return isNearBottom;
+    }
+
+    // FUNCIÓN DE ALERTA MEJORADA CON CONTROL DE PREFERENCIAS
+    function alertUser(m, t='i', preferenceType = 'news') {
         
-        if (!placeId) {
-            console.log("No se encontró un place_id para la consulta:", query);
-            return null;
+        // 🛑 NUEVO: Si no es un error y la preferencia está desactivada, salir.
+        if (t !== 'error' && !notificationPreferences[preferenceType]) {
+            console.log(`Notificación de tipo "${preferenceType}" deshabilitada por el usuario. Mensaje: ${m}`);
+            return; 
         }
 
-        // 2. Obtener los detalles del lugar (incluyendo 'website' y **'photos'**)
-        const detailsResponse = await placesClient.placeDetails({
-            params: {
-                key: placesApiKey,
-                place_id: placeId,
-                // <-- Solicitamos 'website' y **'photos'**
-                fields: ['name', 'formatted_phone_number', 'url', 'reviews', 'website', 'photos'] 
+        // --- MODO DE LIMPIEZA INMEDIATA PARA EVITAR ACUMULACIÓN ---
+        if (appAlertContainer) {
+            // Elimina inmediatamente cualquier alerta existente en el contenedor
+            const existingAlert = appAlertContainer.querySelector('.notification-card');
+            if (existingAlert) {
+                existingAlert.remove(); 
             }
-        });
-
-        const place = detailsResponse.data.result;
-        
-        // 3. Generar la URL de la foto usando la Photo API
-        const photoReference = place.photos?.[0]?.photo_reference || null;
-        let imageUrl = null;
-
-        if (photoReference) {
-            // Usamos un tamaño maxwidth de 250px para el efecto apilado
-            imageUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=250&photoreference=${photoReference}&key=${placesApiKey}`;
         }
+        // --------------------------------------------------------
         
-        return {
-            name: place.name,
-            phone: place.formatted_phone_number || null,
-            mapUrl: place.url || null,
-            reviewUrl: place.url || null,
-            websiteUrl: place.website || null,
-            // <-- ¡AÑADIDO: La URL de la imagen!
-            imageUrl: imageUrl 
+        // Función auxiliar para esconder la alerta (con animación)
+        const hideAlert = (alertElement) => {
+            if (!alertElement || !alertElement.parentNode) return;
+            alertElement.classList.remove('show');
+            alertElement.style.opacity = '0';
+            // Espera a que termine la transición (400ms) antes de eliminar del DOM
+            setTimeout(() => {
+                if (alertElement.parentNode) alertElement.remove();
+            }, 400); 
         };
 
-    } catch (e) {
-        console.error("Error al llamar a Google Places API:", e.response ? e.response.data : e.message);
-        return null;
+        const a = document.createElement('div');
+        const icon = (t === 'error') 
+            ? '❌' 
+            : (t === 'i' ? 'ℹ️' : '✅'); 
+
+        a.className = 'notification-card opacity-0 pointer-events-auto';
+        a.innerHTML = `
+            <div class="message-content">
+                <span class="mr-2">${icon}</span> 
+                <span>${m}</span>
+            </div>
+            <button class="close-btn" aria-label="Cerrar notificación">×</button>
+        `;
+
+        if (appAlertContainer) appAlertContainer.appendChild(a);
+
+        setTimeout(() => {
+            a.classList.add('show');
+            a.style.opacity = '1';
+        }, 10); 
+
+        const closeButton = a.querySelector('.close-btn');
+        closeButton.addEventListener('click', () => {
+            hideAlert(a);
+        });
+        
+        setTimeout(() => {
+            hideAlert(a);
+        }, 4000);
     }
-}
-
-
-export default async function handler(req, res) {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ message: 'Método no permitido' });
+    
+    function scrollToBottom() { 
+        if (messageContainer) messageContainer.scrollTop = messageContainer.scrollHeight; 
+    }
+    
+    // FUNCIÓN MODIFICADA: Ahora solo desactiva la entrada
+    function toggleInput(d) {
+        if (inputElement) inputElement.disabled = d;
+        if (sendButton) sendButton.disabled = d;
     }
 
-    try {
-        const { history = [], userPrompt, currentLanguage } = req.body;
-        
-        // Configuramos el idioma
-        const langText = currentLanguage === 'es' ? 'español' : 'inglés';
-        const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
+    // --- FUNCIONES CORE MODIFICADAS PARA EL EFECTO TYPING/STATUS ---
+    
+    function hideModelTypingBubble() {
+        modelTypingBubble.classList.remove('show');
+    }
 
-        // LÓGICA DE INTERCEPTACIÓN Y PRIORIDAD LOCAL (MODIFICADA para forzar CATEGORY JSON)
-        let promptToSend = userPrompt;
+    function showLoadingIndicator() {
+        isBotTyping = true;
+        // Ocultar indicador de typing del usuario (por si acaso)
+        hideUserTypingBubble(); 
+        
+        // Mostrar indicador de typing del bot
+        modelTypingBubble.classList.add('show'); 
+        
+        // Mostrar mensaje "Respondiendo tu petición..." en el input
+        inputElement.placeholder = UI_STRINGS[currentLanguage].loadingStatus;
+        
+        // Deshabilitar entrada y botón
+        inputElement.disabled = true;
+        sendButton.disabled = true;
+        
+        // El scroll debe activarse cuando el bot empieza a escribir para mostrar el indicador.
+        scrollToBottom(); 
+    }
 
-        // Patrón para detectar solicitudes de listado/recomendación
-        const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra).*\\s+(\\d+|unos cuantos)?\\s*(taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias|clinica|farmacia|dental|optica)s?`, 'i');
+    function hideLoadingIndicator() {
+        isBotTyping = false;
+        // Ocultar indicador de typing del bot
+        hideModelTypingBubble(); 
         
-        const match = userPrompt.match(recommendationPattern);
+        // Revertir el input a su estado normal
+        inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
+        inputElement.disabled = false;
         
-        if (match) {
-            // 1. Determinar el nombre de la categoría para el JSON y el prompt
-            const categoryKeyRaw = match[3].toLowerCase(); 
-            let categoryName = "lugares y negocios"; 
+        // El botón de enviar solo se activa si hay texto
+        sendButton.disabled = inputElement.value.trim() === ''; 
+    }
+    
+    function showUserTypingBubble() {
+        // Solo mostrar si el bot no está respondiendo
+        if (!isBotTyping) {
+            userTypingBubble.classList.add('show');
             
-            if (categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('tacos')) categoryName = "Taquerías y Tacos";
-            else if (categoryKeyRaw.includes('restaurante') || categoryKeyRaw.includes('comer')) categoryName = "Restaurantes y Comida";
-            else if (categoryKeyRaw.includes('artesanias') || categoryKeyRaw.includes('souvenirs')) categoryName = "Tiendas de Artesanías y Souvenirs";
-            else if (categoryKeyRaw.includes('barbacoa')) categoryName = "Barbacoa y Birria";
-            else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = "Salud y Estética";
-            
-            // 2. SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA
-            promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría ${categoryName} en Nuevo Progreso. La descripción debe guiar al usuario a usar los botones de acción ('Ver en Mapa' y 'Buscar en Google') para que ellos decidan qué lugar visitar, cumpliendo con la restricción de no recomendar lugares específicos.`;
-            
-            console.log("PROTOCOLO CATEGORÍA GENERAL ACTIVADO para:", categoryName);
+            // 🛑 CAMBIO CRÍTICO: SCROLL CONDICIONAL
+            // Si el usuario ya está cerca del fondo, hacemos scroll para ver la burbuja.
+            if (isScrolledToBottom()) {
+                scrollToBottom(); 
+            }
         }
-        // FIN DE LÓGICA DE INTERCEPTACIÓN
+    }
 
+    function hideUserTypingBubble() {
+        userTypingBubble.classList.remove('show');
+    }
 
-        // Inicializar el chat con el historial y la instrucción de sistema
-        const chat = ai.chats.create({
-            model: MODEL_NAME, 
-            config: {
-                systemInstruction: finalSystemInstruction 
-            },
-            history: history 
+    function handleTypingIndicator() {
+        const inputValue = inputElement.value.trim();
+        
+        // Si el usuario empieza a escribir Y el bot no está respondiendo
+        if (inputValue.length > 0 && !isBotTyping) {
+            // 🛑 Usar la función que ahora tiene scroll condicional
+            showUserTypingBubble();
+        } else {
+            hideUserTypingBubble();
+        }
+    }
+
+    // --- Funciones de INTERACCIÓN (SIN CAMBIOS EN LÓGICA) ---
+
+    function vibrateDevice() {
+        if ("vibrate" in navigator) {
+            navigator.vibrate(100); 
+        }
+    }
+    
+    function hideChipGroup(groupElement, chipElements) {
+        groupElement.classList.add('hidden');
+        if (chipElements) {
+            chipElements.forEach(chip => {
+                chip.classList.remove('visible-chip');
+            });
+        } else if (groupElement.id === 'dynamic-chips-group') {
+            dynamicChipsList.innerHTML = ''; // Limpiamos la lista al ocultar
+        }
+    }
+
+    function showChipGroupWithWave(groupElement, chipElements) {
+        groupElement.classList.remove('hidden');
+        chipElements.forEach((chip, index) => {
+            chip.style.transition = 'none';
+            chip.classList.remove('visible-chip');
+
+            void chip.offsetWidth; 
+
+            setTimeout(() => {
+                chip.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+                chip.classList.add('visible-chip');
+            }, index * 100); 
+        });
+    }
+
+    function setInterfaceLanguage(lang) {
+        const langChanged = currentLanguage !== lang;
+        currentLanguage = lang;
+        const strings = UI_STRINGS[lang];
+        
+        hideChipGroup(languageChipsGroup, languageChips);
+        languageMenuVisible = false;
+
+        inputElement.placeholder = strings.placeholder;
+        document.getElementById('go-text').textContent = strings.goButton; 
+
+        document.getElementById('btn-categorias').textContent = strings.categories;
+        document.getElementById('btn-lenguaje').textContent = strings.language;
+        document.getElementById('btn-comollegar').textContent = strings.getThere;
+        document.getElementById('btn-info').textContent = strings.info;
+
+        const categoryChipTexts = [strings.chipHealth, strings.chipShopping, strings.chipEntertainment, strings.chipDental];
+        categoryChips.forEach((chip, index) => {
+            chip.textContent = categoryChipTexts[index];
         });
 
-        // Enviamos el nuevo mensaje (original o modificado por la redirección a categoría) al modelo
-        const result = await chat.sendMessage({ message: promptToSend });
-        let modelResponseText = result.text.trim();
-        
-        let finalResponseData = { responseText: modelResponseText };
+        if (langChanged) {
+            alertUser(`Interfaz y conversación cambiadas a ${lang === 'es' ? 'Español' : 'English'}`, 'i', 'news');
+        }
+    }
 
-        // Lógica de ENRIQUECIMIENTO con Places API (MODIFICADA para Array de Fichas)
+    function handleMenuAction(actionChip) {
+        const action = actionChip.getAttribute('data-action');
+        const lang = currentLanguage;
+        const query = actionChip.getAttribute(`data-query-${lang}`);
+
+        vibrateDevice(); 
+
+        // Siempre ocultar los botones de acción rápida
+        quickActionFullList.classList.add('hidden');
+        dynamicChipsGroup.classList.add('hidden'); // Ocultar chips dinámicos
+        lastTotalCount = 0;
+        lastApiQuery = null;
+
+
+        if (action !== 'CATEGORIES' && categoriesVisible) {
+            hideChipGroup(categoryChipsGroup, categoryChips);
+            categoriesVisible = false;
+        }
+        if (action !== 'LANGUAGE' && languageMenuVisible) {
+            hideChipGroup(languageChipsGroup, languageChips);
+            languageMenuVisible = false;
+        }
+        
+        if (notificationModal.classList.contains('show')) {
+            notificationModal.classList.remove('show');
+        }
+
+
+        if (action === 'CATEGORIES') {
+            if (categoriesVisible) {
+                hideChipGroup(categoryChipsGroup, categoryChips);
+                categoriesVisible = false;
+            } else {
+                showChipGroupWithWave(categoryChipsGroup, categoryChips);
+                categoriesVisible = true;
+            }
+        } else if (action === 'LANGUAGE') {
+            if (languageMenuVisible) {
+                hideChipGroup(languageChipsGroup, languageChips);
+                languageMenuVisible = false;
+            } else {
+                showChipGroupWithWave(languageChipsGroup, languageChips);
+                languageMenuVisible = true;
+            }
+        } else if (action === 'CLEAR_HISTORY') { 
+            clearChatHistory();
+            return;
+        } else {
+            if (query) {
+                handleSend(query); 
+                if (categoriesVisible) { hideChipGroup(categoryChipsGroup, categoryChips); categoriesVisible = false; }
+                if (languageMenuVisible) { hideChipGroup(languageChipsGroup, languageChips); languageMenuVisible = false; }
+            }
+        }
+    }
+    
+    // Función para crear las burbujas de mensaje (User/Model)
+    function createMessageBubble(m) {
+        const w = document.createElement('div');
+        
+        const timeStr = m.timestamp ? formatTime(m.timestamp) : '';
+        // 🛑 CAMBIO CLAVE: Usamos contenedores con clases específicas para el alineamiento del timestamp
+        let timeSpan = '';
+        
+        if (m.role === 'user') { 
+            w.className = 'flex justify-end mb-2'; 
+            timeSpan = timeStr ? `<div class="user-timestamp-container"><span class="timestamp">${timeStr}</span></div>` : '';
+            w.innerHTML = `
+                <div class="flex flex-col items-end">
+                    <div class="user-bubble bg-black text-white p-3 shadow-md">${m.text}</div>
+                    ${timeSpan}
+                </div>
+            `; 
+        } 
+        else if (m.role === 'model') {
+            w.className = 'flex flex-col justify-start w-full mb-2';
+            timeSpan = timeStr ? `<div class="model-timestamp-container"><span class="timestamp">${timeStr}</span></div>` : '';
+            
+            let content = '';
+            let actionsBar = '';
+            let imageHTML = ''; // <-- NUEVA VARIABLE PARA LA IMAGEN
+            
+            const strings = UI_STRINGS[currentLanguage];
+
+            if (m.isStructured) { 
+                
+                // 🛑 NUEVO CÓDIGO: Insertar la imagen si existe
+                if (m.imageUrl) {
+                    // CRÍTICO: Envolver la imagen en el <a> con el URL del mapa para el enlace al hacer click
+                    imageHTML = `
+                        <a href="${m.mapUrl || '#'}" target="_blank" rel="noopener noreferrer" class="image-link">
+                            <img 
+                                src="${m.imageUrl}" 
+                                class="stacked-photo clickable-effect" 
+                                alt="Imagen del lugar ${m.placeName || m.categoryName || ''}"
+                                loading="lazy" 
+                            >
+                        </a>
+                    `;
+                }
+                
+                // 1. Contenido de la burbuja (COMBINANDO IMAGEN Y TEXTO)
+                // Ahora, la burbuja (wrapper) contiene la imagen Y el texto.
+                content = `
+                    <div class="model-bubble-wrapper p-3 shadow-md">
+                        ${imageHTML} 
+                        <div class="model-bubble">
+                            ${m.text || m.description}
+                        </div>
+                    </div>
+                `;
+                
+                // 🛑 NUEVA LÓGICA: Comprobar si hay un sub-menú para esta ficha
+                const hasSubMenu = m.menuKey && SUBCATEGORIES_MAP[m.menuKey];
+                
+                if (hasSubMenu) {
+                    // --- REEMPLAZO POR CHIPS DE SUBCATEGORÍA (GLASS-CHIP) ---
+                    const subChips = SUBCATEGORIES_MAP[m.menuKey];
+                    let subChipsHTML = subChips.map(chip => {
+                        // Usamos la clase 'glass-chip' para el menú de subcategoría
+                        return `<div class="action-chip glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-query="${chip.query}">${chip.label}</div>`;
+                    }).join('');
+
+                    actionsBar = `
+                        <div class="action-bar-container">
+                            <div class="inline-flex space-x-3 p-1">
+                                ${subChipsHTML}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // 🛑 LÓGICA DE BOTONES DE ACCIÓN PARA FICHAS ENRIQUECIDAS
+                    
+                    const isPlace = m.type === 'place';
+                    const isHealthPlace = m.isHealthPlace === true; // Nuevo check de salud
+                    const entityName = isPlace 
+                        ? (m.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
+                        : (m.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
+                    
+                    let actionsHTML = '';
+                    
+                    // 1. Botón de Sitio Web / Redes Sociales (NUEVO)
+                    if (isPlace && m.websiteUrl) {
+                        actionsHTML += `
+                            <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="WEBSITE" data-website-url="${m.websiteUrl}">
+                                ${strings.btnWebsite}
+                            </div>
+                        `;
+                    }
+                    
+                    // 2. Botón principal: Ver en Mapa
+                    if (m.mapUrl) {
+                        actionsHTML += `
+                            <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="MAP" data-map-url="${m.mapUrl}">
+                                ${strings.btnMap}
+                            </div>
+                        `;
+                    }
+                    
+                    // 3. Botón Llamar y Reseñas (SOLO si es Lugar y NO es de Salud)
+                    if (isPlace && !isHealthPlace) {
+                        if (m.placePhone) {
+                            actionsHTML += `
+                                <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="PHONE" data-phone="${m.placePhone}">
+                                    ${strings.btnPhone}
+                                </div>
+                            `;
+                        }
+                        if (m.reviewUrl) {
+                            actionsHTML += `
+                                <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="REVIEW" data-review-url="${m.reviewUrl}">
+                                    ${strings.btnReview}
+                                </div>
+                            `;
+                        }
+                    }
+                    
+                    // 4. Botón secundario: Resultados en Google (para todos los casos)
+                    if (entityName) {
+                        actionsHTML += `
+                            <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="SEARCH" data-entity-name="${entityName}">
+                                ${strings.btnSearch}
+                            </div>
+                        `;
+                    }
+
+                    if (actionsHTML.length > 0) {
+                         actionsBar = `
+                            <div class="action-bar-container">
+                                <div class="inline-flex space-x-3 p-1">
+                                    ${actionsHTML}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        actionsBar = '';
+                    }
+                }
+                
+                w.innerHTML = `
+                    <div class="flex flex-col items-start">
+                        ${content}
+                        ${actionsBar}
+                        ${timeSpan}
+                    </div>
+                `;
+
+            } else {
+                // 🛑 HTML MODIFICADO: Usamos el wrapper para el estilo de color para texto plano
+                content = `<div class="model-bubble-wrapper p-3 pb-4 shadow-md">${m.text || ''}</div>`;
+                w.innerHTML = `
+                    <div class="flex flex-col items-start">
+                        ${content}
+                        ${timeSpan}
+                    </div>
+                `;
+            }
+        }
+        return w;
+    }
+    
+    // 🛑 NUEVA FUNCIÓN: Adjuntar listeners a los sub-chips dinámicamente creados
+    function attachSubMenuListeners() {
+        // Selecciona chips de SUBMENÚ (glass-chip)
+        const subMenuChips = messageContainer.querySelectorAll('.action-bar-container .glass-chip');
+        
+        subMenuChips.forEach(chip => {
+            if (chip.classList.contains('listener-attached')) return; 
+            
+            chip.addEventListener('click', function() {
+                vibrateDevice();
+                const query = this.getAttribute('data-query');
+                handleSend(query); 
+            });
+            
+            chip.classList.add('listener-attached');
+        });
+        
+        // 🛑 NUEVA LÓGICA: Adjuntar listeners a los botones de ACCIÓN (blue-glass-chip)
+        const actionButtons = messageContainer.querySelectorAll('.action-bar-container .blue-glass-chip');
+        
+        actionButtons.forEach(button => {
+            if (button.classList.contains('listener-attached')) return; 
+            
+            button.addEventListener('click', function() {
+                vibrateDevice();
+                const action = this.getAttribute('data-action');
+                
+                if (action === 'MAP' && this.getAttribute('data-map-url')) {
+                    window.open(this.getAttribute('data-map-url'), '_blank');
+                    alertUser(currentLanguage === 'es' ? 'Abriendo mapa en nueva ventana.' : 'Opening map in new window.', 'i', 'news');
+                } else if (action === 'SEARCH' && this.getAttribute('data-entity-name')) {
+                    const entityName = this.getAttribute('data-entity-name');
+                    // Buscamos con el nombre de la entidad + ubicación fija
+                    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(entityName + " Nuevo Progreso Tamps")}`;
+                    window.open(searchUrl, '_blank');
+                    alertUser(currentLanguage === 'es' ? `Buscando "${entityName}" en Google.` : `Searching for "${entityName}" on Google.`, 'i', 'news');
+                } else if (action === 'PHONE' && this.getAttribute('data-phone')) {
+                    const phone = this.getAttribute('data-phone').replace(/\D/g, ''); // Limpiar el número
+                    window.location.href = `tel:${phone}`;
+                    alertUser(currentLanguage === 'es' ? `Llamando a ${this.getAttribute('data-phone')}.` : `Calling ${this.getAttribute('data-phone')}.`, 'i', 'news');
+                } else if (action === 'REVIEW' && this.getAttribute('data-review-url')) {
+                    window.open(this.getAttribute('data-review-url'), '_blank');
+                    alertUser(currentLanguage === 'es' ? 'Abriendo reseña en nueva ventana.' : 'Opening review in new window.', 'i', 'news');
+                } else if (action === 'WEBSITE' && this.getAttribute('data-website-url')) { // 🛑 NUEVA ACCIÓN
+                    window.open(this.getAttribute('data-website-url'), '_blank');
+                    alertUser(currentLanguage === 'es' ? 'Abriendo sitio web en nueva ventana.' : 'Opening website in new window.', 'i', 'news');
+                }
+            });
+            
+            button.classList.add('listener-attached');
+        });
+        
+        // 🛑 NUEVA LÓGICA: Adjuntar listeners al contenedor <a> de la imagen.
+        // El listener ya se aplica al elemento <a> dentro de createMessageBubble
+        // con target="_blank", pero aquí aseguramos el efecto visual y el listener si fuera necesario
+        const imageLinks = messageContainer.querySelectorAll('.image-link');
+        imageLinks.forEach(link => {
+            const img = link.querySelector('.stacked-photo');
+            if(img && !img.classList.contains('listener-attached')) {
+                // El listener ya está implícito en la etiqueta <a>, solo aseguramos el efecto 'active'
+                img.classList.add('listener-attached');
+            }
+        });
+
+    }
+
+    function renderChat() {
+        if (messageContainer) {
+            // Limpiar todo excepto las burbujas de escritura del usuario y modelo
+            const typingBubbles = [userTypingBubble, modelTypingBubble];
+            const messages = Array.from(messageContainer.children).filter(child => !typingBubbles.includes(child));
+            messages.forEach(msg => msg.remove());
+
+            // Renderizar el historial
+            chatHistory.forEach((m) => { 
+                const messageElement = createMessageBubble(m);
+                // Insertar el mensaje antes de la burbuja de escritura del modelo
+                messageContainer.insertBefore(messageElement, modelTypingBubble); 
+            });
+            
+            scrollToBottom();
+            
+            // 🛑 NUEVO: Adjuntar listeners a los chips y botones después de renderizar
+            attachSubMenuListeners(); 
+        }
+    }
+    
+    // --- NUEVA FUNCIÓN PARA RENDERIZAR CHIPS DINÁMICOS (se mantiene, pero la lógica de subcategorías va dentro de la burbuja ahora) ---
+    function renderDynamicChips(chips) {
+        dynamicChipsList.innerHTML = ''; // Limpiar cualquier chip anterior
+        
+        // Ocultar cualquier otro chip de acción
+        quickActionFullList.classList.add('hidden'); 
+        hideChipGroup(categoryChipsGroup, categoryChips);
+        categoriesVisible = false;
+        hideChipGroup(languageChipsGroup, languageChips);
+        languageMenuVisible = false;
+
+        dynamicChipsGroup.classList.remove('hidden');
+
+        chips.forEach((chipData, index) => {
+            const chip = document.createElement('div');
+            // Usamos la clase glass-chip que ya tiene buen estilo
+            chip.className = 'dynamic-chip action-chip glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer'; 
+            chip.textContent = chipData.label;
+            chip.setAttribute('data-query', chipData.query);
+            
+            chip.addEventListener('click', function() {
+                vibrateDevice();
+                const query = this.getAttribute('data-query');
+                // Al hacer clic, enviamos la nueva consulta, que el backend transformará en FICHA CATEGORÍA
+                handleSend(query); 
+                // Ocultamos los chips dinámicos después de la acción
+                dynamicChipsGroup.classList.add('hidden'); 
+            });
+
+            // Aplicar el efecto de "Ola"
+            chip.style.opacity = '0';
+            chip.style.transform = 'translateY(20px)';
+            chip.style.transition = 'none';
+
+            void chip.offsetWidth; 
+
+            setTimeout(() => {
+                chip.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+                chip.style.opacity = '1';
+                chip.style.transform = 'translateY(0)';
+            }, index * 100); 
+
+            dynamicChipsList.appendChild(chip);
+        });
+        
+        // Aseguramos que el chat baje para ver los nuevos chips
+        scrollToBottom();
+    }
+
+
+    // --- CÓDIGO DE CONEXIÓN AL BACKEND (SIN CAMBIOS) ---
+
+    async function getGeminiResponse(userPrompt, chatHistoryForAPI) {
+        
+        const historyForAPI = chatHistoryForAPI.map(m => {
+            const textContent = m.isStructured && m.description ? m.description : m.text;
+            
+            return {
+                role: m.role,
+                parts: [{ text: textContent }]
+            };
+        });
+
+        try {
+            const response = await fetch(BACKEND_URL, { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    history: historyForAPI, 
+                    userPrompt: userPrompt, 
+                    currentLanguage: currentLanguage
+                }) 
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Error HTTP: ${response.status}. Mensaje: ${errorData.message || 'El servicio de chat falló.'}`);
+            }
+
+            const data = await response.json();
+            return data.responseText; 
+
+        } catch (error) {
+            console.error("Fallo del Proxy o API de Gemini:", error);
+            // ALERTA DE ERROR USA 'error' (SIEMPRE SE MUESTRA)
+            alertUser(`Error de conexión: ${error.message}.`, 'error');
+            return null;
+        }
+    }
+
+    // --- Lógica Principal del Chatbot (handleSend) ---
+    async function handleSend(userPromptInput = null) {
+        const userPrompt = userPromptInput || inputElement.value.trim();
+        if (!userPrompt) return;
+        
+        hideChipGroup(categoryChipsGroup, categoryChips);
+        categoriesVisible = false;
+        hideChipGroup(languageChipsGroup, languageChips);
+        languageMenuVisible = false;
+
+        // Limpiar el estado de todos los chips de acción al iniciar el envío
+        quickActionFullList.classList.add('hidden');
+        dynamicChipsGroup.classList.add('hidden'); // Ocultar chips dinámicos
+        lastTotalCount = 0;
+        lastApiQuery = null;
+
+        // Utilizamos showLoadingIndicator para el nuevo efecto de status/input
+        showLoadingIndicator(); 
+        
+        chatHistory.push({ role: 'user', text: userPrompt, timestamp: new Date() }); // Añade el mensaje del usuario
+        if (typeof renderChat === 'function') renderChat();
+        inputElement.value = '';
+
+        const MAX_HISTORY_TO_SEND = 10; 
+        const previousHistory = chatHistory.slice(0, -1); 
+        const startIndex = Math.max(0, previousHistory.length - MAX_HISTORY_TO_SEND);
+        const limitedHistory = previousHistory.slice(startIndex);
+        
+        let modelResponseText = await getGeminiResponse(userPrompt, limitedHistory);
+        
+        // **IMPORTANTE**: Ocultar el estado de carga tan pronto como recibimos la respuesta.
+        hideLoadingIndicator(); 
+
+        if (modelResponseText === null) {
+            // Si hay un error, el estado ya se ocultó arriba y el input se habilitó.
+            return;
+        }
+
+        
+        let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date(), isStructured: false };
+        let totalCount = 0; 
+        let apiQuery = null; 
+        let dynamicChipsData = null; // Para guardar los datos de los chips
+
         try {
             const jsonStart = modelResponseText.indexOf('{');
             const jsonEnd = modelResponseText.lastIndexOf('}');
@@ -207,111 +1657,315 @@ export default async function handler(req, res) {
             if (jsonStart !== -1 && jsonEnd !== -1) {
                 const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
                 const parsedJson = JSON.parse(jsonString);
+
+                // *** INICIO DE LA LÓGICA DE PROCESAMIENTO DE RESPUESTA (ACTUALIZADA) ***
                 
-                let fichasToProcess = [];
+                let fichasParaMostrar = [];
+                // Separar el texto conversacional del JSON
+                let conversationText = modelResponseText.replace(jsonString, '').trim();
 
-                // 1. Caso de Múltiples Fichas (Array)
+                // 1. Manejo de Múltiples Fichas (NUEVO)
                 if (parsedJson.isMultiStructured === true && Array.isArray(parsedJson.response)) {
-                    fichasToProcess = parsedJson.response;
-                    console.log("Detectado formato MultiStructured. Fichas:", fichasToProcess.length);
+                    fichasParaMostrar = parsedJson.response;
+                    if (parsedJson.conversationText) conversationText = parsedJson.conversationText;
                 } 
-                // 2. Caso de Ficha Única
+                // 2. Manejo de Respuesta Estructurada Única
                 else if (parsedJson.isStructured === true) {
-                    fichasToProcess = [parsedJson];
+                    fichasParaMostrar = [parsedJson];
+                } 
+                // 3. Manejo de Recomendación Local (Texto Plano Forzado con metadatos)
+                else if (parsedJson.isLocalRecommendation === true) {
+                    totalCount = parsedJson.totalCount || 0;
+                    apiQuery = parsedJson.apiQueryForChip || null;
+                    
+                    // Solo mantenemos el texto conversacional
+                    finalMessage.text = conversationText;
+                    if (finalMessage.text.length < 5) finalMessage.text = modelResponseText;
                 }
+                
+                // 4. Manejo de Chips Dinámicos (solo se usa para el caso de chips en la barra inferior)
+                else if (parsedJson.isDynamicChips === true) {
+                    dynamicChipsData = parsedJson.chips;
+                    finalMessage.text = conversationText;
+                    if (finalMessage.text.length < 5) finalMessage.text = modelResponseText;
+                }
+                
+                // 🛑 LÓGICA CLAVE: Control de Subcategorías. 
+                // Solo si el prompt ES UNA CATEGORÍA PRINCIPAL, inyectamos el menúKey.
+                // Si el prompt NO ES UNA CATEGORÍA PRINCIPAL (i.e. es "Mejores dentistas..."), 
+                // el menúKey NO se añade, lo que dispara los botones de acción en createMessageBubble.
+                
+                let shouldAddMenuKey = SUBCATEGORIES_MAP[userPrompt];
 
-                if (fichasToProcess.length > 0) {
+                // Procesar Fichas (si hay una o varias)
+                if (fichasParaMostrar.length > 0) {
+                    // Si hay fichas, el primer mensaje es el texto conversacional (si existe)
+                    if (conversationText.length > 0) {
+                        chatHistory.push({ role: 'model', text: conversationText, timestamp: new Date(), isStructured: false });
+                    }
                     
-                    const enrichedFichas = [];
-                    
-                    for (const ficha of fichasToProcess) {
-                        let enrichedFicha = { ...ficha };
-
-                        if (ficha.type === 'place' && ficha.placeToSearch) {
-                            
-                            const placeNameSearch = ficha.placeToSearch.trim();
-                            const isHealthPlace = ficha.isHealthPlace === true; 
-
-                            // **** REGLA DE SALUD DINÁMICA: Bloqueo de Enriquecimiento ****
-                            if (isHealthPlace) {
-                                console.log(`Regla de Salud Aplicada: Bloqueando enriquecimiento Places para ${placeNameSearch}`);
-                                // Generamos URL de mapa genérica (para mantener el botón)
-                                // NOTA: La lógica de `https://www.google.com/maps/search/?api=1&query=$` es para forzar la apertura de un URL externo en Vercel/Next.js que usa URL internas. La verdadera URL es la búsqueda en Google Maps.
-                                const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
-
-                                enrichedFicha = {
-                                    ...enrichedFicha,
-                                    placePhone: null, 
-                                    reviewUrl: null,   
-                                    websiteUrl: null,
-                                    mapUrl: baseMapUrl,
-                                    imageUrl: null // Imagen debe ser nula por seguridad/privacidad
-                                };
-
-                            } else {
-                                // SI NO ES SALUD: Procedemos con el enriquecimiento completo.
-                                const placeData = await getPlaceDetails(placeNameSearch);
-
-                                if (placeData) {
-                                    enrichedFicha = {
-                                        ...enrichedFicha,
-                                        placeName: placeData.name,
-                                        placePhone: placeData.phone,
-                                        mapUrl: placeData.mapUrl,
-                                        reviewUrl: placeData.reviewUrl, 
-                                        websiteUrl: placeData.websiteUrl,
-                                        // <-- ¡DATOS AÑADIDOS!
-                                        imageUrl: placeData.imageUrl 
-                                    };
-                                } else {
-                                    // Si falla Places
-                                    delete enrichedFicha.placeToSearch;
-                                    // Generamos URL de mapa genérica de búsqueda
-                                    const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
-                                    enrichedFicha.mapUrl = baseMapUrl;
-                                }
-                            }
-                        } else if (ficha.type === 'category') {
-                             // ENRIQUECIMIENTO PARA CATEGORÍA (Permitir "Ver en Mapa")
-                             
-                             // Generamos URL de búsqueda en Google Maps para la categoría
-                             const categorySearch = ficha.categoryName.replace(/en Progreso/i, '').trim();
-                             const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(categorySearch + " Nuevo Progreso Tamps")}`;
-                             
-                             enrichedFicha.mapUrl = mapUrl; // Añadimos mapUrl para el botón "Ver en Mapa"
+                    // Insertar cada ficha como un mensaje separado
+                    fichasParaMostrar.forEach(ficha => {
+                        
+                        // Determinar si esta ficha es una categoría con submenú
+                        let menuKey = null;
+                        if (ficha.type === 'category' && shouldAddMenuKey) {
+                            menuKey = userPrompt; // Usamos el prompt del usuario como clave
                         }
                         
-                        enrichedFichas.push(enrichedFicha);
-                    }
+                        chatHistory.push({ 
+                            role: 'model', 
+                            isStructured: true,
+                            type: ficha.type, 
+                            text: ficha.description || ficha.text, 
+                            placeName: ficha.placeName, 
+                            placePhone: ficha.placePhone || null, 
+                            mapUrl: ficha.mapUrl || null,
+                            reviewUrl: ficha.reviewUrl || null,
+                            websiteUrl: ficha.websiteUrl || null, // 🛑 NUEVO: Propiedad Website/Social
+                            categoryName: ficha.categoryName || null,
+                            isHealthPlace: ficha.isHealthPlace || false, // 🛑 NUEVO: Propiedad isHealthPlace
+                            menuKey: menuKey, // <--- PROPIEDAD CLAVE AÑADIDA (SÓLO si es categoría principal)
+                            imageUrl: ficha.imageUrl || null, // <-- ¡NUEVA PROPIEDAD DE IMAGEN!
+                            timestamp: new Date()
+                        });
+                        
+                        // Disparar la alerta (solo para la primera ficha para evitar spam)
+                        if (fichasParaMostrar.indexOf(ficha) === 0) {
+                           const isPlace = ficha.type === 'place';
+                           const entityName = isPlace 
+                                ? (ficha.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
+                                : (ficha.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
 
-                    // Después de procesar todas las fichas, reconstruir la respuesta final.
-                    if (parsedJson.isMultiStructured === true) {
-                         // Si fue MultiStructured, respondemos con el array completo y la propiedad "isMultiStructured"
-                         finalResponseData.responseText = JSON.stringify({
-                             isMultiStructured: true,
-                             response: enrichedFichas,
-                             // Opcional: El texto conversacional (si el modelo lo incluyó antes del JSON)
-                             conversationText: parsedJson.conversationText || modelResponseText.replace(jsonString, '').trim() || ''
-                         });
-                    } else {
-                         // Si fue una ficha única, respondemos con la ficha enriquecida directamente.
-                         finalResponseData.responseText = JSON.stringify(enrichedFichas[0]);
-                    }
+                           const alertText = isPlace 
+                               ? UI_STRINGS[currentLanguage].alertStructured(entityName)
+                               : UI_STRINGS[currentLanguage].alertCategory(entityName);
+                           
+                           if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
+                        }
+                    });
+
+                    // Como ya pusheamos todos los mensajes, salimos del resto de la función.
+                    saveHistory(); 
+                    if (typeof renderChat === 'function') renderChat();
+                    return; // 🛑 FINALIZA la ejecución de handleSend
                 }
+                
+                // Si no hay fichas, el finalMessage ya tiene el texto plano.
+
             }
-        } catch (jsonError) {
-            console.error("Fallo en el parseo o enriquecimiento del JSON:", jsonError);
-            finalResponseData.responseText = modelResponseText; 
+        } catch (e) {
+            console.error("Error al parsear JSON estructurado, de chip o array:", e);
+            // Si hay error de parseo, cae a texto plano (modelResponseText)
+            finalMessage.text = modelResponseText;
         }
 
-        // Retornamos la respuesta (enriquecida o original) al frontend
-        res.status(200).json(finalResponseData);
+        // *** FIN DE LA LÓGICA DE PROCESAMIENTO DE RESPUESTA ***
 
-    } catch (error) {
-        console.error("Error en la API de Gemini:", error);
-        res.status(500).json({ 
-            error: true, 
-            message: "Fallo al obtener respuesta de Gemini: " + error.message
+        chatHistory.push(finalMessage); // <- Esta es la línea que antes estaba duplicada y ahora está corregida.
+        
+        // --- LÓGICA DE ACTIVACIÓN DE CHIPS Y ALERTA ---
+        
+        // Limpiamos los estados de las variables globales antes de reasignar
+        lastTotalCount = 0;
+        lastApiQuery = null;
+
+        if (dynamicChipsData && dynamicChipsData.length > 0) {
+            // Caso de CHIPS DINÁMICOS O SUBCATEGORÍAS FORZADAS
+            renderDynamicChips(dynamicChipsData);
+            quickActionFullList.classList.add('hidden'); // Asegurar que el otro chip esté oculto
+            
+        } else if (finalMessage.isStructured) {
+            // Caso de FICHA ESTRUCTURADA (SOLO SI LLEGÓ UNA AQUÍ, si no, ya salió antes)
+            // La lógica de los chips de submenú ocurre en createMessageBubble y no aquí.
+            const isPlace = finalMessage.type === 'place';
+            const entityName = isPlace 
+                ? (finalMessage.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
+                : (finalMessage.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
+
+            const alertText = isPlace 
+                ? UI_STRINGS[currentLanguage].alertStructured(entityName)
+                : UI_STRINGS[currentLanguage].alertCategory(entityName);
+
+            if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
+            
+            quickActionFullList.classList.add('hidden');
+
+        } else if (totalCount > MAX_CHAT_RESULTS && apiQuery) {
+            // Caso de Recomendación Local Forzada (Texto Plano) con más de 4 resultados
+            
+            // Guardar en las variables globales para el listener del botón
+            lastTotalCount = totalCount;
+            lastApiQuery = apiQuery;
+            
+            // Actualizar el texto del botón con el conteo
+            btnViewAllPlaces.innerHTML = currentLanguage === 'es' 
+                ? `➡️ Ver todos los ${totalCount} lugares` 
+                : `➡️ View all ${totalCount} places`;
+
+            // Mostrar el botón de acción rápida
+            quickActionFullList.classList.remove('hidden');
+
+        } else {
+            // Otros casos de texto plano (ej. preguntas generales, menos de 4 resultados, o error)
+            quickActionFullList.classList.add('hidden');
+        }
+        
+        saveHistory(); 
+        
+        if (typeof renderChat === 'function') renderChat();
+    }
+    
+    // --- Event Listeners e Inicio (ACTUALIZADO) ---
+    if (sendButton) sendButton.addEventListener('click', () => handleSend());
+    if (inputElement) inputElement.addEventListener('keypress', function(e) { if (e.key === 'Enter') { handleSend(); } });
+    
+    // NUEVO LISTENER: Para el efecto de escritura del usuario y habilitar/deshabilitar el botón
+    if (inputElement) {
+        inputElement.addEventListener('input', () => {
+            // Habilitar/Deshabilitar el botón de envío
+            sendButton.disabled = inputElement.value.trim() === '';
+            // Manejar la burbuja de escritura del usuario
+            handleTypingIndicator();
         });
     }
-}
+
+    // Listeners para botones del menú principal (Categorías, Lenguaje, etc.)
+    menuActionChips.forEach(chip => {
+        chip.addEventListener('click', function() {
+            handleMenuAction(this);
+        });
+    });
+
+    // Conexión del nuevo botón flotante superior
+    if (btnClearTop) {
+        btnClearTop.addEventListener('click', function() {
+            handleMenuAction(this); 
+        });
+    }
+
+    // Oculta chips de categoría después de usarlos.
+    categoryChips.forEach(chip => {
+        chip.addEventListener('click', function() {
+            const lang = currentLanguage;
+            const query = this.getAttribute(`data-query-${lang}`);
+            handleSend(query); 
+            hideChipGroup(categoryChipsGroup, categoryChips);
+            categoriesVisible = false;
+        });
+    });
+
+    // Oculta chips de idioma después de usarlos (la función setInterfaceLanguage ya lo hace).
+    languageChips.forEach(chip => {
+        chip.addEventListener('click', function() {
+            const lang = this.getAttribute('data-lang');
+            setInterfaceLanguage(lang);
+        });
+    });
+
+    // NUEVO LISTENER PARA EL BOTÓN "VER TODOS LOS LUGARES" (usa las variables globales)
+    if (btnViewAllPlaces) {
+        btnViewAllPlaces.addEventListener('click', () => {
+            vibrateDevice();
+            
+            // Ocultar después de hacer clic, independientemente del éxito.
+            quickActionFullList.classList.add('hidden'); 
+
+            if (lastApiQuery) {
+                
+                // 🛑 LÓGICA DUAL: El botón usa la consulta API completa para buscar en Google (Local + Genérica).
+                
+                // 1. Codificar el query completo (ej: 'Taquerías y Tacos en Nuevo Progreso')
+                const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(lastApiQuery + " Nuevo Progreso Tamps")}`;
+
+                // 2. Abrir la búsqueda en una nueva pestaña/ventana (complementando la lista local)
+                window.open(searchUrl, '_blank'); 
+                
+                alertUser(currentLanguage === 'es' 
+                    ? `Abriendo la lista completa en Google: "${lastApiQuery}"` 
+                    : `Opening the full list on Google: "${lastApiQuery}"`, 
+                'i', 'news');
+            } else {
+                alertUser(currentLanguage === 'es' 
+                    ? 'No se encontró la consulta de lugares. Por favor, intenta de nuevo.' 
+                    : 'Place query not found. Please try again.', 
+                'error');
+            }
+            
+            // Limpiar el estado de las variables globales
+            lastTotalCount = 0;
+            lastApiQuery = null;
+        });
+    }
+
+    // NUEVOS LISTENERS PARA EL PANEL DE NOTIFICACIONES
+    if (btnNotifications) {
+        btnNotifications.addEventListener('click', () => {
+            vibrateDevice();
+            loadNotificationPreferences(); // Cargar preferencias al abrir el modal
+            notificationModal.classList.add('show');
+        });
+    }
+
+    // Cerrar el modal al hacer clic fuera del panel (overlay)
+    if (notificationModal) {
+        notificationModal.addEventListener('click', (e) => {
+            if (e.target === notificationModal) { 
+                notificationModal.classList.remove('show');
+            }
+        });
+    }
+
+    // Botones dentro del modal
+    if (btnDiscardChanges) {
+        btnDiscardChanges.addEventListener('click', () => {
+            vibrateDevice();
+            notificationModal.classList.remove('show');
+            // No guarda, simplemente cierra
+        });
+    }
+
+    if (btnApplyChanges) {
+        btnApplyChanges.addEventListener('click', () => {
+            vibrateDevice();
+            // Actualizar el objeto `notificationPreferences` con el estado actual de los toggles
+            notificationPreferences.news = toggleNews.checked;
+            notificationPreferences.reminders = toggleReminders.checked;
+            // promotions se mantiene en false ya que está deshabilitado
+
+            saveNotificationPreferences(); 
+            notificationModal.classList.remove('show');
+        });
+    }
+
+    // Evita que el clic dentro del panel cierre el modal
+    if (notificationPanel) {
+        notificationPanel.addEventListener('click', (e) => {
+            e.stopPropagation(); 
+        });
+    }
+
+
+    document.addEventListener('DOMContentLoaded', () => {
+        
+        // Asegurarse de que ambas estén ocultas al inicio
+        hideUserTypingBubble();
+        hideModelTypingBubble();
+        
+        // Establece el idioma por defecto y actualiza la interfaz (sin disparar alerta)
+        setInterfaceLanguage(currentLanguage); 
+        
+        // Carga el historial o asegura que chatHistory es []
+        loadHistory(); 
+        
+        // Cargar preferencias de notificación
+        loadNotificationPreferences(); 
+        
+        // 4. ⚠️ CORRECCIÓN DE ERROR ADICIONAL: Desbloquear la entrada por si acaso
+        hideLoadingIndicator(); // Usamos la nueva función para asegurar el estado normal
+    });
+</script>
+
+
+</body>
+</html>
