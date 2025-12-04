@@ -70,7 +70,8 @@ REGLAS DE FORMATO:
      "response": [
        { "type": "category", "categoryName": "Dentistas en Progreso", "description": "...", "isStructured": true },
        { "type": "category", "categoryName": "Oculistas en Progreso", "description": "...", "isStructured": true }
-     ]
+     ],
+     "conversationText": "Hola, encontré varias opciones para ti:"
    }
    
    // El texto conversacional siempre debe ir ANTES o DESPUÉS de cualquier bloque JSON.`;
@@ -234,7 +235,8 @@ export default async function handler(req, res) {
                             // **** REGLA DE SALUD DINÁMICA: Bloqueo de Enriquecimiento ****
                             if (isHealthPlace) {
                                 console.log(`Regla de Salud Aplicada: Bloqueando enriquecimiento Places para ${placeNameSearch}`);
-                                // URL de mapa genérica (para mantener el botón)
+                                // Generamos URL de mapa genérica (para mantener el botón)
+                                // NOTA: La lógica de `https://www.google.com/maps/search/?api=1&query=$` es para forzar la apertura de un URL externo en Vercel/Next.js que usa URL internas. La verdadera URL es la búsqueda en Google Maps.
                                 const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
 
                                 enrichedFicha = {
@@ -264,6 +266,9 @@ export default async function handler(req, res) {
                                 } else {
                                     // Si falla Places
                                     delete enrichedFicha.placeToSearch;
+                                    // Generamos URL de mapa genérica de búsqueda
+                                    const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
+                                    enrichedFicha.mapUrl = baseMapUrl;
                                 }
                             }
                         } else if (ficha.type === 'category') {
@@ -286,7 +291,7 @@ export default async function handler(req, res) {
                              isMultiStructured: true,
                              response: enrichedFichas,
                              // Opcional: El texto conversacional (si el modelo lo incluyó antes del JSON)
-                             conversationText: modelResponseText.replace(jsonString, '').trim() || ''
+                             conversationText: parsedJson.conversationText || modelResponseText.replace(jsonString, '').trim() || ''
                          });
                     } else {
                          // Si fue una ficha única, respondemos con la ficha enriquecida directamente.
