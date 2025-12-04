@@ -4,6 +4,9 @@ import { Client as PlacesClient } from '@googlemaps/google-maps-services-js';
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
 
+// CONTEXTO GEOGRÁFICO FIJO PARA EL FILTRADO ESTRICTO
+const GEOGRAPHIC_CONTEXT = ", Nuevo Progreso, Tamaulipas, México";
+
 // Mapeo de intención de usuario a Categoría (Simplificado)
 const CATEGORY_MAP = {
     'tacos': 'Taquerías y Tacos',
@@ -62,6 +65,14 @@ REGLAS DE FORMATO:
      "description": "Resumen de la categoría en Progreso. Debes incluir una frase como: 'Usa el botón de 'Ver en Mapa' para explorar todas las opciones y elegir el lugar que más te interese. 🗺️'",
      "isStructured": true
    }
+
+   // FORMATO DE FALLO: Si la búsqueda local falla (el servidor lo generará si no encuentra el lugar)
+   {
+     "type": "place_not_found", 
+     "placeToSearch": "Nombre del Lugar No Encontrado", 
+     "description": "El servidor generó este mensaje: El lugar no se encontró en Nuevo Progreso. 📍",
+     "isStructured": true
+   }
    
    // REGLA CLAVE: Si la respuesta requiere MÚLTIPLES FICHAS, debes envolver todas las fichas en un array y añadir la propiedad "isMultiStructured": true.
    // Ejemplo para múltiples categorías (la respuesta al usuario debe ser el JSON completo, texto conversacional opcional):
@@ -79,9 +90,9 @@ REGLAS DE FORMATO:
 
 /**
  * Función que busca el nombre de un lugar en la API de Google Places,
- * incluyendo ahora la referencia de la foto para generar la URL.
+ * aplicando el filtro geográfico estricto.
  * @param {string} query Nombre del lugar a buscar.
- * @returns {object|null} Objeto con detalles del lugar o null si falla.
+ * @returns {object|null} Objeto con detalles del lugar o null si NO existe en Nuevo Progreso.
  */
 async function getPlaceDetails(query) {
     if (!placesApiKey) {
@@ -89,30 +100,33 @@ async function getPlaceDetails(query) {
         return null;
     }
     
+    // **** MODIFICACIÓN CLAVE 1: APLICACIÓN DEL FILTRO GEOGRÁFICO ESTRICTO ****
+    const searchInput = query + GEOGRAPHIC_CONTEXT;
+
     // 1. Buscar el place_id
     try {
         const findPlaceResponse = await placesClient.findPlaceFromText({
             params: {
                 key: placesApiKey,
-                input: query + ", Nuevo Progreso Tamps, México",
+                input: searchInput, // <-- Búsqueda restringida
                 inputtype: 'textquery',
                 fields: ['place_id']
             }
         });
 
+        // Si no hay candidatos (es decir, no se encontró en Nuevo Progreso), retorna null
         const placeId = findPlaceResponse.data.candidates?.[0]?.place_id;
         
         if (!placeId) {
-            console.log("No se encontró un place_id para la consulta:", query);
-            return null;
+            console.log("No se encontró un place_id en Nuevo Progreso para:", query);
+            return null; // <-- DEVOLUCIÓN NULA (¡NO EXISTE LOCALMENTE!)
         }
-
+        
         // 2. Obtener los detalles del lugar (incluyendo 'website' y **'photos'**)
         const detailsResponse = await placesClient.placeDetails({
             params: {
                 key: placesApiKey,
                 place_id: placeId,
-                // <-- Solicitamos 'website' y **'photos'**
                 fields: ['name', 'formatted_phone_number', 'url', 'reviews', 'website', 'photos'] 
             }
         });
@@ -134,13 +148,12 @@ async function getPlaceDetails(query) {
             mapUrl: place.url || null,
             reviewUrl: place.url || null,
             websiteUrl: place.website || null,
-            // <-- ¡AÑADIDO: La URL de la imagen!
             imageUrl: imageUrl 
         };
 
     } catch (e) {
         console.error("Error al llamar a Google Places API:", e.response ? e.response.data : e.message);
-        return null;
+        return null; // Fallo en la API
     }
 }
 
@@ -235,24 +248,37 @@ export default async function handler(req, res) {
                             // **** REGLA DE SALUD DINÁMICA: Bloqueo de Enriquecimiento ****
                             if (isHealthPlace) {
                                 console.log(`Regla de Salud Aplicada: Bloqueando enriquecimiento Places para ${placeNameSearch}`);
-                                // Generamos URL de mapa genérica (para mantener el botón)
-                                // NOTA: La lógica de `https://www.google.com/maps/search/?api=1&query=$` es para forzar la apertura de un URL externo en Vercel/Next.js que usa URL internas. La verdadera URL es la búsqueda en Google Maps.
-                                const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
+                                
+                                // Búsqueda de detalles de salud (Aplica filtro geográfico estricto)
+                                const placeData = await getPlaceDetails(placeNameSearch);
 
-                                enrichedFicha = {
-                                    ...enrichedFicha,
-                                    placePhone: null, 
-                                    reviewUrl: null,   
-                                    websiteUrl: null,
-                                    mapUrl: baseMapUrl,
-                                    imageUrl: null // Imagen debe ser nula por seguridad/privacidad
-                                };
+                                if (placeData) {
+                                    // Si existe localmente, enriquecer solo con datos seguros
+                                    enrichedFicha = {
+                                        ...enrichedFicha,
+                                        placeName: placeData.name,
+                                        mapUrl: placeData.mapUrl,
+                                        placePhone: null, // Bloqueado
+                                        reviewUrl: null, // Bloqueado
+                                        websiteUrl: null, // Bloqueado
+                                        imageUrl: null // Bloqueado
+                                    };
+                                } else {
+                                    // **** MODIFICACIÓN CLAVE 2a: RESPUESTA DE LUGAR NO ENCONTRADO (ALUCINACIÓN/FUERA DE ZONA) ****
+                                    enrichedFicha = {
+                                        type: "place_not_found", 
+                                        placeToSearch: placeNameSearch, 
+                                        description: `Disculpa, no se encontró un lugar llamado **${placeNameSearch}** ubicado en Nuevo Progreso.`,
+                                        isStructured: true
+                                    };
+                                }
 
                             } else {
                                 // SI NO ES SALUD: Procedemos con el enriquecimiento completo.
                                 const placeData = await getPlaceDetails(placeNameSearch);
 
                                 if (placeData) {
+                                    // Si existe localmente
                                     enrichedFicha = {
                                         ...enrichedFicha,
                                         placeName: placeData.name,
@@ -260,15 +286,16 @@ export default async function handler(req, res) {
                                         mapUrl: placeData.mapUrl,
                                         reviewUrl: placeData.reviewUrl, 
                                         websiteUrl: placeData.websiteUrl,
-                                        // <-- ¡DATOS AÑADIDOS!
                                         imageUrl: placeData.imageUrl 
                                     };
                                 } else {
-                                    // Si falla Places
-                                    delete enrichedFicha.placeToSearch;
-                                    // Generamos URL de mapa genérica de búsqueda
-                                    const baseMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeNameSearch + " Nuevo Progreso Tamps")}`;
-                                    enrichedFicha.mapUrl = baseMapUrl;
+                                     // **** MODIFICACIÓN CLAVE 2b: RESPUESTA DE LUGAR NO ENCONTRADO (ALUCINACIÓN/FUERA DE ZONA) ****
+                                    enrichedFicha = {
+                                        type: "place_not_found", 
+                                        placeToSearch: placeNameSearch, 
+                                        description: `Disculpa, no se encontró un lugar llamado **${placeNameSearch}** ubicado en Nuevo Progreso.`,
+                                        isStructured: true
+                                    };
                                 }
                             }
                         } else if (ficha.type === 'category') {
@@ -276,9 +303,11 @@ export default async function handler(req, res) {
                              
                              // Generamos URL de búsqueda en Google Maps para la categoría
                              const categorySearch = ficha.categoryName.replace(/en Progreso/i, '').trim();
-                             const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(categorySearch + " Nuevo Progreso Tamps")}`;
+                             // **** MODIFICACIÓN CLAVE 3: CONTEXTO GEOGRÁFICO EN LA URL DEL MAPA ****
+                             const mapUrlQuery = categorySearch + GEOGRAPHIC_CONTEXT;
+                             const mapUrl = `https://www.google.com/maps/search/?api=1&query=$${encodeURIComponent(mapUrlQuery)}`;
                              
-                             enrichedFicha.mapUrl = mapUrl; // Añadimos mapUrl para el botón "Ver en Mapa"
+                             enrichedFicha.mapUrl = mapUrl; 
                         }
                         
                         enrichedFichas.push(enrichedFicha);
@@ -290,7 +319,6 @@ export default async function handler(req, res) {
                          finalResponseData.responseText = JSON.stringify({
                              isMultiStructured: true,
                              response: enrichedFichas,
-                             // Opcional: El texto conversacional (si el modelo lo incluyó antes del JSON)
                              conversationText: parsedJson.conversationText || modelResponseText.replace(jsonString, '').trim() || ''
                          });
                     } else {
