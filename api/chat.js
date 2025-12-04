@@ -127,26 +127,26 @@ async function getPlaceDetails(query) {
             return null; // NO EXISTE LOCALMENTE
         }
 
-        // **** VALIDACIÓN ESTRICTA DE NOMBRE ****
-        // Si el nombre encontrado es demasiado diferente del nombre buscado (ej: Benavides vs Guadalajara), lo rechazamos.
-        // Se compara que los primeros 5 caracteres de la búsqueda estén incluidos en el nombre encontrado.
-        if (!foundName.includes(normalizedQuery.substring(0, Math.min(normalizedQuery.length, 5)))) { 
-             console.log(`Filtro estricto: El lugar encontrado "${foundName}" no coincide estrictamente con la búsqueda "${normalizedQuery}".`);
-             return null; // NO EXISTE EL LUGAR EXACTO
-        }
-
-
         // 2. Obtener los detalles del lugar 
         const detailsResponse = await placesClient.placeDetails({
             params: {
                 key: placesApiKey,
                 place_id: placeId,
-                fields: ['name', 'formatted_phone_number', 'url', 'reviews', 'website', 'photos'] 
+                // AÑADIMOS formatted_address para el GEOFENCING ESTRICTO
+                fields: ['name', 'formatted_phone_number', 'url', 'reviews', 'website', 'photos', 'formatted_address'] 
             }
         });
 
         const place = detailsResponse.data.result;
         
+        // 🛑 NUEVA VALIDACIÓN CRÍTICA: GEOFENCING ESTRICTO POR DIRECCIÓN
+        const expectedCity = 'Nuevo Progreso'; 
+        if (!place.formatted_address || !place.formatted_address.includes(expectedCity)) {
+            console.log(`Fallo de geofencing: El lugar encontrado no está en ${expectedCity}. Dirección: ${place.formatted_address}`);
+            return null; // FORZAMOS EL FALLO (¡NO ESTÁ EN NUEVO PROGRESO!)
+        }
+        // FIN DE LA VALIDACIÓN
+
         // 3. Generar la URL de la foto usando la Photo API
         const photoReference = place.photos?.[0]?.photo_reference || null;
         let imageUrl = null;
