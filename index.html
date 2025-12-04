@@ -391,24 +391,27 @@ font-family:Spline Sans Light;
         /* 🛑 NUEVO ESTILO: EFECTO DE IMAGEN APILADA (STACKED PHOTO) */
         .stacked-photo {
           /* Propiedades de la foto real */
-          width: 180px;
-          height: 180px; 
+          width: 120px;
+          height: 120px; 
           object-fit: cover; /* Asegura que la imagen cubra el área */
-          border-radius: 8px; /* Bordes redondeados */
+          border-radius: 12px; /* Bordes redondeados */
           position: relative;
           
           /* El truco: Simulación de las capas traseras con box-shadow */
           box-shadow: 
             /* Capa 1: Sombra sutil desplazada */
-            10px 10px 0 0 rgba(0, 0, 0, 0.15),
+            6px -4px 0 0 rgba(0, 0, 0, 0.15),
             /* Capa 2: Sombra más clara y desplazada */
-            20px 20px 0 0 rgba(0, 0, 0, 0.08);
+            3px -5px 0 0 rgba(0, 0, 0, 0.08);
 
           /* Rotación ligera para el estilo flotante */
-          transform: rotate(2deg); 
+          transform: rotate(356deg); 
           transition: transform 0.3s ease;
           margin-bottom: 12px; /* Espacio antes del texto del lugar */
           margin-right: 32px; /* Espacio para que las sombras sobresalgan del wrapper */
+padding:0px;
+left:20px;
+border:4px solid #9ca3af;
         }
 
         /* Opcional: Quitar la rotación y el apilamiento en pantallas pequeñas */
