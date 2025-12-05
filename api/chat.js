@@ -1,7 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
 import { Client as PlacesClient } from '@googlemaps/google-maps-services-js';
-// ⚠️ IMPORTANTE: Asegúrate de que tu herramienta de Google Search esté disponible aquí.
-// Si el entorno te la proporciona directamente, solo asegúrate de poder acceder a ella.
 
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
@@ -24,18 +22,81 @@ const CATEGORY_MAP = {
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
 const placesClient = new PlacesClient({}); 
-// ⭐️ ASUMIENDO que la herramienta de búsqueda está disponible globalmente o se inicializa aquí
-// const googleSearchClient = google.search; 
+
+// 2. Definimos la Instrucción del Sistema
+// 🛑 IMPORTANTE: Esta definición DEBE estar aquí, fuera de cualquier función.
+const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
+Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
+
+REGLAS DE FORMATO:
+1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 📍, ☀️) al inicio o final de tus respuestas o descripciones para hacerlas más amigables y atractivas.
+2. **REGLA CRÍTICA DE SALUD Y PRIVACIDAD:** Para cualquier lugar o categoría relacionado con la salud (clínicas, farmacias, ópticas, etc.), DEBES establecer el campo "isHealthPlace" en "true". NUNCA debes incluir precios, dar recomendaciones directas, o proporcionar detalles de contacto en la descripción. El servidor se encargará de limitar los botones de acción solo a "Ver en Mapa" y "Buscar en Google" para garantizar el cumplimiento.
+
+---
+
+### PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES
+
+**REGLA CRÍTICA:** Si el usuario pide recomendaciones, sugerencias o un listado de lugares (ej. '4 taquerías', 'dime restaurantes cerca'), DEBES usar el **MODO FICHA DE CATEGORÍA (JSON)** para dar un resumen general de la categoría. NUNCA debes listar lugares específicos o dar sugerencias directas. Tu descripción debe guiar al usuario a usar los botones de acción para que ellos exploren las opciones en el mapa.
+
+---
+
+3. **MODO FICHA DE LUGAR (JSON):** Úsalo si la solicitud es de un lugar o negocio **específico** (Salud o No Salud). Debe incluir la propiedad 'placeToSearch' con el nombre exacto del lugar.
+
+4. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo para solicitudes de categorías generales O para **CUMPLIR EL PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES**.
+
+5. **MODO CONVERSACIONAL (Texto Plano):** Úsalo para preguntas generales o de seguimiento que no requieran una ficha.
+
+6. Los formatos JSON requeridos son:
+   
+   // Formato para LUGAR ESPECÍFICO (Salud o No Salud)
+   {
+     "type": "place", 
+     "placeName": "Nombre del Lugar", 
+     "placeToSearch": "Nombre Exacto a buscar en Places API, ej: JM Dental Clinic", 
+     "placeCategory": "Clasificación general del lugar, ej: Clínica Dental, Restaurante",
+     "isHealthPlace": true/false, 
+     "description": "Descripción corta de no más de 3 oraciones.",
+     "isStructured": true
+   }
+   
+   // Formato para CATEGORÍA GENERAL
+   {
+     "type": "category", 
+     "categoryName": "Nombre de la Categoría, ej: Taquerías en Progreso",
+     "description": "Resumen de la categoría en Progreso. Debes incluir una frase como: 'Usa el botón de 'Ver en Mapa' para explorar todas las opciones y elegir el lugar que más te interese. 🗺️'",
+     "isStructured": true
+   }
+
+   // FORMATO DE FALLO: Si la búsqueda local falla (el servidor lo generará si no encuentra el lugar)
+   {
+     "type": "place_not_found", 
+     "placeToSearch": "Nombre del Lugar No Encontrado", 
+     "description": "El servidor generó este mensaje: El lugar no se encontró en Nuevo Progreso. 📍",
+     "isStructured": true
+   }
+   
+   // REGLA CLAVE: Si la respuesta requiere MÚLTIPLES FICHAS, debes envolver todas las fichas en un array y añadir la propiedad "isMultiStructured": true.
+   // Ejemplo para múltiples categorías (la respuesta al usuario debe ser el JSON completo, texto conversacional opcional):
+   {
+     "isMultiStructured": true,
+     "response": [
+       { "type": "category", "categoryName": "Dentistas en Progreso", "description": "...", "isStructured": true },
+       { "type": "category", "categoryName": "Oculistas en Progreso", "description": "...", "isStructured": true }
+     ],
+     "conversationText": "Hola, encontré varias opciones para ti:"
+   }
+   
+   // El texto conversacional siempre debe ir ANTES o DESPUÉS de cualquier bloque JSON.`;
+
 
 /**
  * Función que busca el nombre de un lugar en la API de Google Places,
  * aplicando el filtro geográfico estricto y la validación de nombre.
  * @param {string} query Nombre del lugar a buscar.
+ * @param {object|null} googleSearchClient El cliente de la herramienta de búsqueda de Gemini.
  * @returns {object|null} Objeto con detalles del lugar o null si NO existe el lugar exacto en Nuevo Progreso.
  */
-async function getPlaceDetails(query) {
-    // ⚠️ ATENCIÓN: Esta función requiere acceso a Google Search Tool
-    const googleSearchClient = global.google?.search; // Accediendo a la herramienta globalmente si está disponible
+async function getPlaceDetails(query, googleSearchClient) { 
     
     if (!placesApiKey) {
         console.error("GOOGLE_PLACES_API_KEY no definida.");
@@ -75,7 +136,7 @@ async function getPlaceDetails(query) {
 
         const place = detailsResponse.data.result;
         
-        // 🛑 VALIDACIÓN GEOFENCING FLEXIBLE
+        // 🛑 VALIDACIÓN GEOFENCING FLEXIBLE: Debe contener 'Progreso' o 'Río Bravo'
         const address = place.formatted_address ? place.formatted_address.toLowerCase() : '';
         
         if (!address.includes('progreso') && !address.includes('río bravo')) {
@@ -102,7 +163,6 @@ async function getPlaceDetails(query) {
                  
                  if (searchResult.result) {
                      // Usamos el resultado de la búsqueda como nuestro resumen
-                     // Limitamos el resumen a 200 caracteres para no abrumar a Gemini
                      const summaryText = searchResult.result.substring(0, 200);
                      editorialSummary = `Según una búsqueda reciente, el giro del negocio es: ${summaryText}...`;
                      console.log(`Resumen de Search inyectado para ${query}.`);
@@ -139,6 +199,7 @@ export default async function handler(req, res) {
         
         // Configuramos el idioma
         const langText = currentLanguage === 'es' ? 'español' : 'inglés';
+        // 🛑 BASE_SYSTEM_INSTRUCTION es accesible porque está definida globalmente
         const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
 
         // LÓGICA DE INTERCEPTACIÓN Y PRIORIDAD LOCAL (MODIFICADA para forzar CATEGORY JSON)
@@ -174,7 +235,9 @@ export default async function handler(req, res) {
             config: {
                 systemInstruction: finalSystemInstruction 
             },
-            history: history 
+            history: history,
+            // ⭐️ PASO CRUCIAL: Habilitar la herramienta de búsqueda de Google.
+            tools: [{ googleSearch: {} }] 
         });
 
         // Enviamos el nuevo mensaje (original o modificado por la redirección a categoría) al modelo
@@ -216,8 +279,8 @@ export default async function handler(req, res) {
                             const placeNameSearch = ficha.placeToSearch.trim();
                             const isHealthPlace = ficha.isHealthPlace === true; 
                             
-                            // Obtenemos los datos de Places API (con el nuevo filtro flexible y Google Search)
-                            const placeData = await getPlaceDetails(placeNameSearch);
+                            // 🛑 Llamamos a getPlaceDetails pasando la herramienta de búsqueda
+                            const placeData = await getPlaceDetails(placeNameSearch, chat.googleSearch);
 
                             if (placeData) {
                                 
