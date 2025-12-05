@@ -21,10 +21,9 @@ const CATEGORY_MAP = {
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
-const placesClient = new PlacesClient({}); 
+const placesClient = new Client({}); 
 
 // 2. Definimos la Instrucción del Sistema
-// 🛑 IMPORTANTE: Esta definición DEBE estar aquí, fuera de cualquier función.
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 
@@ -90,13 +89,12 @@ REGLAS DE FORMATO:
 
 
 /**
- * Función que busca el nombre de un lugar en la API de Google Places,
- * aplicando el filtro geográfico estricto y la validación de nombre.
+ * Función que busca el nombre de un lugar en la API de Google Places.
+ * NOTA: La lógica de Google Search se ha movido al re-prompt de Gemini para usar su herramienta nativa.
  * @param {string} query Nombre del lugar a buscar.
- * @param {object|null} googleSearchClient El cliente de la herramienta de búsqueda de Gemini.
  * @returns {object|null} Objeto con detalles del lugar o null si NO existe el lugar exacto en Nuevo Progreso.
  */
-async function getPlaceDetails(query, googleSearchClient) { 
+async function getPlaceDetails(query) { 
     
     if (!placesApiKey) {
         console.error("GOOGLE_PLACES_API_KEY no definida.");
@@ -107,7 +105,7 @@ async function getPlaceDetails(query, googleSearchClient) {
     const LOCATION_BIAS = { lat: 26.064, lng: -98.005 };
 
     try {
-        // 1. Buscar el place_id (usando locationBias como preferencia)
+        // 1. Buscar el place_id
         const findPlaceResponse = await placesClient.findPlaceFromText({
             params: {
                 key: placesApiKey,
@@ -125,7 +123,7 @@ async function getPlaceDetails(query, googleSearchClient) {
             return null;
         }
 
-        // 2. Obtener los detalles del lugar (incluyendo formatted_address y editorial_summary)
+        // 2. Obtener los detalles del lugar
         const detailsResponse = await placesClient.placeDetails({
             params: {
                 key: placesApiKey,
@@ -136,7 +134,7 @@ async function getPlaceDetails(query, googleSearchClient) {
 
         const place = detailsResponse.data.result;
         
-        // 🛑 VALIDACIÓN GEOFENCING FLEXIBLE: Debe contener 'Progreso' o 'Río Bravo'
+        // 🛑 VALIDACIÓN GEOFENCING FLEXIBLE
         const address = place.formatted_address ? place.formatted_address.toLowerCase() : '';
         
         if (!address.includes('progreso') && !address.includes('río bravo')) {
@@ -144,7 +142,7 @@ async function getPlaceDetails(query, googleSearchClient) {
             return null; 
         }
         
-        // 3. Generar la URL de la foto y obtener/enriquecer el resumen editorial
+        // 3. Generar la URL de la foto y obtener el resumen editorial
         const photoReference = place.photos?.[0]?.photo_reference || null;
         let imageUrl = null;
 
@@ -153,24 +151,6 @@ async function getPlaceDetails(query, googleSearchClient) {
         }
 
         let editorialSummary = place.editorial_summary?.overview || null;
-        
-        // ⭐️ NUEVA LÓGICA: Si no hay resumen editorial, usa Google Search para verificar el giro
-        if (!editorialSummary && googleSearchClient) {
-             const searchQuery = `${query} Nuevo Progreso giro o categoría`;
-             
-             try {
-                 const searchResult = await googleSearchClient.search({ queries: [searchQuery] });
-                 
-                 if (searchResult.result) {
-                     // Usamos el resultado de la búsqueda como nuestro resumen
-                     const summaryText = searchResult.result.substring(0, 200);
-                     editorialSummary = `Según una búsqueda reciente, el giro del negocio es: ${summaryText}...`;
-                     console.log(`Resumen de Search inyectado para ${query}.`);
-                 }
-             } catch (e) {
-                 console.error("Fallo al ejecutar Google Search para el giro:", e.message);
-             }
-        }
         
         return {
             name: place.name,
@@ -199,7 +179,6 @@ export default async function handler(req, res) {
         
         // Configuramos el idioma
         const langText = currentLanguage === 'es' ? 'español' : 'inglés';
-        // 🛑 BASE_SYSTEM_INSTRUCTION es accesible porque está definida globalmente
         const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
 
         // LÓGICA DE INTERCEPTACIÓN Y PRIORIDAD LOCAL (MODIFICADA para forzar CATEGORY JSON)
@@ -246,7 +225,7 @@ export default async function handler(req, res) {
         
         let finalResponseData = { responseText: modelResponseText };
 
-        // Lógica de ENRIQUECIMIENTO con Places API (MODIFICADA para Array de Fichas)
+        // Lógica de ENRIQUECIMIENTO con Places API
         try {
             const jsonStart = modelResponseText.indexOf('{');
             const jsonEnd = modelResponseText.lastIndexOf('}');
@@ -260,7 +239,6 @@ export default async function handler(req, res) {
                 // 1. Caso de Múltiples Fichas (Array)
                 if (parsedJson.isMultiStructured === true && Array.isArray(parsedJson.response)) {
                     fichasToProcess = parsedJson.response;
-                    console.log("Detectado formato MultiStructured. Fichas:", fichasToProcess.length);
                 } 
                 // 2. Caso de Ficha Única
                 else if (parsedJson.isStructured === true) {
@@ -279,8 +257,8 @@ export default async function handler(req, res) {
                             const placeNameSearch = ficha.placeToSearch.trim();
                             const isHealthPlace = ficha.isHealthPlace === true; 
                             
-                            // 🛑 Llamamos a getPlaceDetails pasando la herramienta de búsqueda
-                            const placeData = await getPlaceDetails(placeNameSearch, chat.googleSearch);
+                            // 🛑 Ya no pasamos el cliente de búsqueda
+                            const placeData = await getPlaceDetails(placeNameSearch);
 
                             if (placeData) {
                                 
@@ -288,12 +266,14 @@ export default async function handler(req, res) {
                                 let placePrompt = `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder.`;
                                 
                                 if (placeData.editorialSummary) {
-                                    placePrompt += ` La información de giro y descripción obtenida es: "${placeData.editorialSummary}". DEBES usar esta información, o inspirarte fuertemente en ella, para crear la 'description' en el JSON, ignorando cualquier contexto anterior si es contradictorio.`;
+                                    // Tenemos descripción de Places, la usamos para generar la ficha.
+                                    placePrompt += ` La información de giro y descripción obtenida es: "${placeData.editorialSummary}". DEBES usar esta información, o inspirarte fuertemente en ella, para crear la 'description' en el JSON.`;
                                 } else {
-                                    placePrompt += ` El género del lugar inicialmente clasificado es: ${ficha.placeCategory}. Crea la 'description' del JSON basada en este género y el nombre del lugar.`;
+                                    // NO tenemos descripción de Places. FORZAMOS A GEMINI A BUSCAR.
+                                    placePrompt += ` No tenemos una descripción editorial. Usa **tu herramienta de Google Search** para buscar el **giro y descripción** de "${placeNameSearch} Nuevo Progreso" y luego usa esa información para crear la 'description' del JSON.`;
                                 }
 
-                                // 🛑 RE-PROMPT A GEMINI PARA GENERAR LA FICHA CON LA DESCRIPCIÓN ENRIQUECIDA
+                                // 🛑 RE-PROMPT A GEMINI PARA GENERAR LA FICHA ENRIQUECIDA
                                 const rePromptResult = await chat.sendMessage({ message: placePrompt });
                                 const rePromptText = rePromptResult.text.trim();
                                 
@@ -301,7 +281,7 @@ export default async function handler(req, res) {
                                     // Intentamos parsear la respuesta (solo el JSON)
                                     const reParsedJson = JSON.parse(rePromptText.substring(rePromptText.indexOf('{'), rePromptText.lastIndexOf('}') + 1));
                                     
-                                    // Usamos la ficha re-parseada, pero mantenemos los datos de Places API (que son los confiables)
+                                    // Usamos la ficha re-parseada
                                     enrichedFicha = {
                                         ...reParsedJson, // Ficha con la nueva descripción (anti-alucinación)
                                         placeName: placeData.name,
