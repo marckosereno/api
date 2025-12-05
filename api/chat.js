@@ -274,38 +274,39 @@ export default async function handler(req, res) {
 
                             if (placeData) {
                                 
-                                // 🛑 APLICAR CORRECCIÓN DE EXCEPCIÓN ANTES DE HACER EL RE-PROMPT
+                                // 🛑 APLICAR CORRECCIÓN DE EXCEPCIÓN AL JSON INICIAL Y DATOS
                                 const exceptionName = placeNameSearch.toLowerCase().replace(/\s/g, '');
-                                let mandatoryDescription = null; 
                                 let toolsToUse = [{ googleSearch: {} }]; // Por defecto, usamos la búsqueda
 
                                 if (EXCEPTION_DATA_MAP[exceptionName]) {
                                     const exception = EXCEPTION_DATA_MAP[exceptionName];
+                                    
+                                    // 1. CORREGIR CATEGORÍA DEL JSON INICIAL (enrichedFicha)
                                     enrichedFicha.placeCategory = exception.category;
-                                    mandatoryDescription = exception.description; 
+                                    
+                                    // 2. FORZAR LA DESCRIPCIÓN CANÓNICA EN LOS DATOS DE PLACES
+                                    placeData.editorialSummary = exception.description; 
+                                    
                                     toolsToUse = []; // <--- DESACTIVAMOS EXPLÍCITAMENTE LAS HERRAMIENTAS
-                                    console.log(`Excepción CANÓNICA aplicada: ${placeNameSearch} forzado a ${enrichedFicha.placeCategory}`);
+                                    console.log(`Excepción CANÓNICA aplicada y Forzada: ${placeNameSearch} a ${enrichedFicha.placeCategory}`);
                                 }
                                 
                                 // ⭐️ PASO ANTI-ALUCINACIÓN: FORZAR A GEMINI A USAR LA DESCRIPCIÓN CORRECTA
                                 let placePrompt = `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder.`;
                                 
-                                if (mandatoryDescription) {
-                                    // Caso 1: ¡TENEMOS LA DESCRIPCIÓN CANÓNICA!
-                                    // Forzamos la descripción.
-                                    placePrompt += ` La categoría y descripción correcta (CANÓNICA) es: CATEGORIA: ${enrichedFicha.placeCategory}. DESCRIPCION: "${mandatoryDescription}". DEBES usar esta descripción tal cual para la 'description' en el JSON. No uses Google Search.`;
-                                } else if (placeData.editorialSummary) {
-                                    // Caso 2: Tenemos descripción de Places API.
-                                    placePrompt += ` La información de giro y descripción obtenida es: "${placeData.editorialSummary}". La categoría es ${enrichedFicha.placeCategory}. DEBES usar esta información, o inspirarte fuertemente en ella, para crear la 'description' en el JSON.`;
+                                if (placeData.editorialSummary) {
+                                    // Usa la descripción de Places API (que ahora podría ser la canónica forzada)
+                                    // Le pasamos la categoría corregida y la descripción forzada/real.
+                                    placePrompt += ` La categoría es: ${enrichedFicha.placeCategory}. La información de giro y descripción obtenida es: "${placeData.editorialSummary}". DEBES usar esta información para crear la 'description' en el JSON.`;
                                 } else {
-                                    // Caso 3: No tenemos descripción. Forzamos a Gemini a buscar.
+                                    // Caso de fallo total sin excepción, forzamos la búsqueda.
                                     placePrompt += ` No tenemos una descripción editorial. La categoría es: ${enrichedFicha.placeCategory}. Usa **tu herramienta de Google Search** para buscar el **giro y descripción** de "${placeNameSearch} Nuevo Progreso" y luego usa esa información para crear la 'description' del JSON.`;
                                 }
 
                                 // 🛑 RE-PROMPT A GEMINI PARA GENERAR LA FICHA ENRIQUECIDA (¡CON HERRAMIENTAS CONTROLADAS!)
                                 const rePromptResult = await chat.sendMessage({ 
                                     message: placePrompt,
-                                    tools: toolsToUse // Usar las herramientas controladas
+                                    tools: toolsToUse // Usar las herramientas controladas (vacías si hay excepción)
                                 });
                                 const rePromptText = rePromptResult.text.trim();
                                 
