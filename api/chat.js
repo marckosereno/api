@@ -391,7 +391,7 @@ export default async function handler(req, res) {
                         
                         let finalConversationText = parsedJson.conversationText || modelResponseText.replace(jsonString, '').trim() || '';
 
-                        // 🛑 NUEVA REGLA: SI ALGUNA FICHA ES UNA EXCEPCIÓN, ELIMINAR EL TEXTO CONVERSACIONAL
+                        // 🛑 REGLA BLINDADA: SI ALGUNA FICHA ES UNA EXCEPCIÓN, ELIMINAR EL TEXTO CONVERSACIONAL
                         // Esto previene que Gemini alucine sobre "tienda" o "restaurante" fuera del JSON.
                         const hasExceptionFicha = enrichedFichas.some(f => {
                             const placeName = f.placeToSearch ? f.placeToSearch.toLowerCase().replace(/\s/g, '') : null;
@@ -399,8 +399,8 @@ export default async function handler(req, res) {
                         });
 
                         if (hasExceptionFicha) {
-                            console.log("Excepción detectada en multi-fichas. Limpiando texto conversacional.");
-                            finalConversationText = ""; // Fuerza a vacío
+                            console.log("Excepción detectada en multi-fichas. Limpiando texto conversacional de forma agresiva.");
+                            finalConversationText = ""; // Fuerza a vacío para evitar contaminación
                         }
                         
                          finalResponseData.responseText = JSON.stringify({
