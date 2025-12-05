@@ -288,7 +288,7 @@ export default async function handler(req, res) {
                                 }
                                 
                                 if (isException) {
-                                    // **NUEVA LÓGICA: GENERAR LA FICHA FINAL CON DATOS CANÓNICOS**
+                                    // **LÓGICA DE BYPASS: GENERAR LA FICHA FINAL CON DATOS CANÓNICOS**
                                     const canonicalDescription = EXCEPTION_DATA_MAP[exceptionName].description;
                                     
                                     enrichedFicha = {
@@ -308,7 +308,7 @@ export default async function handler(req, res) {
                                     };
 
                                 } else { 
-                                    // **LÓGICA EXISTENTE: USAR RE-PROMPT PARA LUGARES NORMALES**
+                                    // **LÓGICA NORMAL: USAR RE-PROMPT PARA LUGARES NO EXCEPCIÓN**
 
                                     let toolsToUse = [{ googleSearch: {} }]; 
                                     
@@ -388,12 +388,28 @@ export default async function handler(req, res) {
 
                     // Después de procesar todas las fichas, reconstruir la respuesta final.
                     if (parsedJson.isMultiStructured === true) {
+                        
+                        let finalConversationText = parsedJson.conversationText || modelResponseText.replace(jsonString, '').trim() || '';
+
+                        // 🛑 NUEVA REGLA: SI ALGUNA FICHA ES UNA EXCEPCIÓN, ELIMINAR EL TEXTO CONVERSACIONAL
+                        // Esto previene que Gemini alucine sobre "tienda" o "restaurante" fuera del JSON.
+                        const hasExceptionFicha = enrichedFichas.some(f => {
+                            const placeName = f.placeToSearch ? f.placeToSearch.toLowerCase().replace(/\s/g, '') : null;
+                            return placeName && EXCEPTION_DATA_MAP[placeName];
+                        });
+
+                        if (hasExceptionFicha) {
+                            console.log("Excepción detectada en multi-fichas. Limpiando texto conversacional.");
+                            finalConversationText = ""; // Fuerza a vacío
+                        }
+                        
                          finalResponseData.responseText = JSON.stringify({
                              isMultiStructured: true,
                              response: enrichedFichas,
-                             conversationText: parsedJson.conversationText || modelResponseText.replace(jsonString, '').trim() || ''
+                             conversationText: finalConversationText
                          });
                     } else {
+                         // Si es ficha única, simplemente retorna el JSON de la ficha enriquecida
                          finalResponseData.responseText = JSON.stringify(enrichedFichas[0]);
                     }
                 }
