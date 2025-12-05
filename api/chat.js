@@ -102,57 +102,52 @@ async function getPlaceDetails(query) {
     
     // Coordenadas aproximadas de Nuevo Progreso para locationBias (26.064, -98.005)
     const LOCATION_BIAS = { lat: 26.064, lng: -98.005 };
-    // Normalizamos el nombre para comparación
-    const normalizedQuery = query.toLowerCase().trim();
 
-    // 1. Buscar el place_id usando el nombre del lugar.
     try {
+        // 1. Buscar el place_id (usando locationBias como preferencia)
         const findPlaceResponse = await placesClient.findPlaceFromText({
             params: {
                 key: placesApiKey,
-                input: query, // Solo el nombre del lugar
+                input: query, 
                 inputtype: 'textquery',
-                fields: ['place_id', 'name'], // Necesitamos el nombre para validar
-                locationBias: `point:${LOCATION_BIAS.lat},${LOCATION_BIAS.lng}` // Sesgo a la ubicación
+                fields: ['place_id'], 
+                locationBias: `point:${LOCATION_BIAS.lat},${LOCATION_BIAS.lng}` 
             }
         });
 
-        // Verificamos si hay candidatos
-        const candidate = findPlaceResponse.data.candidates?.[0];
-        const placeId = candidate?.place_id;
-        const foundName = candidate?.name.toLowerCase().trim();
+        const placeId = findPlaceResponse.data.candidates?.[0]?.place_id;
         
         if (!placeId) {
-            console.log("No se encontró un place_id en Nuevo Progreso (cero candidatos).");
-            return null; // NO EXISTE LOCALMENTE
+            console.log("No se encontró un place_id cerca de Nuevo Progreso.");
+            return null;
         }
 
-        // 2. Obtener los detalles del lugar 
+        // 2. Obtener los detalles del lugar (incluyendo formatted_address y editorial_summary)
         const detailsResponse = await placesClient.placeDetails({
             params: {
                 key: placesApiKey,
                 place_id: placeId,
-                // AÑADIMOS formatted_address para el GEOFENCING ESTRICTO
-                fields: ['name', 'formatted_phone_number', 'url', 'reviews', 'website', 'photos', 'formatted_address'] 
+                // CAMPOS CLAVE: formatted_address para geofencing y editorial_summary para descripción
+                fields: ['name', 'formatted_phone_number', 'url', 'reviews', 'website', 'photos', 'formatted_address', 'editorial_summary'] 
             }
         });
 
         const place = detailsResponse.data.result;
         
-        // 🛑 NUEVA VALIDACIÓN CRÍTICA: GEOFENCING ESTRICTO POR DIRECCIÓN
-        const expectedCity = 'Nuevo Progreso'; 
-        if (!place.formatted_address || !place.formatted_address.includes(expectedCity)) {
-            console.log(`Fallo de geofencing: El lugar encontrado no está en ${expectedCity}. Dirección: ${place.formatted_address}`);
-            return null; // FORZAMOS EL FALLO (¡NO ESTÁ EN NUEVO PROGRESO!)
+        // 🛑 VALIDACIÓN GEOFENCING FLEXIBLE: Debe contener 'Progreso' o 'Río Bravo'
+        const address = place.formatted_address ? place.formatted_address.toLowerCase() : '';
+        
+        if (!address.includes('progreso') && !address.includes('río bravo')) {
+            console.log(`Fallo de geofencing flexible: Dirección (${address}) no incluye "Progreso" o "Río Bravo".`);
+            return null; 
         }
         // FIN DE LA VALIDACIÓN
 
-        // 3. Generar la URL de la foto usando la Photo API
+        // 3. Generar la URL de la foto y devolver los datos
         const photoReference = place.photos?.[0]?.photo_reference || null;
         let imageUrl = null;
 
         if (photoReference) {
-            // Usamos un tamaño maxwidth de 250px para el efecto apilado
             imageUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=250&photoreference=${photoReference}&key=${placesApiKey}`;
         }
         
@@ -162,12 +157,14 @@ async function getPlaceDetails(query) {
             mapUrl: place.url || null,
             reviewUrl: place.url || null,
             websiteUrl: place.website || null,
-            imageUrl: imageUrl 
+            imageUrl: imageUrl,
+            // ⭐️ AÑADIDO: Resumen editorial de Places API
+            editorialSummary: place.editorial_summary?.overview || null 
         };
 
     } catch (e) {
         console.error("Error al llamar a Google Places API:", e.response ? e.response.data : e.message);
-        return null; // Fallo en la API
+        return null; 
     }
 }
 
@@ -200,7 +197,7 @@ export default async function handler(req, res) {
             if (categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('tacos')) categoryName = "Taquerías y Tacos";
             else if (categoryKeyRaw.includes('restaurante') || categoryKeyRaw.includes('comer')) categoryName = "Restaurantes y Comida";
             else if (categoryKeyRaw.includes('artesanias') || categoryKeyRaw.includes('souvenirs')) categoryName = "Tiendas de Artesanías y Souvenirs";
-            else if (categoryKeyRaw.includes('barbacoa')) categoryName = "Barbacoa y Birria";
+            else if (categoryKeyRaw.includes('barbacoa')) categoryKeyRaw.includes('barbacoa')) categoryName = "Barbacoa y Birria";
             else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = "Salud y Estética";
             
             // 2. SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA
@@ -258,66 +255,68 @@ export default async function handler(req, res) {
                             
                             const placeNameSearch = ficha.placeToSearch.trim();
                             const isHealthPlace = ficha.isHealthPlace === true; 
+                            
+                            // Obtenemos los datos de Places API (con el nuevo filtro flexible)
+                            const placeData = await getPlaceDetails(placeNameSearch);
 
-                            // **** REGLA DE SALUD DINÁMICA: Bloqueo de Enriquecimiento ****
-                            if (isHealthPlace) {
-                                console.log(`Regla de Salud Aplicada: Bloqueando enriquecimiento Places para ${placeNameSearch}`);
+                            if (placeData) {
                                 
-                                // Búsqueda de detalles de salud (Aplica filtro geográfico estricto)
-                                const placeData = await getPlaceDetails(placeNameSearch);
+                                // ⭐️ PASO ANTI-ALUCINACIÓN: FORZAR A GEMINI A USAR LA DESCRIPCIÓN CORRECTA
+                                let placePrompt = `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder.`;
+                                
+                                if (placeData.editorialSummary) {
+                                    placePrompt += ` El resumen principal del lugar es: "${placeData.editorialSummary}". DEBES usar esta información, o inspirarte fuertemente en ella, para crear la 'description' en el JSON.`;
+                                } else {
+                                    placePrompt += ` El género del lugar es: ${ficha.placeCategory}. Crea la 'description' del JSON basada en este género y el nombre del lugar.`;
+                                }
 
-                                if (placeData) {
-                                    // Si existe localmente, enriquecer solo con datos seguros
+                                // 🛑 RE-PROMPT A GEMINI PARA GENERAR LA FICHA CON LA DESCRIPCIÓN ENRIQUECIDA
+                                const rePromptResult = await chat.sendMessage({ message: placePrompt });
+                                const rePromptText = rePromptResult.text.trim();
+                                
+                                try {
+                                    // Intentamos parsear la respuesta (solo el JSON)
+                                    const reParsedJson = JSON.parse(rePromptText.substring(rePromptText.indexOf('{'), rePromptText.lastIndexOf('}') + 1));
+                                    
+                                    // Usamos la ficha re-parseada, pero mantenemos los datos de Places API (que son los confiables)
+                                    enrichedFicha = {
+                                        ...reParsedJson, // Ficha con la nueva descripción (anti-alucinación)
+                                        placeName: placeData.name,
+                                        mapUrl: placeData.mapUrl,
+                                        imageUrl: placeData.imageUrl,
+                                        // Restricciones de salud
+                                        placePhone: isHealthPlace ? null : placeData.phone, 
+                                        reviewUrl: isHealthPlace ? null : placeData.reviewUrl, 
+                                        websiteUrl: isHealthPlace ? null : placeData.websiteUrl,
+                                    };
+                                } catch (e) {
+                                    console.error("Fallo al re-parsear el JSON de anti-alucinación. Usando descripción original.");
+                                    
+                                    // Fallback: Si el JSON re-parseado falla, usamos la ficha original de Gemini
                                     enrichedFicha = {
                                         ...enrichedFicha,
                                         placeName: placeData.name,
                                         mapUrl: placeData.mapUrl,
-                                        placePhone: null, // Bloqueado
-                                        reviewUrl: null, // Bloqueado
-                                        websiteUrl: null, // Bloqueado
-                                        imageUrl: null // Bloqueado
-                                    };
-                                } else {
-                                    // **** RESPUESTA DE LUGAR NO ENCONTRADO (ALUCINACIÓN/FUERA DE ZONA) ****
-                                    enrichedFicha = {
-                                        type: "place_not_found", 
-                                        placeToSearch: placeNameSearch, 
-                                        description: `Disculpa, no se encontró un lugar llamado **${placeNameSearch}** ubicado en Nuevo Progreso.`,
-                                        isStructured: true
+                                        imageUrl: placeData.imageUrl,
+                                        placePhone: isHealthPlace ? null : placeData.phone,
+                                        reviewUrl: isHealthPlace ? null : placeData.reviewUrl, 
+                                        websiteUrl: isHealthPlace ? null : placeData.websiteUrl,
                                     };
                                 }
-
-                            } else {
-                                // SI NO ES SALUD: Procedemos con el enriquecimiento completo.
-                                const placeData = await getPlaceDetails(placeNameSearch);
-
-                                if (placeData) {
-                                    // Si existe localmente
-                                    enrichedFicha = {
-                                        ...enrichedFicha,
-                                        placeName: placeData.name,
-                                        placePhone: placeData.phone,
-                                        mapUrl: placeData.mapUrl,
-                                        reviewUrl: placeData.reviewUrl, 
-                                        websiteUrl: placeData.websiteUrl,
-                                        imageUrl: placeData.imageUrl 
-                                    };
-                                } else {
-                                     // **** RESPUESTA DE LUGAR NO ENCONTRADO (ALUCINACIÓN/FUERA DE ZONA) ****
-                                    enrichedFicha = {
-                                        type: "place_not_found", 
-                                        placeToSearch: placeNameSearch, 
-                                        description: `Disculpa, no se encontró un lugar llamado **${placeNameSearch}** ubicado en Nuevo Progreso.`,
-                                        isStructured: true
-                                    };
-                                }
+                                
+                            } else { 
+                                // Si NO existe (Fallo del geofencing)
+                                enrichedFicha = {
+                                    type: "place_not_found", 
+                                    placeToSearch: placeNameSearch, 
+                                    description: `Disculpa, no se encontró un lugar llamado **${placeNameSearch}** ubicado en Nuevo Progreso.`,
+                                    isStructured: true
+                                };
                             }
                         } else if (ficha.type === 'category') {
                              // ENRIQUECIMIENTO PARA CATEGORÍA (Permitir "Ver en Mapa")
                              
-                             // Generamos URL de búsqueda en Google Maps para la categoría
                              const categorySearch = ficha.categoryName.replace(/en Progreso/i, '').trim();
-                             // **** CONTEXTO GEOGRÁFICO EN LA URL DEL MAPA ****
                              const mapUrlQuery = categorySearch + GEOGRAPHIC_CONTEXT;
                              const mapUrl = `https://www.google.com/maps/search/?api=1&query=$${encodeURIComponent(mapUrlQuery)}`;
                              
@@ -329,14 +328,12 @@ export default async function handler(req, res) {
 
                     // Después de procesar todas las fichas, reconstruir la respuesta final.
                     if (parsedJson.isMultiStructured === true) {
-                         // Si fue MultiStructured, respondemos con el array completo y la propiedad "isMultiStructured"
                          finalResponseData.responseText = JSON.stringify({
                              isMultiStructured: true,
                              response: enrichedFichas,
                              conversationText: parsedJson.conversationText || modelResponseText.replace(jsonString, '').trim() || ''
                          });
                     } else {
-                         // Si fue una ficha única, respondemos con la ficha enriquecida directamente.
                          finalResponseData.responseText = JSON.stringify(enrichedFichas[0]);
                     }
                 }
