@@ -21,7 +21,8 @@ const CATEGORY_MAP = {
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
-const placesClient = new Client({}); 
+// 🛑 CORRECCIÓN: Usamos PlacesClient, la constante importada
+const placesClient = new PlacesClient({}); 
 
 // 2. Definimos la Instrucción del Sistema
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
@@ -90,7 +91,6 @@ REGLAS DE FORMATO:
 
 /**
  * Función que busca el nombre de un lugar en la API de Google Places.
- * NOTA: La lógica de Google Search se ha movido al re-prompt de Gemini para usar su herramienta nativa.
  * @param {string} query Nombre del lugar a buscar.
  * @returns {object|null} Objeto con detalles del lugar o null si NO existe el lugar exacto en Nuevo Progreso.
  */
@@ -134,7 +134,7 @@ async function getPlaceDetails(query) {
 
         const place = detailsResponse.data.result;
         
-        // 🛑 VALIDACIÓN GEOFENCING FLEXIBLE
+        // 🛑 VALIDACIÓN GEOFENCING FLEXIBLE: Debe contener 'Progreso' o 'Río Bravo'
         const address = place.formatted_address ? place.formatted_address.toLowerCase() : '';
         
         if (!address.includes('progreso') && !address.includes('río bravo')) {
@@ -157,7 +157,7 @@ async function getPlaceDetails(query) {
             phone: place.formatted_phone_number || null,
             mapUrl: place.url || null,
             reviewUrl: place.url || null,
-            websiteUrl: place.website || null,
+            websiteUrl: place.websiteUrl || null,
             imageUrl: imageUrl,
             editorialSummary: editorialSummary 
         };
@@ -257,7 +257,6 @@ export default async function handler(req, res) {
                             const placeNameSearch = ficha.placeToSearch.trim();
                             const isHealthPlace = ficha.isHealthPlace === true; 
                             
-                            // 🛑 Ya no pasamos el cliente de búsqueda
                             const placeData = await getPlaceDetails(placeNameSearch);
 
                             if (placeData) {
@@ -269,7 +268,7 @@ export default async function handler(req, res) {
                                     // Tenemos descripción de Places, la usamos para generar la ficha.
                                     placePrompt += ` La información de giro y descripción obtenida es: "${placeData.editorialSummary}". DEBES usar esta información, o inspirarte fuertemente en ella, para crear la 'description' en el JSON.`;
                                 } else {
-                                    // NO tenemos descripción de Places. FORZAMOS A GEMINI A BUSCAR.
+                                    // NO tenemos descripción de Places. FORZAMOS A GEMINI A BUSCAR USANDO SU HERRAMIENTA.
                                     placePrompt += ` No tenemos una descripción editorial. Usa **tu herramienta de Google Search** para buscar el **giro y descripción** de "${placeNameSearch} Nuevo Progreso" y luego usa esa información para crear la 'description' del JSON.`;
                                 }
 
