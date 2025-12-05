@@ -18,10 +18,16 @@ const CATEGORY_MAP = {
     'souvenirs': 'Tiendas de Artesanías y Souvenirs',
 };
 
+// ⭐️ MAPA DE EXCEPCIONES PARA CORREGIR LA CLASIFICACIÓN ERRÓNEA DE GEMINI O GOOGLE PLACES
+const EXCEPTION_CATEGORY_MAP = {
+    // Nombre exacto a buscar (en minúsculas, sin espacios extra): Categoría correcta
+    'yomis': 'Spa y Masajes',
+    'pinkys': 'Tienda de Ropa y Accesorios', 
+};
+
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
-// 🛑 CORRECCIÓN: Usamos PlacesClient, la constante importada
 const placesClient = new PlacesClient({}); 
 
 // 2. Definimos la Instrucción del Sistema
@@ -261,15 +267,22 @@ export default async function handler(req, res) {
 
                             if (placeData) {
                                 
+                                // 🛑 APLICAR CORRECCIÓN DE EXCEPCIÓN ANTES DE HACER EL RE-PROMPT
+                                const exceptionName = placeNameSearch.toLowerCase().replace(/\s/g, '');
+                                if (EXCEPTION_CATEGORY_MAP[exceptionName]) {
+                                    enrichedFicha.placeCategory = EXCEPTION_CATEGORY_MAP[exceptionName];
+                                    console.log(`Excepción aplicada: ${placeNameSearch} forzado a ${enrichedFicha.placeCategory}`);
+                                }
+                                
                                 // ⭐️ PASO ANTI-ALUCINACIÓN: FORZAR A GEMINI A USAR LA DESCRIPCIÓN CORRECTA
                                 let placePrompt = `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder.`;
                                 
+                                // PRIORIDAD 1: Descripción de Places API
                                 if (placeData.editorialSummary) {
-                                    // Tenemos descripción de Places, la usamos para generar la ficha.
-                                    placePrompt += ` La información de giro y descripción obtenida es: "${placeData.editorialSummary}". DEBES usar esta información, o inspirarte fuertemente en ella, para crear la 'description' en el JSON.`;
+                                    placePrompt += ` La información de giro y descripción obtenida es: "${placeData.editorialSummary}". La categoría correcta es ${enrichedFicha.placeCategory}. DEBES usar esta información, o inspirarte fuertemente en ella, para crear la 'description' en el JSON.`;
                                 } else {
-                                    // NO tenemos descripción de Places. FORZAMOS A GEMINI A BUSCAR USANDO SU HERRAMIENTA.
-                                    placePrompt += ` No tenemos una descripción editorial. Usa **tu herramienta de Google Search** para buscar el **giro y descripción** de "${placeNameSearch} Nuevo Progreso" y luego usa esa información para crear la 'description' del JSON.`;
+                                    // PRIORIDAD 2: Usar Google Search si Places API falla, e INYECTAR la categoría corregida.
+                                    placePrompt += ` No tenemos una descripción editorial. La categoría correcta es: ${enrichedFicha.placeCategory}. Usa **tu herramienta de Google Search** para buscar el **giro y descripción** de "${placeNameSearch} Nuevo Progreso" y luego usa esa información para crear la 'description' del JSON.`;
                                 }
 
                                 // 🛑 RE-PROMPT A GEMINI PARA GENERAR LA FICHA ENRIQUECIDA
