@@ -18,11 +18,18 @@ const CATEGORY_MAP = {
     'souvenirs': 'Tiendas de Artesanías y Souvenirs',
 };
 
-// ⭐️ MAPA DE EXCEPCIONES PARA CORREGIR LA CLASIFICACIÓN ERRÓNEA DE GEMINI O GOOGLE PLACES
-const EXCEPTION_CATEGORY_MAP = {
-    // Nombre exacto a buscar (en minúsculas, sin espacios extra): Categoría correcta
-    'yomis': 'Spa y Masajes',
-    'pinkys': 'Tienda de Ropa y Accesorios', 
+// ⭐️ MAPA DE EXCEPCIONES CON DESCRIPCIONES CANÓNICAS PARA CORREGIR ALUCINACIONES
+// Si la alucinación persiste, Gemini DEBE usar la categoría y descripción de aquí.
+const EXCEPTION_DATA_MAP = {
+    // Nombre exacto a buscar (en minúsculas, sin espacios extra): { category, description }
+    'yomis': { 
+        category: 'Spa y Masajes', 
+        description: 'Yomis es un tranquilo spa especializado en masajes terapéuticos y relajantes para viajeros que buscan un descanso profundo. Ofrece una variedad de tratamientos para el bienestar y la salud.',
+    },
+    'pinkys': { 
+        category: 'Tienda de Ropa y Accesorios', 
+        description: 'Pinkys es una tienda de ropa y accesorios que ofrece las últimas tendencias de moda para damas y caballeros, con un enfoque en estilos casuales y de temporada.',
+    }, 
 };
 
 // 1. Inicializamos los clientes
@@ -221,7 +228,7 @@ export default async function handler(req, res) {
                 systemInstruction: finalSystemInstruction 
             },
             history: history,
-            // ⭐️ PASO CRUCIAL: Habilitar la herramienta de búsqueda de Google.
+            // ⭐️ Dejamos el tool de búsqueda por defecto, pero lo controlamos en el re-prompt
             tools: [{ googleSearch: {} }] 
         });
 
@@ -269,24 +276,37 @@ export default async function handler(req, res) {
                                 
                                 // 🛑 APLICAR CORRECCIÓN DE EXCEPCIÓN ANTES DE HACER EL RE-PROMPT
                                 const exceptionName = placeNameSearch.toLowerCase().replace(/\s/g, '');
-                                if (EXCEPTION_CATEGORY_MAP[exceptionName]) {
-                                    enrichedFicha.placeCategory = EXCEPTION_CATEGORY_MAP[exceptionName];
-                                    console.log(`Excepción aplicada: ${placeNameSearch} forzado a ${enrichedFicha.placeCategory}`);
+                                let mandatoryDescription = null; 
+                                let toolsToUse = [{ googleSearch: {} }]; // Por defecto, usamos la búsqueda
+
+                                if (EXCEPTION_DATA_MAP[exceptionName]) {
+                                    const exception = EXCEPTION_DATA_MAP[exceptionName];
+                                    enrichedFicha.placeCategory = exception.category;
+                                    mandatoryDescription = exception.description; 
+                                    toolsToUse = []; // <--- DESACTIVAMOS EXPLÍCITAMENTE LAS HERRAMIENTAS
+                                    console.log(`Excepción CANÓNICA aplicada: ${placeNameSearch} forzado a ${enrichedFicha.placeCategory}`);
                                 }
                                 
                                 // ⭐️ PASO ANTI-ALUCINACIÓN: FORZAR A GEMINI A USAR LA DESCRIPCIÓN CORRECTA
                                 let placePrompt = `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder.`;
                                 
-                                // PRIORIDAD 1: Descripción de Places API
-                                if (placeData.editorialSummary) {
-                                    placePrompt += ` La información de giro y descripción obtenida es: "${placeData.editorialSummary}". La categoría correcta es ${enrichedFicha.placeCategory}. DEBES usar esta información, o inspirarte fuertemente en ella, para crear la 'description' en el JSON.`;
+                                if (mandatoryDescription) {
+                                    // Caso 1: ¡TENEMOS LA DESCRIPCIÓN CANÓNICA!
+                                    // Forzamos la descripción.
+                                    placePrompt += ` La categoría y descripción correcta (CANÓNICA) es: CATEGORIA: ${enrichedFicha.placeCategory}. DESCRIPCION: "${mandatoryDescription}". DEBES usar esta descripción tal cual para la 'description' en el JSON. No uses Google Search.`;
+                                } else if (placeData.editorialSummary) {
+                                    // Caso 2: Tenemos descripción de Places API.
+                                    placePrompt += ` La información de giro y descripción obtenida es: "${placeData.editorialSummary}". La categoría es ${enrichedFicha.placeCategory}. DEBES usar esta información, o inspirarte fuertemente en ella, para crear la 'description' en el JSON.`;
                                 } else {
-                                    // PRIORIDAD 2: Usar Google Search si Places API falla, e INYECTAR la categoría corregida.
-                                    placePrompt += ` No tenemos una descripción editorial. La categoría correcta es: ${enrichedFicha.placeCategory}. Usa **tu herramienta de Google Search** para buscar el **giro y descripción** de "${placeNameSearch} Nuevo Progreso" y luego usa esa información para crear la 'description' del JSON.`;
+                                    // Caso 3: No tenemos descripción. Forzamos a Gemini a buscar.
+                                    placePrompt += ` No tenemos una descripción editorial. La categoría es: ${enrichedFicha.placeCategory}. Usa **tu herramienta de Google Search** para buscar el **giro y descripción** de "${placeNameSearch} Nuevo Progreso" y luego usa esa información para crear la 'description' del JSON.`;
                                 }
 
-                                // 🛑 RE-PROMPT A GEMINI PARA GENERAR LA FICHA ENRIQUECIDA
-                                const rePromptResult = await chat.sendMessage({ message: placePrompt });
+                                // 🛑 RE-PROMPT A GEMINI PARA GENERAR LA FICHA ENRIQUECIDA (¡CON HERRAMIENTAS CONTROLADAS!)
+                                const rePromptResult = await chat.sendMessage({ 
+                                    message: placePrompt,
+                                    tools: toolsToUse // Usar las herramientas controladas
+                                });
                                 const rePromptText = rePromptResult.text.trim();
                                 
                                 try {
