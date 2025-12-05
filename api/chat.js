@@ -19,7 +19,7 @@ const CATEGORY_MAP = {
 };
 
 // ⭐️ MAPA DE EXCEPCIONES CON DESCRIPCIONES CANÓNICAS PARA CORREGIR ALUCINACIONES
-// Si la alucinación persiste, Gemini DEBE usar la categoría y descripción de aquí.
+// Si la alucinación persiste, el servidor BYPASS el re-prompt y usa estos datos.
 const EXCEPTION_DATA_MAP = {
     // Nombre exacto a buscar (en minúsculas, sin espacios extra): { category, description }
     'yomis': { 
@@ -274,71 +274,93 @@ export default async function handler(req, res) {
 
                             if (placeData) {
                                 
-                                // 🛑 APLICAR CORRECCIÓN DE EXCEPCIÓN AL JSON INICIAL Y DATOS
+                                // 🛑 APLICAR CORRECCIÓN DE EXCEPCIÓN: Bypass si es un lugar conocido problemático.
                                 const exceptionName = placeNameSearch.toLowerCase().replace(/\s/g, '');
-                                let toolsToUse = [{ googleSearch: {} }]; // Por defecto, usamos la búsqueda
+                                let isException = false; 
 
                                 if (EXCEPTION_DATA_MAP[exceptionName]) {
                                     const exception = EXCEPTION_DATA_MAP[exceptionName];
                                     
-                                    // 1. CORREGIR CATEGORÍA DEL JSON INICIAL (enrichedFicha)
+                                    // 1. CORREGIR CATEGORÍA DEL JSON INICIAL
                                     enrichedFicha.placeCategory = exception.category;
-                                    
-                                    // 2. FORZAR LA DESCRIPCIÓN CANÓNICA EN LOS DATOS DE PLACES
-                                    placeData.editorialSummary = exception.description; 
-                                    
-                                    toolsToUse = []; // <--- DESACTIVAMOS EXPLÍCITAMENTE LAS HERRAMIENTAS
-                                    console.log(`Excepción CANÓNICA aplicada y Forzada: ${placeNameSearch} a ${enrichedFicha.placeCategory}`);
+                                    isException = true; 
+                                    console.log(`Excepción CANÓNICA aplicada. Bypassing re-prompt para ${placeNameSearch}.`);
                                 }
                                 
-                                // ⭐️ PASO ANTI-ALUCINACIÓN: FORZAR A GEMINI A USAR LA DESCRIPCIÓN CORRECTA
-                                let placePrompt = `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder.`;
-                                
-                                if (placeData.editorialSummary) {
-                                    // Usa la descripción de Places API (que ahora podría ser la canónica forzada)
-                                    // Le pasamos la categoría corregida y la descripción forzada/real.
-                                    placePrompt += ` La categoría es: ${enrichedFicha.placeCategory}. La información de giro y descripción obtenida es: "${placeData.editorialSummary}". DEBES usar esta información para crear la 'description' en el JSON.`;
-                                } else {
-                                    // Caso de fallo total sin excepción, forzamos la búsqueda.
-                                    placePrompt += ` No tenemos una descripción editorial. La categoría es: ${enrichedFicha.placeCategory}. Usa **tu herramienta de Google Search** para buscar el **giro y descripción** de "${placeNameSearch} Nuevo Progreso" y luego usa esa información para crear la 'description' del JSON.`;
-                                }
-
-                                // 🛑 RE-PROMPT A GEMINI PARA GENERAR LA FICHA ENRIQUECIDA (¡CON HERRAMIENTAS CONTROLADAS!)
-                                const rePromptResult = await chat.sendMessage({ 
-                                    message: placePrompt,
-                                    tools: toolsToUse // Usar las herramientas controladas (vacías si hay excepción)
-                                });
-                                const rePromptText = rePromptResult.text.trim();
-                                
-                                try {
-                                    // Intentamos parsear la respuesta (solo el JSON)
-                                    const reParsedJson = JSON.parse(rePromptText.substring(rePromptText.indexOf('{'), rePromptText.lastIndexOf('}') + 1));
+                                if (isException) {
+                                    // **NUEVA LÓGICA: GENERAR LA FICHA FINAL CON DATOS CANÓNICOS**
+                                    const canonicalDescription = EXCEPTION_DATA_MAP[exceptionName].description;
                                     
-                                    // Usamos la ficha re-parseada
                                     enrichedFicha = {
-                                        ...reParsedJson, // Ficha con la nueva descripción (anti-alucinación)
-                                        placeName: placeData.name,
+                                        type: "place", 
+                                        placeName: placeData.name, 
+                                        placeToSearch: placeNameSearch, 
+                                        placeCategory: enrichedFicha.placeCategory, // Categoría Correcta
+                                        isHealthPlace: isHealthPlace,
+                                        description: canonicalDescription, // Descripción Canónica Forzada
+                                        isStructured: true,
+                                        // Datos de Places API
                                         mapUrl: placeData.mapUrl,
                                         imageUrl: placeData.imageUrl,
-                                        // Restricciones de salud
                                         placePhone: isHealthPlace ? null : placeData.phone, 
                                         reviewUrl: isHealthPlace ? null : placeData.reviewUrl, 
                                         websiteUrl: isHealthPlace ? null : placeData.websiteUrl,
                                     };
-                                } catch (e) {
-                                    console.error("Fallo al re-parsear el JSON de anti-alucinación. Usando descripción original.", e);
+
+                                } else { 
+                                    // **LÓGICA EXISTENTE: USAR RE-PROMPT PARA LUGARES NORMALES**
+
+                                    let toolsToUse = [{ googleSearch: {} }]; 
                                     
-                                    // Fallback: Si el JSON re-parseado falla, usamos la ficha original de Gemini
-                                    enrichedFicha = {
-                                        ...enrichedFicha,
-                                        placeName: placeData.name,
-                                        mapUrl: placeData.mapUrl,
-                                        imageUrl: placeData.imageUrl,
-                                        placePhone: isHealthPlace ? null : placeData.phone,
-                                        reviewUrl: isHealthPlace ? null : placeData.reviewUrl, 
-                                        websiteUrl: isHealthPlace ? null : placeData.websiteUrl,
-                                    };
-                                }
+                                    // ⭐️ PASO ANTI-ALUCINACIÓN: FORZAR A GEMINI A USAR LA DESCRIPCIÓN CORRECTA
+                                    let placePrompt = `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder.`;
+                                    
+                                    if (placeData.editorialSummary) {
+                                        // Usa la descripción real de Places API
+                                        placePrompt += ` La categoría es: ${enrichedFicha.placeCategory}. La información de giro y descripción obtenida es: "${placeData.editorialSummary}". DEBES usar esta información para crear la 'description' en el JSON.`;
+                                    } else {
+                                        // Fallback: Force Google Search
+                                        placePrompt += ` No tenemos una descripción editorial. La categoría es: ${enrichedFicha.placeCategory}. Usa **tu herramienta de Google Search** para buscar el **giro y descripción** de "${placeNameSearch} Nuevo Progreso" y luego usa esa información para crear la 'description' del JSON.`;
+                                    }
+
+                                    // 🛑 RE-PROMPT A GEMINI PARA GENERAR LA FICHA ENRIQUECIDA
+                                    const rePromptResult = await chat.sendMessage({ 
+                                        message: placePrompt,
+                                        tools: toolsToUse 
+                                    });
+                                    const rePromptText = rePromptResult.text.trim();
+                                    
+                                    try {
+                                        // Intentamos parsear la respuesta (solo el JSON)
+                                        const reParsedJson = JSON.parse(rePromptText.substring(rePromptText.indexOf('{'), rePromptText.lastIndexOf('}') + 1));
+                                        
+                                        // Usamos la ficha re-parseada
+                                        enrichedFicha = {
+                                            ...reParsedJson, // Ficha con la nueva descripción (anti-alucinación)
+                                            placeName: placeData.name,
+                                            mapUrl: placeData.mapUrl,
+                                            imageUrl: placeData.imageUrl,
+                                            // Restricciones de salud
+                                            placePhone: isHealthPlace ? null : placeData.phone, 
+                                            reviewUrl: isHealthPlace ? null : placeData.reviewUrl, 
+                                            websiteUrl: isHealthPlace ? null : placeData.websiteUrl,
+                                        };
+                                    } catch (e) {
+                                        console.error("Fallo al re-parsear el JSON de anti-alucinación. Usando descripción original.", e);
+                                        
+                                        // Fallback: Si el re-prompt falla, usamos la descripción original de Gemini
+                                        enrichedFicha = {
+                                            ...enrichedFicha,
+                                            placeName: placeData.name,
+                                            mapUrl: placeData.mapUrl,
+                                            imageUrl: placeData.imageUrl,
+                                            placePhone: isHealthPlace ? null : placeData.phone,
+                                            reviewUrl: isHealthPlace ? null : placeData.reviewUrl, 
+                                            websiteUrl: isHealthPlace ? null : placeData.websiteUrl,
+                                        };
+                                    }
+                                } // Fin del if (isException) else block
+
                                 
                             } else { 
                                 // Si NO existe (Fallo del geofencing)
