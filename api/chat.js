@@ -1,5 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { Client as PlacesClient } from '@googlemaps/google-maps-services-js';
+// ⚠️ IMPORTANTE: Asegúrate de que tu herramienta de Google Search esté disponible aquí.
+// Si el entorno te la proporciona directamente, solo asegúrate de poder acceder a ella.
 
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
@@ -22,71 +24,8 @@ const CATEGORY_MAP = {
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
 const placesClient = new PlacesClient({}); 
-
-// 2. Definimos la Instrucción del Sistema
-const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
-Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
-
-REGLAS DE FORMATO:
-1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 📍, ☀️) al inicio o final de tus respuestas o descripciones para hacerlas más amigables y atractivas.
-2. **REGLA CRÍTICA DE SALUD Y PRIVACIDAD:** Para cualquier lugar o categoría relacionado con la salud (clínicas, farmacias, ópticas, etc.), DEBES establecer el campo "isHealthPlace" en "true". NUNCA debes incluir precios, dar recomendaciones directas, o proporcionar detalles de contacto en la descripción. El servidor se encargará de limitar los botones de acción solo a "Ver en Mapa" y "Buscar en Google" para garantizar el cumplimiento.
-
----
-
-### PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES
-
-**REGLA CRÍTICA:** Si el usuario pide recomendaciones, sugerencias o un listado de lugares (ej. '4 taquerías', 'dime restaurantes cerca'), DEBES usar el **MODO FICHA DE CATEGORÍA (JSON)** para dar un resumen general de la categoría. NUNCA debes listar lugares específicos o dar sugerencias directas. Tu descripción debe guiar al usuario a usar los botones de acción para que ellos exploren las opciones en el mapa.
-
----
-
-3. **MODO FICHA DE LUGAR (JSON):** Úsalo si la solicitud es de un lugar o negocio **específico** (Salud o No Salud). Debe incluir la propiedad 'placeToSearch' con el nombre exacto del lugar.
-
-4. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo para solicitudes de categorías generales O para **CUMPLIR EL PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES**.
-
-5. **MODO CONVERSACIONAL (Texto Plano):** Úsalo para preguntas generales o de seguimiento que no requieran una ficha.
-
-6. Los formatos JSON requeridos son:
-   
-   // Formato para LUGAR ESPECÍFICO (Salud o No Salud)
-   {
-     "type": "place", 
-     "placeName": "Nombre del Lugar", 
-     "placeToSearch": "Nombre Exacto a buscar en Places API, ej: JM Dental Clinic", 
-     "placeCategory": "Clasificación general del lugar, ej: Clínica Dental, Restaurante",
-     "isHealthPlace": true/false, 
-     "description": "Descripción corta de no más de 3 oraciones.",
-     "isStructured": true
-   }
-   
-   // Formato para CATEGORÍA GENERAL
-   {
-     "type": "category", 
-     "categoryName": "Nombre de la Categoría, ej: Taquerías en Progreso",
-     "description": "Resumen de la categoría en Progreso. Debes incluir una frase como: 'Usa el botón de 'Ver en Mapa' para explorar todas las opciones y elegir el lugar que más te interese. 🗺️'",
-     "isStructured": true
-   }
-
-   // FORMATO DE FALLO: Si la búsqueda local falla (el servidor lo generará si no encuentra el lugar)
-   {
-     "type": "place_not_found", 
-     "placeToSearch": "Nombre del Lugar No Encontrado", 
-     "description": "El servidor generó este mensaje: El lugar no se encontró en Nuevo Progreso. 📍",
-     "isStructured": true
-   }
-   
-   // REGLA CLAVE: Si la respuesta requiere MÚLTIPLES FICHAS, debes envolver todas las fichas en un array y añadir la propiedad "isMultiStructured": true.
-   // Ejemplo para múltiples categorías (la respuesta al usuario debe ser el JSON completo, texto conversacional opcional):
-   {
-     "isMultiStructured": true,
-     "response": [
-       { "type": "category", "categoryName": "Dentistas en Progreso", "description": "...", "isStructured": true },
-       { "type": "category", "categoryName": "Oculistas en Progreso", "description": "...", "isStructured": true }
-     ],
-     "conversationText": "Hola, encontré varias opciones para ti:"
-   }
-   
-   // El texto conversacional siempre debe ir ANTES o DESPUÉS de cualquier bloque JSON.`;
-
+// ⭐️ ASUMIENDO que la herramienta de búsqueda está disponible globalmente o se inicializa aquí
+// const googleSearchClient = google.search; 
 
 /**
  * Función que busca el nombre de un lugar en la API de Google Places,
@@ -95,6 +34,9 @@ REGLAS DE FORMATO:
  * @returns {object|null} Objeto con detalles del lugar o null si NO existe el lugar exacto en Nuevo Progreso.
  */
 async function getPlaceDetails(query) {
+    // ⚠️ ATENCIÓN: Esta función requiere acceso a Google Search Tool
+    const googleSearchClient = global.google?.search; // Accediendo a la herramienta globalmente si está disponible
+    
     if (!placesApiKey) {
         console.error("GOOGLE_PLACES_API_KEY no definida.");
         return null;
@@ -127,28 +69,47 @@ async function getPlaceDetails(query) {
             params: {
                 key: placesApiKey,
                 place_id: placeId,
-                // CAMPOS CLAVE: formatted_address para geofencing y editorial_summary para descripción
                 fields: ['name', 'formatted_phone_number', 'url', 'reviews', 'website', 'photos', 'formatted_address', 'editorial_summary'] 
             }
         });
 
         const place = detailsResponse.data.result;
         
-        // 🛑 VALIDACIÓN GEOFENCING FLEXIBLE: Debe contener 'Progreso' o 'Río Bravo'
+        // 🛑 VALIDACIÓN GEOFENCING FLEXIBLE
         const address = place.formatted_address ? place.formatted_address.toLowerCase() : '';
         
         if (!address.includes('progreso') && !address.includes('río bravo')) {
             console.log(`Fallo de geofencing flexible: Dirección (${address}) no incluye "Progreso" o "Río Bravo".`);
             return null; 
         }
-        // FIN DE LA VALIDACIÓN
-
-        // 3. Generar la URL de la foto y devolver los datos
+        
+        // 3. Generar la URL de la foto y obtener/enriquecer el resumen editorial
         const photoReference = place.photos?.[0]?.photo_reference || null;
         let imageUrl = null;
 
         if (photoReference) {
             imageUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=250&photoreference=${photoReference}&key=${placesApiKey}`;
+        }
+
+        let editorialSummary = place.editorial_summary?.overview || null;
+        
+        // ⭐️ NUEVA LÓGICA: Si no hay resumen editorial, usa Google Search para verificar el giro
+        if (!editorialSummary && googleSearchClient) {
+             const searchQuery = `${query} Nuevo Progreso giro o categoría`;
+             
+             try {
+                 const searchResult = await googleSearchClient.search({ queries: [searchQuery] });
+                 
+                 if (searchResult.result) {
+                     // Usamos el resultado de la búsqueda como nuestro resumen
+                     // Limitamos el resumen a 200 caracteres para no abrumar a Gemini
+                     const summaryText = searchResult.result.substring(0, 200);
+                     editorialSummary = `Según una búsqueda reciente, el giro del negocio es: ${summaryText}...`;
+                     console.log(`Resumen de Search inyectado para ${query}.`);
+                 }
+             } catch (e) {
+                 console.error("Fallo al ejecutar Google Search para el giro:", e.message);
+             }
         }
         
         return {
@@ -158,8 +119,7 @@ async function getPlaceDetails(query) {
             reviewUrl: place.url || null,
             websiteUrl: place.website || null,
             imageUrl: imageUrl,
-            // ⭐️ AÑADIDO: Resumen editorial de Places API
-            editorialSummary: place.editorial_summary?.overview || null 
+            editorialSummary: editorialSummary 
         };
 
     } catch (e) {
@@ -197,7 +157,6 @@ export default async function handler(req, res) {
             if (categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('tacos')) categoryName = "Taquerías y Tacos";
             else if (categoryKeyRaw.includes('restaurante') || categoryKeyRaw.includes('comer')) categoryName = "Restaurantes y Comida";
             else if (categoryKeyRaw.includes('artesanias') || categoryKeyRaw.includes('souvenirs')) categoryName = "Tiendas de Artesanías y Souvenirs";
-            // 🛑 CORREGIDO EL ERROR DE SINTAXIS: Se eliminó el "categoryKeyRaw.includes('barbacoa'))" repetido
             else if (categoryKeyRaw.includes('barbacoa')) categoryName = "Barbacoa y Birria";
             else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = "Salud y Estética";
             
@@ -257,7 +216,7 @@ export default async function handler(req, res) {
                             const placeNameSearch = ficha.placeToSearch.trim();
                             const isHealthPlace = ficha.isHealthPlace === true; 
                             
-                            // Obtenemos los datos de Places API (con el nuevo filtro flexible)
+                            // Obtenemos los datos de Places API (con el nuevo filtro flexible y Google Search)
                             const placeData = await getPlaceDetails(placeNameSearch);
 
                             if (placeData) {
@@ -266,9 +225,9 @@ export default async function handler(req, res) {
                                 let placePrompt = `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder.`;
                                 
                                 if (placeData.editorialSummary) {
-                                    placePrompt += ` El resumen principal del lugar es: "${placeData.editorialSummary}". DEBES usar esta información, o inspirarte fuertemente en ella, para crear la 'description' en el JSON.`;
+                                    placePrompt += ` La información de giro y descripción obtenida es: "${placeData.editorialSummary}". DEBES usar esta información, o inspirarte fuertemente en ella, para crear la 'description' en el JSON, ignorando cualquier contexto anterior si es contradictorio.`;
                                 } else {
-                                    placePrompt += ` El género del lugar es: ${ficha.placeCategory}. Crea la 'description' del JSON basada en este género y el nombre del lugar.`;
+                                    placePrompt += ` El género del lugar inicialmente clasificado es: ${ficha.placeCategory}. Crea la 'description' del JSON basada en este género y el nombre del lugar.`;
                                 }
 
                                 // 🛑 RE-PROMPT A GEMINI PARA GENERAR LA FICHA CON LA DESCRIPCIÓN ENRIQUECIDA
@@ -291,7 +250,7 @@ export default async function handler(req, res) {
                                         websiteUrl: isHealthPlace ? null : placeData.websiteUrl,
                                     };
                                 } catch (e) {
-                                    console.error("Fallo al re-parsear el JSON de anti-alucinación. Usando descripción original.");
+                                    console.error("Fallo al re-parsear el JSON de anti-alucinación. Usando descripción original.", e);
                                     
                                     // Fallback: Si el JSON re-parseado falla, usamos la ficha original de Gemini
                                     enrichedFicha = {
@@ -320,7 +279,7 @@ export default async function handler(req, res) {
                              const categorySearch = ficha.categoryName.replace(/en Progreso/i, '').trim();
                              const mapUrlQuery = categorySearch + GEOGRAPHIC_CONTEXT;
                              
-                             // 🛑 CORREGIDO EL ERROR DE SINTAXIS AQUÍ
+                             // URL de Google Maps para búsqueda de categorías
                              const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapUrlQuery)}`;
                              
                              enrichedFicha.mapUrl = mapUrl; 
