@@ -1,9 +1,13 @@
-// Archivo: chat.js (Versión Definitiva con corrección de importación ESM)
+// Archivo: chat.js (Versión Definitiva con Carga Estática de JSON)
 
 import { GoogleGenAI } from '@google/genai';
 import { Client as PlacesClient } from '@googlemaps/google-maps-services-js'; 
-// ✅ CORRECCIÓN CRÍTICA: Volvemos a 'import * as fs from' para el entorno ESM
-import * as fs from 'fs/promises'; 
+
+// 🛑 SOLUCIÓN CRÍTICA: Carga estática y síncrona del JSON usando require.
+// Vercel garantiza que este archivo se incluya y se cargue al inicio.
+const DENTIST_CATALOG = require('./dentists_data.json'); 
+const CATALOG_LOADED = true; 
+console.log(`✅ Catálogo de Dentistas cargado estáticamente: ${DENTIST_CATALOG.length} entradas.`);
 
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
@@ -20,39 +24,77 @@ const EXCEPTION_DATA_MAP = {
     },
     'pinkys': { 
         category: 'Tienda de Ropa y Accesorios', 
-        description: 'Pinkys es una tienda de ropa y accesorios que ofrece las últimas tendencias de moda para damas y caballeros, con un enfoque en estilos casuales y de temporada.',
+        description: 'Pinkys es una tienda de ropa y accesorios que ofrece las últimas tendencias de moda de moda para damas y caballeros, con un enfoque en estilos casuales y de temporada.',
         searchName: 'Pinkys Fashion'
     }, 
 };
-
-// Variables globales para el Catálogo de Dentistas
-let DENTIST_CATALOG = [];
-let CATALOG_LOADED = false;
 
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
 const placesClient = new PlacesClient({});
 
-// 2. Definimos la Instrucción del Sistema (truncada por longitud, sin cambios)
-const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE...`;
+// 2. Definimos la Instrucción del Sistema (MODIFICADA PARA FORZAR CONTEXTO FRESCO)
+const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
+Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
+**REGLA DE ESTRICTO CUMPLIMIENTO:** Si la solicitud del usuario es para un LUGAR o CATEGORÍA, DEBES responder **EXCLUSIVAMENTE con un formato JSON**. Está **PROHIBIDO** responder en texto plano conversacional en estos casos. Usa el formato de FALLO si el servidor lo indica o si no estás seguro de la existencia del lugar.
+**NOTA CRÍTICA DE CLASIFICACIÓN:** Tu clasificación debe ser precisa. No asumas que todas las búsquedas son restaurantes. Usa las categorías más específicas posibles (Spa, Tienda de Ropa, Clínica Dental, Taquería, etc.).
+**REGLA CRÍTICA DE CONTEXTO:** Si el usuario solicita un **LUGAR ESPECÍFICO** (ej. "Farmacia Guadalajara", "El Cuñao"), DEBES IGNORAR CUALQUIER CATEGORÍA PREVIA del chat (ej. si la última búsqueda fue un restaurante). Debes clasificar la nueva solicitud desde CERO, de forma independiente.
+
+REGLAS DE FORMATO:
+1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 📍, ☀️) al inicio o final de tus respuestas o descripciones.
+2. **REGLA CRÍTICA DE SALUD Y PRIVACIDAD:** Para salud, DEBES establecer el campo "isHealthPlace" en "true".
+
+---
+
+### PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES (MODO FICHA DE CATEGORÍA)
+**REGLA CRÍTICA:** Si el usuario pide recomendaciones, sugerencias o un listado de lugares, DEBES usar el **MODO FICHA DE CATEGORÍA (JSON)**.
+
+---
+
+3. **MODO FICHA DE LUGAR (JSON):** Úsalo si la solicitud es de un lugar o negocio **específico**.
+4. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo para solicitudes de categorías generales O para **CUMPLIR EL PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES**.
+
+5. **MODO CONVERSACIONAL (Texto Plano):** Úsalo *SOLO* para preguntas generales o de seguimiento (ej: "gracias", "¿cómo está el clima?") que **no** requieran una ficha.
+
+6. Los formatos JSON requeridos son:
+   
+   // Formato para LUGAR ESPECÍFICO (Salud o No Salud)
+   {
+     "type": "place", 
+     "placeName": "Nombre del Lugar", 
+     "placeToSearch": "Nombre Exacto a buscar en Places API", 
+     "placeCategory": "Clasificación general del lugar, ej: Clínica Dental, Restaurante",
+     "isHealthPlace": true/false, 
+     "description": "Descripción corta de no más de 3 oraciones.",
+     "isStructured": true
+   }
+   
+   // Formato para CATEGORÍA GENERAL
+   {
+     "type": "category", 
+     "categoryName": "Nombre de la Categoría",
+     "description": "Resumen de la categoría...",
+     "isStructured": true
+   }
+
+   // FORMATO DE FALLO: Úsalo si no estás seguro de la existencia del lugar o si el servidor lo indica.
+   {
+     "type": "place_not_found", 
+     "placeToSearch": "Nombre del Lugar No Encontrado", 
+     "description": "El lugar no se encontró en Nuevo Progreso. Si el usuario insiste, aconséjale usar Google Search. 📍",
+     "isStructured": true
+   }
+   
+   // REGLA CLAVE: Si la respuesta requiere MÚLTIPLES FICHAS, debes envolver todas las fichas en un array y añadir la propiedad "isMultiStructured": true.
+   // El texto conversacional debe ir en "conversationText" y NO debe ser la respuesta principal.`;
 
 
-// Función de Carga de Catálogo
-async function loadDentistCatalog() {
-    if (CATALOG_LOADED) return;
-    try {
-        // La ruta './dentists_data.json' funciona si está en el mismo directorio '/api'
-        const data = await fs.readFile('./dentists_data.json', 'utf-8');
-        DENTIST_CATALOG = JSON.parse(data);
-        CATALOG_LOADED = true;
-        console.log(`✅ Catálogo de Dentistas cargado: ${DENTIST_CATALOG.length} entradas.`);
-    } catch (e) {
-        console.error("❌ ERROR: No se pudo cargar el JSON de dentistas (dentists_data.json). Asegúrate de que existe en el directorio /api.", e.message);
-    }
-}
-
-// Función de búsqueda en el JSON local.
+/**
+ * Función de búsqueda en el JSON local (Catálogo de Dentistas).
+ * @param {string} query Nombre del lugar a buscar (ej: "Dr. Juarez").
+ * @returns {object|null} Detalles completos del JSON o null.
+ */
 function searchLocalCatalog(query) {
     if (!CATALOG_LOADED) return null;
     
@@ -64,6 +106,7 @@ function searchLocalCatalog(query) {
         
         // Búsqueda por inclusión: si la consulta del usuario es parte del nombre CANÓNICO
         if (normalizedName.includes(normalizedQuery) || normalizedQuery.includes(normalizedName)) {
+            // ¡ENCONTRADO!
             return {
                 name: dentist.name,
                 phone: dentist.phone || null,
@@ -76,10 +119,14 @@ function searchLocalCatalog(query) {
             };
         }
     }
-    return null; 
+    return null; // No encontrado en el catálogo local
 }
 
-// Función que busca el nombre de un lugar en la API de Google Places. (Se mantiene la API de Places como Plan B)
+/**
+ * Función que busca el nombre de un lugar en la API de Google Places (Plan B).
+ * @param {string} query Nombre del lugar a buscar.
+ * @returns {object|null} Objeto con detalles del lugar o null si NO existe el lugar exacto.
+ */
 async function getPlaceDetails(query) { 
     
     if (!placesApiKey) {
@@ -87,6 +134,7 @@ async function getPlaceDetails(query) {
         return null;
     }
     
+    // Coordenadas aproximadas de Nuevo Progreso para locationBias (26.064, -98.005)
     const LOCATION_BIAS = { lat: 26.064, lng: -98.005 };
 
     try {
@@ -141,6 +189,28 @@ async function getPlaceDetails(query) {
     }
 }
 
+// Función auxiliar para pedir el nombre a Gemini (para la búsqueda local)
+async function getPlaceNameFromAI(userPrompt, history) {
+    const identificationPrompt = `El usuario pide información. Basándote en el historial y el prompt ("${userPrompt}"), identifica el nombre del lugar específico (ej. "Farmacia Guadalajara" o "Dr. Juan Pérez") que el usuario está preguntando. Responde ÚNICAMENTE con el nombre exacto que usarías para buscar. Si el usuario pide una categoría ("dame restaurantes"), responde ÚNICAMENTE con "CATEGORY_REQUEST".`;
+    
+    try {
+        const chat = ai.chats.create({
+            model: MODEL_NAME, 
+            history: history 
+        });
+        const result = await chat.sendMessage({ message: identificationPrompt });
+        const name = result.text.trim();
+        
+        if (name && name !== "CATEGORY_REQUEST" && name.length < 50) {
+            return name;
+        }
+        return null;
+    } catch (e) {
+        console.error("Error al identificar el nombre del lugar con IA:", e);
+        return null;
+    }
+}
+
 // Función de utilidad para verificar similitud de nombres (Anti-Correlación)
 function areNamesSimilar(searchName, returnedName) {
     const s1 = searchName.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -150,8 +220,7 @@ function areNamesSimilar(searchName, returnedName) {
 
 
 export default async function handler(req, res) {
-    // Cargar el catálogo al inicio del handler
-    await loadDentistCatalog(); 
+    // 🛑 Nota: No se requiere loadDentistCatalog(), la carga es estática.
     
     if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Método no permitido' });
@@ -161,7 +230,6 @@ export default async function handler(req, res) {
         const { history = [], userPrompt, currentLanguage } = req.body;
         
         const langText = currentLanguage === 'es' ? 'español' : 'inglés';
-        // NOTA: Usé un placeholder truncado en la línea 56 para no repetir todo el texto
         const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
 
         // ----------------------------------------------------
@@ -173,7 +241,6 @@ export default async function handler(req, res) {
         // 1. Verificar excepciones fijas (Yomis, Pinkys)
         for (const [key, exceptionData] of Object.entries(EXCEPTION_DATA_MAP)) {
             if (promptSearchKey.includes(key)) {
-                // ... (lógica de Yomis/Pinkys, sin cambios) ...
                 
                 console.log(`Interceptación CANÓNICA forzada para: ${key}`);
                 
@@ -222,7 +289,7 @@ export default async function handler(req, res) {
                         placePhone: localData.phone,
                         mapUrl: localData.mapUrl,
                         websiteUrl: localData.websiteUrl,
-                        // NO se pone imageUrl, ya que la estrategia es buscarla con Gemini
+                        // NO se pone imageUrl aquí, ya que la estrategia es buscarla con Gemini
                     };
                  }
              }
@@ -301,7 +368,7 @@ export default async function handler(req, res) {
                             
                             const searchForPlaces = placeNameSearch; 
                             
-                            // LLAMADA A LA API DE PLACES (PLAN B)
+                            // LLAMADA A LA API DE PLACES (PLAN B para lugares NO dentistas)
                             const placeData = await getPlaceDetails(searchForPlaces);
 
                             // 🛑 BLINDAJE ANTI-CORRELACIÓN:
@@ -356,7 +423,7 @@ export default async function handler(req, res) {
                                 }
                                 
                             } else { 
-                                // Si NO existe (Fallo de geofencing, API, o Correlación de nombres)
+                                // Si NO existe 
                                 enrichedFicha = {
                                     type: "place_not_found", 
                                     placeToSearch: placeNameSearch, 
@@ -402,30 +469,5 @@ export default async function handler(req, res) {
             error: true, 
             message: "Fallo al obtener respuesta de Gemini: " + error.message
         });
-    }
-}
-
-
-/** Función auxiliar para pedir el nombre a Gemini.
- * Necesaria para que Gemini clasifique y devuelva el 'placeToSearch' antes de buscar en el JSON.
- */
-async function getPlaceNameFromAI(userPrompt, history) {
-    const identificationPrompt = `El usuario pide información. Basándote en el historial y el prompt ("${userPrompt}"), identifica el nombre del lugar específico (ej. "Farmacia Guadalajara" o "Dr. Juan Pérez") que el usuario está preguntando. Responde ÚNICAMENTE con el nombre exacto que usarías para buscar. Si el usuario pide una categoría ("dame restaurantes"), responde ÚNICAMENTE con "CATEGORY_REQUEST".`;
-    
-    try {
-        const chat = ai.chats.create({
-            model: MODEL_NAME, 
-            history: history 
-        });
-        const result = await chat.sendMessage({ message: identificationPrompt });
-        const name = result.text.trim();
-        
-        if (name && name !== "CATEGORY_REQUEST" && name.length < 50) {
-            return name;
-        }
-        return null;
-    } catch (e) {
-        console.error("Error al identificar el nombre del lugar con IA:", e);
-        return null;
     }
 }
