@@ -1,4 +1,4 @@
-// Archivo: chat.js (Versión Definitiva 5.2 - Blindaje de Descripción y Fallbacks)
+// Archivo: chat.js (Versión Definitiva 5.3 - Refuerzo de Flujo de Categoría Dental)
 
 import { GoogleGenAI } from '@google/genai';
 import { Client as PlacesClient } from '@googlemaps/google-maps-services-js'; 
@@ -119,7 +119,7 @@ function searchLocalCatalog(query) {
                 phone: dentist.phone || null,
                 mapUrl: dentist.google_url || null,
                 websiteUrl: dentist.website || null,
-                // 🟢 MEJORA v5.2: Forzar descripción si está vacía
+                // MEJORA v5.2: Forzar descripción si está vacía
                 description: dentist.description_summary || `Clínica dental verificada en Nuevo Progreso: ${dentist.name}`,
                 latitude: dentist.latitude,
                 longitude: dentist.longitude,
@@ -134,7 +134,7 @@ function searchLocalCatalog(query) {
                 phone: dentist.phone || null,
                 mapUrl: dentist.google_url || null,
                 websiteUrl: dentist.website || null,
-                // 🟢 MEJORA v5.2: Forzar descripción si está vacía
+                // MEJORA v5.2: Forzar descripción si está vacía
                 description: dentist.description_summary || `Clínica dental verificada en Nuevo Progreso: ${dentist.name}`,
                 latitude: dentist.latitude,
                 longitude: dentist.longitude,
@@ -157,7 +157,7 @@ function searchLocalCatalog(query) {
                 phone: dentist.phone || null,
                 mapUrl: dentist.google_url || null,
                 websiteUrl: dentist.website || null,
-                // 🟢 MEJORA v5.2: Forzar descripción si está vacía
+                // MEJORA v5.2: Forzar descripción si está vacía
                 description: dentist.description_summary || `Clínica dental verificada en Nuevo Progreso: ${dentist.name}`,
                 latitude: dentist.latitude,
                 longitude: dentist.longitude,
@@ -331,7 +331,7 @@ export default async function handler(req, res) {
                         placeToSearch: localData.name,
                         placeCategory: 'Clínica Dental',
                         isHealthPlace: localData.isHealthPlace,
-                        // 🟢 MEJORA v5.2: Asegurar que la descripción es válida.
+                        // MEJORA v5.2: Asegurar que la descripción es válida.
                         description: localData.description || `Clínica dental verificada en Nuevo Progreso: ${localData.name}.`, 
                         isStructured: true,
                         // Datos del JSON
@@ -362,7 +362,7 @@ export default async function handler(req, res) {
         
         const match = userPrompt.match(recommendationPattern);
         
-        // 🟢 MEJORA: Forzamos CATEGORÍA si es una palabra clave general Y no se encontró localmente.
+        // 🟢 MEJORA v5.3: Forzamos CATEGORÍA si es una palabra clave general Y no se encontró localmente.
         if (match || promptSearchKey.includes('dental') || promptSearchKey.includes('clinica')) {
             const categoryKeyRaw = match ? match[3].toLowerCase() : promptSearchKey; // Si no hay match, usa la palabra clave
             let categoryName = "lugares y negocios"; 
@@ -372,10 +372,16 @@ export default async function handler(req, res) {
             else if (categoryKeyRaw.includes('artesanias') || categoryKeyRaw.includes('souvenirs')) categoryName = "Tiendas de Artesanías y Souvenirs";
             else if (categoryKeyRaw.includes('barbacoa')) categoryName = "Barbacoa y Birria";
             // CRÍTICO: Si solo dice "dental" o "clinica", lo forzamos a ser CATEGORÍA
-            else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = "Salud y Estética (Dentistas, Ópticas, Farmacias)";
-            
-            // Forzar el re-prompt para generar la ficha de CATEGORÍA
-            promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría ${categoryName} en Nuevo Progreso.`;
+            else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) {
+                categoryName = "Salud y Estética (Dentistas, Ópticas, Farmacias)";
+                
+                // 🛑 NUEVA REGLA v5.3: Prohibir el término "dental" para evitar el fallo de la boca.
+                promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría **CLÍNICAS ODONTOLÓGICAS Y ÓPTICAS** en Nuevo Progreso. **PROHIBIDO** mencionar la palabra 'dental' en tu respuesta conversacional o en la descripción del JSON.`;
+                
+            } else {
+                // Para otras categorías generales
+                promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría ${categoryName} en Nuevo Progreso.`;
+            }
             
             console.log("PROTOCOLO CATEGORÍA GENERAL ACTIVADO para:", categoryName);
         }
@@ -482,7 +488,7 @@ export default async function handler(req, res) {
                                 enrichedFicha = {
                                     type: "place_not_found", 
                                     placeToSearch: placeNameSearch, 
-                                    // 🟢 MEJORA v5.2: Mensaje claro para evitar N/A
+                                    // MEJORA v5.2: Mensaje claro para evitar N/A
                                     description: `Disculpa, no se encontró un lugar llamado **${placeNameSearch}** ubicado en Nuevo Progreso en nuestra base de datos. Por favor, verifica el nombre.`,
                                     isStructured: true
                                 };
