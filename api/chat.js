@@ -26,11 +26,12 @@ const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
 const placesClient = new PlacesClient({}); 
 
-// 2. Definimos la Instrucción del Sistema (MODIFICADA PARA PROHIBIR TEXTO PLANO EN SOLICITUDES DE LUGAR)
+// 2. Definimos la Instrucción del Sistema (MODIFICADA PARA FORZAR CONTEXTO FRESCO)
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 **REGLA DE ESTRICTO CUMPLIMIENTO:** Si la solicitud del usuario es para un LUGAR o CATEGORÍA, DEBES responder **EXCLUSIVAMENTE con un formato JSON**. Está **PROHIBIDO** responder en texto plano conversacional en estos casos. Usa el formato de FALLO si el servidor lo indica o si no estás seguro de la existencia del lugar.
-**NOTA CRÍTICA:** Tu clasificación debe ser precisa. No asumas que todas las búsquedas son restaurantes. Usa las categorías más específicas posibles (Spa, Tienda de Ropa, Clínica Dental, Taquería, etc.).
+**NOTA CRÍTICA DE CLASIFICACIÓN:** Tu clasificación debe ser precisa. No asumas que todas las búsquedas son restaurantes. Usa las categorías más específicas posibles (Spa, Tienda de Ropa, Clínica Dental, Taquería, etc.).
+**REGLA CRÍTICA DE CONTEXTO:** Si el usuario solicita un **LUGAR ESPECÍFICO** (ej. "Farmacia Guadalajara", "El Cuñao"), DEBES IGNORAR CUALQUIER CATEGORÍA PREVIA del chat (ej. si la última búsqueda fue un restaurante). Debes clasificar la nueva solicitud desde CERO, de forma independiente.
 
 REGLAS DE FORMATO:
 1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 📍, ☀️) al inicio o final de tus respuestas o descripciones.
@@ -154,7 +155,7 @@ async function getPlaceDetails(query) {
     }
 }
 
-// Función de utilidad para verificar similitud de nombres (Nuevo en esta versión)
+// Función de utilidad para verificar similitud de nombres (Anti-Correlación)
 function areNamesSimilar(searchName, returnedName) {
     const s1 = searchName.toLowerCase().replace(/[^a-z0-9]/g, '');
     const s2 = returnedName.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -282,13 +283,12 @@ export default async function handler(req, res) {
                             const placeNameSearch = ficha.placeToSearch.trim();
                             const isHealthPlace = ficha.isHealthPlace === true; 
                             
-                            // ⭐️ CORRECCIÓN CRÍTICA: BUSCAR CON CATEGORÍA PARA MEJORAR LA COINCIDENCIA DE PLACES API
+                            // ⭐️ BÚSQUEDA MEJORADA: Incluye categoría para afinar resultados de Places API
                             const searchForPlaces = `${placeNameSearch} ${ficha.placeCategory}`;
                             
                             const placeData = await getPlaceDetails(searchForPlaces);
 
-                            // 🛑 NUEVO BLINDAJE ANTI-CORRELACIÓN:
-                            // Si placeData existe, pero el nombre devuelto es dramáticamente diferente, lo descartamos.
+                            // 🛑 BLINDAJE ANTI-CORRELACIÓN:
                             let isNameMiscorrelated = false;
                             if (placeData && !areNamesSimilar(placeNameSearch, placeData.name)) {
                                 console.warn(`¡Fallo de correlación! Se buscó "${placeNameSearch}" pero Places devolvió "${placeData.name}". Descartando resultado.`);
