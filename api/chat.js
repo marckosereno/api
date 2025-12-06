@@ -1,4 +1,4 @@
-// Archivo: chat.js (Versión Definitiva 5.4 - Neutralización del Fallback Dental)
+// Archivo: chat.js (Versión 6.0 - Mejoras de Robustez y Estandarización)
 
 import { GoogleGenAI } from '@google/genai';
 import { Client as PlacesClient } from '@googlemaps/google-maps-services-js'; 
@@ -7,10 +7,10 @@ import { createRequire } from 'module';
 // 🟢 CRÍTICO: Inicializa la función 'require' localmente para entornos ESM.
 const require = createRequire(import.meta.url); 
 
-// 🛑 SOLUCIÓN CRÍTICA: Carga estática y síncrona del JSON.
-const DENTIST_CATALOG = require('./dentists_data.json'); 
-const CATALOG_LOADED = true; 
-console.log(`✅ Catálogo de Dentistas cargado estáticamente: ${DENTIST_CATALOG.length} entradas.`);
+// --- Variables Globales ---
+let DENTIST_CATALOG = {}; 
+let CATALOG_LOADED = false;
+const JSON_FILE_PATH = './dentists_data.json'; 
 
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
@@ -18,32 +18,53 @@ const MODEL_NAME = "gemini-2.5-flash";
 // CONTEXTO GEOGRÁFICO FIJO
 const GEOGRAPHIC_CONTEXT = ", Nuevo Progreso, Tamaulipas, México";
 
-// ⭐️ MAPA DE EXCEPCIONES Y CACHÉ LOCAL
+// ⭐️ MAPA DE EXCEPCIONES Y CACHÉ LOCAL (Mantenido para Blanqueo)
 const EXCEPTION_DATA_MAP = {
     'yomis': { 
         category: 'Spa y Masajes', 
         description: 'Yomis es un tranquilo spa especializado en masajes terapéuticos y relajantes para viajeros que buscan un descanso profundo. Ofrece una variedad de tratamientos para el bienestar y la salud.',
-        searchName: 'Yomis Spa' 
+        searchName: 'Yomis Spa',
+        isHealthPlace: true
     },
     'pinkys': { 
         category: 'Tienda de Ropa y Accesorios', 
         description: 'Pinkys es una tienda de ropa y accesorios que ofrece las últimas tendencias de moda de moda para damas y caballeros, con un enfoque en estilos casuales y de temporada.',
-        searchName: 'Pinkys Fashion'
+        searchName: 'Pinkys Fashion',
+        isHealthPlace: false
     }, 
 };
 
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
-// CORRECCIÓN: Usar PlacesClient, no Client.
+// Usar PlacesClient
 const placesClient = new PlacesClient({});
+
+
+// 🟢 FUNCIÓN DE INICIALIZACIÓN DEL SISTEMA
+async function initializeSystem() {
+    try {
+        // Carga estática y síncrona del JSON (si el entorno lo permite, si no usar fetch)
+        DENTIST_CATALOG = require(JSON_FILE_PATH); 
+        CATALOG_LOADED = Array.isArray(DENTIST_CATALOG) && DENTIST_CATALOG.length > 0;
+        console.log(`✅ Catálogo de Dentistas cargado estáticamente: ${DENTIST_CATALOG.length} entradas.`);
+    } catch (e) {
+        console.error(`🛑 ERROR CRÍTICO al cargar el catálogo de dentistas (${JSON_FILE_PATH}):`, e.message);
+        DENTIST_CATALOG = [];
+        CATALOG_LOADED = false;
+    }
+}
+
+// Llama a la inicialización al inicio
+initializeSystem();
+
 
 // 2. Definimos la Instrucción del Sistema 
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 **REGLA DE ESTRICTO CUMPLIMIENTO:** Si la solicitud del usuario es para un LUGAR o CATEGORÍA, DEBES responder **EXCLUSIVAMENTE con un formato JSON**. Está **PROHIBIDO** responder en texto plano conversacional en estos casos. Usa el formato de FALLO si el servidor lo indica o si no estás seguro de la existencia del lugar.
 **NOTA CRÍTICA DE CLASIFICACIÓN:** Tu clasificación debe ser precisa. No asumas que todas las búsquedas son restaurantes. Usa las categorías más específicas posibles (Spa, Tienda de Ropa, Clínica Dental, Taquería, etc.).
-**REGLA CRÍTICA DE CONTEXTO:** Si el usuario solicita un **LUGAR ESPECÍFICO** (ej. "Farmacia Guadalajara", "El Cuñao"), DEBES IGNORAR CUALQUIER CATEGORÍA PREVIA del chat (ej. si la última búsqueda fue un restaurante). Debes clasificar la nueva solicitud desde CERO, de forma independiente.
+**REGLA CRÍTICA DE CONTEXTO:** Si el usuario solicita un **LUGAR ESPECÍFICO** (ej. "Farmacia Guadalajara", "El Cuñao"), DEBES IGNORAR CUALQUIER CATEGORÍA PREVIA del chat. Debes clasificar la nueva solicitud desde CERO.
 
 REGLAS DE FORMATO:
 1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 📍, ☀️) al inicio o final de tus respuestas o descripciones.
@@ -97,67 +118,31 @@ REGLAS DE FORMATO:
 /**
  * Función de búsqueda en el JSON local (Catálogo de Dentistas) con tolerancia.
  * @param {string} query Nombre del lugar a buscar (ej: "Dr. Juarez").
- * @returns {object|null} Detalles completos del JSON o null.
+ * @returns {object|null} Detalles del catálogo local o null.
  */
 function searchLocalCatalog(query) {
     if (!CATALOG_LOADED) return null;
     
-    // Normalización de la búsqueda
     const normalizedQuery = query.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
-    
-    // Si la consulta es demasiado corta después de la normalización, regresamos null (para evitar falsos positivos)
     if (normalizedQuery.length < 3) return null; 
 
     for (const dentist of DENTIST_CATALOG) {
-        // Normaliza el nombre del dentista en el JSON
         const normalizedName = dentist.name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
         
-        // 1. Coincidencia exacta
-        if (normalizedName === normalizedQuery) {
-            return { 
-                name: dentist.name,
-                phone: dentist.phone || null,
-                mapUrl: dentist.google_url || null,
-                websiteUrl: dentist.website || null,
-                // MEJORA v5.2: Forzar descripción si está vacía
-                description: dentist.description_summary || `Clínica dental verificada en Nuevo Progreso: ${dentist.name}`,
-                latitude: dentist.latitude,
-                longitude: dentist.longitude,
-                isHealthPlace: true 
-            };
-        }
-
-        // 2. Coincidencia por inclusión (si la consulta incluye el nombre completo o viceversa)
-        if (normalizedName.includes(normalizedQuery) || normalizedQuery.includes(normalizedName)) {
-            return { 
-                name: dentist.name,
-                phone: dentist.phone || null,
-                mapUrl: dentist.google_url || null,
-                websiteUrl: dentist.website || null,
-                // MEJORA v5.2: Forzar descripción si está vacía
-                description: dentist.description_summary || `Clínica dental verificada en Nuevo Progreso: ${dentist.name}`,
-                latitude: dentist.latitude,
-                longitude: dentist.longitude,
-                isHealthPlace: true 
-            };
-        }
-        
-        // 3. Coincidencia por palabra clave (útil para buscar por apellido o fragmento)
-        const queryWords = normalizedQuery.split(/\s+/).filter(word => word.length > 2);
-        const nameWords = normalizedName.split(/\s+/).filter(word => word.length > 2);
-        
-        // Si cualquier palabra clave (de más de 2 letras) de la búsqueda coincide con una del nombre
-        const commonWord = queryWords.some(qWord => 
-            nameWords.some(nWord => nWord.includes(qWord))
+        // Coincidencia exacta, inclusión o por palabra clave
+        const isMatch = (
+            normalizedName === normalizedQuery || 
+            normalizedName.includes(normalizedQuery) || 
+            normalizedQuery.includes(normalizedName) ||
+            normalizedQuery.split(/\s+/).some(qWord => qWord.length > 2 && normalizedName.split(/\s+/).some(nWord => nWord.includes(qWord)))
         );
-
-        if (commonWord) {
-             return { 
+        
+        if (isMatch) {
+            return { 
                 name: dentist.name,
                 phone: dentist.phone || null,
                 mapUrl: dentist.google_url || null,
                 websiteUrl: dentist.website || null,
-                // MEJORA v5.2: Forzar descripción si está vacía
                 description: dentist.description_summary || `Clínica dental verificada en Nuevo Progreso: ${dentist.name}`,
                 latitude: dentist.latitude,
                 longitude: dentist.longitude,
@@ -165,18 +150,17 @@ function searchLocalCatalog(query) {
             };
         }
     }
-    return null; // No encontrado en el catálogo local
+    return null; // No encontrado
 }
 
 /**
- * Función que busca el nombre de un lugar en la API de Google Places (Plan B / Enriquecimiento de imagen).
+ * Función que busca el nombre de un lugar en la API de Google Places.
  * @param {string} query Nombre del lugar a buscar.
- * @returns {object|null} Objeto con detalles del lugar o null si NO existe el lugar exacto.
+ * @returns {object|null} Objeto con detalles del lugar (incluyendo foto URL) o null.
  */
 async function getPlaceDetails(query) { 
-    
     if (!placesApiKey) {
-        console.error("GOOGLE_PLACES_API_KEY no definida.");
+        // console.error("GOOGLE_PLACES_API_KEY no definida.");
         return null;
     }
     
@@ -184,11 +168,10 @@ async function getPlaceDetails(query) {
     const LOCATION_BIAS = { lat: 26.064, lng: -98.005 };
 
     try {
-        // 1. Buscar el place_id
         const findPlaceResponse = await placesClient.findPlaceFromText({
             params: {
                 key: placesApiKey,
-                input: query, 
+                input: query + GEOGRAPHIC_CONTEXT, // Añadir contexto geográfico
                 inputtype: 'textquery',
                 fields: ['place_id'], 
                 locationBias: `point:${LOCATION_BIAS.lat},${LOCATION_BIAS.lng}` 
@@ -196,12 +179,8 @@ async function getPlaceDetails(query) {
         });
 
         const placeId = findPlaceResponse.data.candidates?.[0]?.place_id;
-        
-        if (!placeId) {
-            return null;
-        }
+        if (!placeId) return null;
 
-        // 2. Obtener los detalles del lugar (SOLO CAMPOS BÁSICOS)
         const detailsResponse = await placesClient.placeDetails({
             params: {
                 key: placesApiKey,
@@ -211,14 +190,12 @@ async function getPlaceDetails(query) {
         });
 
         const place = detailsResponse.data.result;
-        
-        // 3. Generar la URL de la foto
         const photoReference = place.photos?.[0]?.photo_reference || null;
-        let imageUrl = null;
-
-        if (photoReference) {
-            imageUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=250&photoreference=${photoReference}&key=${placesApiKey}`;
-        }
+        
+        // Generar la URL de la foto de Places
+        let imageUrl = photoReference 
+            ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=250&photoreference=${photoReference}&key=${placesApiKey}`
+            : null;
 
         return {
             name: place.name,
@@ -247,7 +224,7 @@ async function getPlaceNameFromAI(userPrompt, history) {
         const result = await chat.sendMessage({ message: identificationPrompt });
         const name = result.text.trim();
         
-        if (name && name !== "CATEGORY_REQUEST" && name.length < 50) {
+        if (name && name !== "CATEGORY_REQUEST" && name.length > 3 && name.length < 50) {
             return name;
         }
         return null;
@@ -261,10 +238,30 @@ async function getPlaceNameFromAI(userPrompt, history) {
 function areNamesSimilar(searchName, returnedName) {
     const s1 = searchName.toLowerCase().replace(/[^a-z0-9]/g, '');
     const s2 = returnedName.toLowerCase().replace(/[^a-z0-9]/g, '');
-    return s2.includes(s1) || s1.includes(s2) || s1 === s2;
+    // Considerar si el nombre buscado está contenido en el devuelto (o viceversa)
+    return s2.includes(s1) || s1.includes(s2); 
+}
+
+// Función de utilidad para parsear el JSON de la respuesta del modelo
+function parseModelResponse(responseText) {
+    try {
+        const jsonStart = responseText.indexOf('{');
+        const jsonEnd = responseText.lastIndexOf('}');
+        
+        if (jsonStart !== -1 && jsonEnd !== -1) {
+            const jsonString = responseText.substring(jsonStart, jsonEnd + 1);
+            return JSON.parse(jsonString);
+        }
+    } catch (e) {
+        console.error("Fallo al parsear el JSON de la respuesta del modelo.", e);
+    }
+    return null;
 }
 
 
+// ----------------------------------------------------------------
+// 🟢 FUNCIÓN PRINCIPAL DEL HANDLER
+// ----------------------------------------------------------------
 export default async function handler(req, res) {
     
     if (req.method !== 'POST') {
@@ -272,78 +269,70 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { history = [], userPrompt, currentLanguage } = req.body;
+        const { history = [], userPrompt, currentLanguage = 'es' } = req.body;
         
         const langText = currentLanguage === 'es' ? 'español' : 'inglés';
         const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
 
         // ----------------------------------------------------
-        // ⭐️ LÓGICA DE BLINDAJE CANÓNICO Y DENTISTAS (PRIORIDAD AL SERVIDOR)
+        // ⭐️ LÓGICA DE BLINDAJE CANÓNICO (PRIORIDAD 1)
         // ----------------------------------------------------
         let forcedCanonicalResponse = null; 
         const promptSearchKey = userPrompt.toLowerCase().replace(/\s/g, ''); 
+        const placeNameFromAI = await getPlaceNameFromAI(userPrompt, history);
 
-        // 1. Verificar excepciones fijas (Yomis, Pinkys)
+        // A. Verificar excepciones fijas (Yomis, Pinkys)
         for (const [key, exceptionData] of Object.entries(EXCEPTION_DATA_MAP)) {
             if (promptSearchKey.includes(key)) {
                 
-                console.log(`Interceptación CANÓNICA forzada para: ${key}`);
-                
                 const placeData = await getPlaceDetails(exceptionData.searchName);
-                
-                const isHealthPlace = exceptionData.category.includes('Spa');
                 
                 forcedCanonicalResponse = {
                     type: "place", 
                     placeName: placeData ? placeData.name : exceptionData.searchName, 
                     placeToSearch: exceptionData.searchName,
                     placeCategory: exceptionData.category, 
-                    isHealthPlace: isHealthPlace,
-                    description: exceptionData.description, // DESCRIPCIÓN CANÓNICA FIJA
+                    isHealthPlace: exceptionData.isHealthPlace,
+                    description: exceptionData.description, 
                     isStructured: true,
-                    // Datos de Places API
                     mapUrl: placeData?.mapUrl || null,
                     imageUrl: placeData?.imageUrl || null,
-                    placePhone: (placeData?.phone && !isHealthPlace) ? placeData.phone : null, 
-                    reviewUrl: placeData?.reviewUrl || null, 
-                    websiteUrl: (placeData?.websiteUrl && !isHealthPlace) ? placeData.websiteUrl : null,
+                    // Restringir datos de contacto para salud (Spa es salud en este contexto)
+                    placePhone: (placeData?.phone && !exceptionData.isHealthPlace) ? placeData.phone : null, 
+                    websiteUrl: (placeData?.websiteUrl && !exceptionData.isHealthPlace) ? placeData.websiteUrl : null,
                 };
+                console.log(`Interceptación CANÓNICA forzada para: ${key}`);
                 break; 
             }
         }
         
-        // 2. Verificar en el Catálogo de Dentistas (Con Búsqueda Tolerante)
-        if (!forcedCanonicalResponse) {
-             const placeNameFromAI = await getPlaceNameFromAI(userPrompt, history);
-
-             if (placeNameFromAI) {
-                 const localData = searchLocalCatalog(placeNameFromAI);
+        // B. Verificar en el Catálogo de Dentistas (usando el nombre identificado por AI)
+        if (!forcedCanonicalResponse && placeNameFromAI) {
+             const localData = searchLocalCatalog(placeNameFromAI);
                  
-                 if (localData) {
-                    console.log(`✅ Interceptación LOCAL (Dentista): Encontrado '${localData.name}' con búsqueda: '${placeNameFromAI}'`);
-                    
-                    // 🟢 ENRIQUECIMIENTO: Llama a Places API SOLO para obtener la imagen
-                    const placeDataForImage = await getPlaceDetails(localData.name);
-                    
-                    forcedCanonicalResponse = {
-                        type: "place", 
-                        placeName: localData.name, 
-                        placeToSearch: localData.name,
-                        placeCategory: 'Clínica Dental',
-                        isHealthPlace: localData.isHealthPlace,
-                        // MEJORA v5.2: Asegurar que la descripción es válida.
-                        description: localData.description || `Clínica dental verificada en Nuevo Progreso: ${localData.name}.`, 
-                        isStructured: true,
-                        // Datos del JSON
-                        placePhone: localData.phone,
-                        mapUrl: localData.mapUrl,
-                        websiteUrl: localData.websiteUrl,
-                        // Imagen de Places API (o null)
-                        imageUrl: placeDataForImage?.imageUrl || null, 
-                        latitude: localData.latitude, 
-                        longitude: localData.longitude
-                    };
-                 }
+             if (localData) {
+                console.log(`✅ Interceptación LOCAL (Dentista): Encontrado '${localData.name}'`);
+                
+                // ENRIQUECIMIENTO: Llama a Places API SOLO para obtener la imagen
+                const placeDataForImage = await getPlaceDetails(localData.name);
+                
+                forcedCanonicalResponse = {
+                    type: "place", 
+                    placeName: localData.name, 
+                    placeToSearch: localData.name,
+                    placeCategory: 'Clínica Dental',
+                    isHealthPlace: localData.isHealthPlace,
+                    description: localData.description || `Clínica dental verificada en Nuevo Progreso: ${localData.name}.`, 
+                    isStructured: true,
+                    // Datos del JSON
+                    placePhone: localData.phone,
+                    mapUrl: localData.mapUrl,
+                    websiteUrl: localData.websiteUrl,
+                    latitude: localData.latitude, 
+                    longitude: localData.longitude,
+                    // Imagen de Places API (o null)
+                    imageUrl: placeDataForImage?.imageUrl || null, 
+                };
              }
         }
         
@@ -351,8 +340,9 @@ export default async function handler(req, res) {
             return res.status(200).json({ responseText: JSON.stringify(forcedCanonicalResponse) });
         }
 
+
         // ----------------------------------------------------
-        // ⭐️ LÓGICA NORMAL (GEMINI + RAG de Reseñas) - PLAN B
+        // ⭐️ LÓGICA NORMAL (GEMINI) - PLAN B
         // ----------------------------------------------------
         
         let promptToSend = userPrompt;
@@ -362,9 +352,9 @@ export default async function handler(req, res) {
         
         const match = userPrompt.match(recommendationPattern);
         
-        // 🟢 MEJORA v5.3: Forzamos CATEGORÍA si es una palabra clave general Y no se encontró localmente.
+        // 🟢 MEJORA v6.0: Forzamos CATEGORÍA si es una palabra clave general Y no se encontró localmente.
         if (match || promptSearchKey.includes('dental') || promptSearchKey.includes('clinica')) {
-            const categoryKeyRaw = match ? match[3].toLowerCase() : promptSearchKey; // Si no hay match, usa la palabra clave
+            const categoryKeyRaw = match ? match[3].toLowerCase() : promptSearchKey;
             let categoryName = "lugares y negocios"; 
             
             if (categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('tacos')) categoryName = "Taquerías y Tacos";
@@ -379,7 +369,6 @@ export default async function handler(req, res) {
                 promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría **CLÍNICAS ODONTOLÓGICAS Y ÓPTICAS** en Nuevo Progreso. **PROHIBIDO** mencionar la palabra 'dental' en tu respuesta conversacional o en la descripción del JSON.`;
                 
             } else {
-                // Para otras categorías generales
                 promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría ${categoryName} en Nuevo Progreso.`;
             }
             
@@ -395,6 +384,7 @@ export default async function handler(req, res) {
                 systemInstruction: finalSystemInstruction 
             },
             history: history,
+            // Google Search se añade en la inicialización para ser usado en el RAG más abajo
             tools: [{ googleSearch: {} }] 
         });
 
@@ -404,140 +394,100 @@ export default async function handler(req, res) {
         
         let finalResponseData = { responseText: modelResponseText };
 
-        // Lógica de ENRIQUECIMIENTO con Places API
-        try {
-            const jsonStart = modelResponseText.indexOf('{');
-            const jsonEnd = modelResponseText.lastIndexOf('}');
+        // Lógica de ENRIQUECIMIENTO con Places API (Si el modelo devuelve un JSON)
+        const parsedJsonRoot = parseModelResponse(modelResponseText);
+
+        if (parsedJsonRoot) {
             
-            if (jsonStart !== -1 && jsonEnd !== -1) {
-                const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
-                const parsedJson = JSON.parse(jsonString);
+            let fichasToProcess = parsedJsonRoot.isStructured ? [parsedJsonRoot] : (parsedJsonRoot.isMultiStructured ? parsedJsonRoot.response : []);
+
+            if (fichasToProcess.length > 0) {
                 
-                let fichasToProcess = parsedJson.isStructured ? [parsedJson] : (parsedJson.isMultiStructured ? parsedJson.response : []);
+                const enrichedFichas = [];
+                
+                for (const ficha of fichasToProcess) {
+                    let enrichedFicha = { ...ficha };
 
-                if (fichasToProcess.length > 0) {
-                    
-                    const enrichedFichas = [];
-                    
-                    for (const ficha of fichasToProcess) {
-                        let enrichedFicha = { ...ficha };
-
-                        if (ficha.type === 'place' && ficha.placeToSearch) {
-                            
-                            const placeNameSearch = ficha.placeToSearch.trim();
-                            const isHealthPlace = ficha.isHealthPlace === true; 
-                            
-                            const searchForPlaces = placeNameSearch; 
-                            
-                            // LLAMADA A LA API DE PLACES (PLAN B para lugares NO dentistas)
-                            const placeData = await getPlaceDetails(searchForPlaces);
-
-                            // 🛑 BLINDAJE ANTI-CORRELACIÓN:
-                            let isNameMiscorrelated = false;
-                            if (placeData && !areNamesSimilar(placeNameSearch, placeData.name)) {
-                                console.warn(`¡Fallo de correlación! Se buscó "${placeNameSearch}" pero Places devolvió "${placeData.name}". Descartando resultado.`);
-                                isNameMiscorrelated = true;
-                            }
-
-
-                            if (placeData && !isNameMiscorrelated) {
-                                // **LÓGICA NORMAL: USAR RE-PROMPT con GOOGLE SEARCH RAG (Reseñas)**
-                                
-                                // REFUERZO RAG: MÁS AGRESIVO EN LAS INSTRUCCIONES
-                                let placePrompt = `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder.`;
-                                
-                                placePrompt += ` La categoría es: ${enrichedFicha.placeCategory}. **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **Extrae las frases clave de una o dos reseñas REALES y úsalas para componer la 'description' en el JSON. La descripción debe ser corta y basada SÓLO en reseñas.** Si no encuentras reseñas, resume el giro del lugar. **NOTA CRÍTICA:** Solo usa la descripción que el RAG te proporciona.`;
-
-                                const rePromptResult = await chat.sendMessage({ 
-                                    message: placePrompt,
-                                    tools: [{ googleSearch: {} }] 
-                                });
-                                const rePromptText = rePromptResult.text.trim();
-                                
-                                try {
-                                    const reParsedJson = JSON.parse(rePromptText.substring(rePromptText.indexOf('{'), rePromptText.lastIndexOf('}') + 1));
-                                    
-                                    // Usamos la ficha re-parseada (con descripción RAG)
-                                    enrichedFicha = {
-                                        ...reParsedJson, 
-                                        placeName: placeData.name,
-                                        mapUrl: placeData.mapUrl,
-                                        imageUrl: placeData.imageUrl,
-                                        // Restricciones de salud
-                                        placePhone: isHealthPlace ? null : placeData.phone, 
-                                        reviewUrl: placeData.reviewUrl, 
-                                        websiteUrl: isHealthPlace ? null : placeData.websiteUrl,
-                                    };
-                                } catch (e) {
-                                    console.error("Fallo al re-parsear el JSON de anti-alucinación RAG. Usando ficha original sin descripción RAG.", e);
-                                    
-                                    // Fallback
-                                    enrichedFicha = {
-                                        ...enrichedFicha,
-                                        placeName: placeData.name,
-                                        mapUrl: placeData.mapUrl,
-                                        imageUrl: placeData.imageUrl,
-                                        placePhone: isHealthPlace ? null : placeData.phone,
-                                        reviewUrl: placeData.reviewUrl, 
-                                        websiteUrl: isHealthPlace ? null : placeData.websiteUrl,
-                                    };
-                                }
-                                
-                            } else { 
-                                // Si NO existe, creamos un FALLO personalizado
-                                // 🛑 CAMBIO CRÍTICO V5.4: Eliminar propiedades de salud para evitar el fallback del cliente.
-                                const isHealthPlace = ficha.isHealthPlace;
-                                delete ficha.isHealthPlace;
-                                delete ficha.placeCategory;
-
-                                enrichedFicha = {
-                                    ...ficha,
-                                    type: "place_not_found", 
-                                    placeToSearch: placeNameSearch, 
-                                    // MEJORA v5.2: Mensaje claro para evitar N/A
-                                    description: `Disculpa, no se encontró un lugar llamado **${placeNameSearch}** ubicado en Nuevo Progreso en nuestra base de datos. Por favor, verifica el nombre.`,
-                                    isStructured: true
-                                };
-                                // Si se había clasificado como salud, mantenemos el registro interno.
-                                if (isHealthPlace) enrichedFicha.wasHealthPlace = true;
-                            }
-                        } else if (ficha.type === 'category') {
-                             // ENRIQUECIMIENTO PARA CATEGORÍA (Mapa)
-                             
-                             const categorySearch = ficha.categoryName.replace(/en Progreso/i, '').trim();
-                             const mapUrlQuery = categorySearch + GEOGRAPHIC_CONTEXT;
-                             
-                             const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapUrlQuery)}`;
-                             
-                             enrichedFicha.mapUrl = mapUrl; 
-                        }
+                    if (ficha.type === 'place' && ficha.placeToSearch) {
                         
-                        enrichedFichas.push(enrichedFicha);
+                        const placeNameSearch = ficha.placeToSearch.trim();
+                        const isHealthPlace = ficha.isHealthPlace === true; 
+                        
+                        // LLAMADA A LA API DE PLACES (Plan B)
+                        const placeData = await getPlaceDetails(placeNameSearch);
+
+                        // 🛑 BLINDAJE ANTI-CORRELACIÓN: (Verificación de similitud)
+                        let isNameMiscorrelated = false;
+                        if (placeData && !areNamesSimilar(placeNameSearch, placeData.name)) {
+                            console.warn(`¡Fallo de correlación! Se buscó "${placeNameSearch}" pero Places devolvió "${placeData.name}". Descartando resultado.`);
+                            isNameMiscorrelated = true;
+                        }
+
+
+                        if (placeData && !isNameMiscorrelated) {
+                            // **LÓGICA RAG: Obtener descripción de Reseñas**
+                            const ragPrompt = `El usuario preguntó por "${placeNameSearch}". Genera una descripción de **no más de 3 oraciones** para el lugar, utilizando frases clave de reseñas REALES. **Utiliza tu herramienta de Google Search** para buscar la consulta: "reseñas de ${placeNameSearch} ${enrichedFredita.placeCategory} Nuevo Progreso". **SOLO responde con el texto de la descripción.**`;
+
+                            const ragResult = await chat.sendMessage({ 
+                                message: ragPrompt,
+                                tools: [{ googleSearch: {} }] 
+                            });
+                            const ragDescription = ragResult.text.trim();
+                            
+                            // 🟢 MEJORA v6.0: Fusión de datos directa
+                            enrichedFicha = {
+                                ...enrichedFicha, 
+                                placeName: placeData.name,
+                                description: ragDescription || enrichedFicha.description, // Usar RAG o el original
+                                mapUrl: placeData.mapUrl,
+                                imageUrl: placeData.imageUrl,
+                                // Restricciones de salud: ocultar teléfono/web para salud
+                                placePhone: isHealthPlace ? null : placeData.phone, 
+                                reviewUrl: placeData.reviewUrl, 
+                                websiteUrl: isHealthPlace ? null : placeData.websiteUrl,
+                            };
+                            
+                        } else { 
+                            // Si NO existe o falló la correlación, creamos un FALLO
+                            enrichedFicha = {
+                                type: "place_not_found", 
+                                placeToSearch: placeNameSearch, 
+                                description: `Disculpa, no se encontró un lugar llamado **${placeNameSearch}** en Nuevo Progreso. Por favor, verifica el nombre.`,
+                                isStructured: true
+                            };
+                        }
+
+                    } else if (ficha.type === 'category') {
+                         // ENRIQUECIMIENTO PARA CATEGORÍA (Mapa de la Categoría)
+                         const categorySearch = ficha.categoryName.replace(/en Progreso/i, '').trim();
+                         const mapUrlQuery = encodeURIComponent(categorySearch + GEOGRAPHIC_CONTEXT);
+                         // CORRECCIÓN: Usar un host real de Google Maps, no googleusercontent.com
+                         const mapUrl = `https://www.google.com/maps/search/?api=1&query=${mapUrlQuery}`;
+                         
+                         enrichedFicha.mapUrl = mapUrl; 
                     }
-
-                    // Después de procesar todas las fichas, reconstruir la respuesta final.
-                    let finalResponseJson = parsedJson.isMultiStructured 
-                        ? { isMultiStructured: true, response: enrichedFichas, conversationText: parsedJson.conversationText || '' }
-                        : enrichedFichas[0];
                     
-                    finalResponseData.responseText = JSON.stringify(finalResponseJson);
-
-                } else {
-                    finalResponseData.responseText = modelResponseText; 
+                    enrichedFichas.push(enrichedFicha);
                 }
+
+                // Reconstruir la respuesta final.
+                let finalResponseJson = parsedJsonRoot.isMultiStructured 
+                    ? { isMultiStructured: true, response: enrichedFichas, conversationText: parsedJsonRoot.conversationText || '' }
+                    : enrichedFichas[0];
+                
+                finalResponseData.responseText = JSON.stringify(finalResponseJson);
+
             }
-        } catch (jsonError) {
-            console.error("Fallo en el parseo o enriquecimiento del JSON. Asumiendo que el texto no contenía JSON estructurado.", jsonError);
-            finalResponseData.responseText = modelResponseText; 
-        }
+        } 
+        // Si no había JSON, finalResponseData.responseText ya tiene el texto plano.
 
         res.status(200).json(finalResponseData);
 
     } catch (error) {
-        console.error("Error en la API de Gemini:", error);
+        console.error("Error en el handler principal:", error);
         res.status(500).json({ 
             error: true, 
-            message: "Fallo al obtener respuesta de Gemini: " + error.message
+            message: "Fallo interno del servidor: " + error.message
         });
     }
 }
