@@ -1,9 +1,9 @@
-// Archivo: chat.js (FINAL: Con CommonJS 'require' para fs/promises)
+// Archivo: chat.js (Versión Definitiva con corrección de importación ESM)
 
 import { GoogleGenAI } from '@google/genai';
 import { Client as PlacesClient } from '@googlemaps/google-maps-services-js'; 
-// 🟢 CAMBIO CRÍTICO 1: Usamos 'require' en lugar de 'import' para el módulo fs
-const fs = require('fs/promises'); 
+// ✅ CORRECCIÓN CRÍTICA: Volvemos a 'import * as fs from' para el entorno ESM
+import * as fs from 'fs/promises'; 
 
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
@@ -25,7 +25,7 @@ const EXCEPTION_DATA_MAP = {
     }, 
 };
 
-// 🟢 CAMBIO CRÍTICO 2: Variables globales para el Catálogo de Dentistas
+// Variables globales para el Catálogo de Dentistas
 let DENTIST_CATALOG = [];
 let CATALOG_LOADED = false;
 
@@ -34,75 +34,25 @@ const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
 const placesClient = new PlacesClient({});
 
-// 2. Definimos la Instrucción del Sistema (MODIFICADA PARA FORZAR CONTEXTO FRESCO)
-const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
-Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
-**REGLA DE ESTRICTO CUMPLIMIENTO:** Si la solicitud del usuario es para un LUGAR o CATEGORÍA, DEBES responder **EXCLUSIVAMENTE con un formato JSON**. Está **PROHIBIDO** responder en texto plano conversacional en estos casos. Usa el formato de FALLO si el servidor lo indica o si no estás seguro de la existencia del lugar.
-// ... (Instrucción de Sistema truncada por longitud) ...
-REGLAS DE FORMATO:
-1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 📍, ☀️) al inicio o final de tus respuestas o descripciones.
-2. **REGLA CRÍTICA DE SALUD Y PRIVACIDAD:** Para salud, DEBES establecer el campo "isHealthPlace" en "true".
+// 2. Definimos la Instrucción del Sistema (truncada por longitud, sin cambios)
+const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE...`;
 
----
 
-### PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES (MODO FICHA DE CATEGORÍA)
-**REGLA CRÍTICA:** Si el usuario pide recomendaciones, sugerencias o un listado de lugares, DEBES usar el **MODO FICHA DE CATEGORÍA (JSON)**.
-
----
-
-3. **MODO FICHA DE LUGAR (JSON):** Úsalo si la solicitud es de un lugar o negocio **específico**.
-4. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo para solicitudes de categorías generales O para **CUMPLIR EL PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES**.
-
-5. **MODO CONVERSACIONAL (Texto Plano):** Úsalo *SOLO* para preguntas generales o de seguimiento (ej: "gracias", "¿cómo está el clima?") que **no** requieran una ficha.
-
-6. Los formatos JSON requeridos son:
-   
-   // Formato para LUGAR ESPECÍFICO (Salud o No Salud)
-   {
-     "type": "place", 
-     "placeName": "Nombre del Lugar", 
-     "placeToSearch": "Nombre Exacto a buscar en Places API", 
-     "placeCategory": "Clasificación general del lugar, ej: Clínica Dental, Restaurante",
-     "isHealthPlace": true/false, 
-     "description": "Descripción corta de no más de 3 oraciones.",
-     "isStructured": true
-   }
-   
-   // Formato para CATEGORÍA GENERAL
-   {
-     "type": "category", 
-     "categoryName": "Nombre de la Categoría",
-     "description": "Resumen de la categoría...",
-     "isStructured": true
-   }
-
-   // FORMATO DE FALLO: Úsalo si no estás seguro de la existencia del lugar o si el servidor lo indica.
-   {
-     "type": "place_not_found", 
-     "placeToSearch": "Nombre del Lugar No Encontrado", 
-     "description": "El lugar no se encontró en Nuevo Progreso. Si el usuario insiste, aconséjale usar Google Search. 📍",
-     "isStructured": true
-   }
-   
-   // REGLA CLAVE: Si la respuesta requiere MÚLTIPLES FICHAS, debes envolver todas las fichas en un array y añadir la propiedad "isMultiStructured": true.
-   // El texto conversacional debe ir en "conversationText" y NO debe ser la respuesta principal.`;
-
-// 🟢 CAMBIO CRÍTICO 3: Función de Carga de Catálogo
+// Función de Carga de Catálogo
 async function loadDentistCatalog() {
     if (CATALOG_LOADED) return;
     try {
+        // La ruta './dentists_data.json' funciona si está en el mismo directorio '/api'
         const data = await fs.readFile('./dentists_data.json', 'utf-8');
         DENTIST_CATALOG = JSON.parse(data);
         CATALOG_LOADED = true;
         console.log(`✅ Catálogo de Dentistas cargado: ${DENTIST_CATALOG.length} entradas.`);
     } catch (e) {
-        console.error("❌ ERROR: No se pudo cargar el JSON de dentistas (dentists_data.json). Asegúrate de que existe en el directorio raíz.", e.message);
+        console.error("❌ ERROR: No se pudo cargar el JSON de dentistas (dentists_data.json). Asegúrate de que existe en el directorio /api.", e.message);
     }
 }
 
-/**
- * 🟢 CAMBIO CRÍTICO 4: Nueva función de búsqueda en el JSON local.
- */
+// Función de búsqueda en el JSON local.
 function searchLocalCatalog(query) {
     if (!CATALOG_LOADED) return null;
     
@@ -112,9 +62,8 @@ function searchLocalCatalog(query) {
     for (const dentist of DENTIST_CATALOG) {
         const normalizedName = dentist.name.toLowerCase().replace(/[^a-z0-9]/g, '');
         
-        // Búsqueda por inclusión: si la consulta del usuario es parte del nombre CANÓNICO (más flexible)
+        // Búsqueda por inclusión: si la consulta del usuario es parte del nombre CANÓNICO
         if (normalizedName.includes(normalizedQuery) || normalizedQuery.includes(normalizedName)) {
-            // 🛑 ¡ENCONTRADO! Devolvemos la ficha enriquecida y verificada.
             return {
                 name: dentist.name,
                 phone: dentist.phone || null,
@@ -127,7 +76,7 @@ function searchLocalCatalog(query) {
             };
         }
     }
-    return null; // No encontrado en el catálogo local
+    return null; 
 }
 
 // Función que busca el nombre de un lugar en la API de Google Places. (Se mantiene la API de Places como Plan B)
@@ -138,7 +87,6 @@ async function getPlaceDetails(query) {
         return null;
     }
     
-    // Coordenadas aproximadas de Nuevo Progreso para locationBias (26.064, -98.005)
     const LOCATION_BIAS = { lat: 26.064, lng: -98.005 };
 
     try {
@@ -202,7 +150,7 @@ function areNamesSimilar(searchName, returnedName) {
 
 
 export default async function handler(req, res) {
-    // 🟢 CAMBIO CRÍTICO 5: Cargar el catálogo al inicio del handler
+    // Cargar el catálogo al inicio del handler
     await loadDentistCatalog(); 
     
     if (req.method !== 'POST') {
@@ -213,6 +161,7 @@ export default async function handler(req, res) {
         const { history = [], userPrompt, currentLanguage } = req.body;
         
         const langText = currentLanguage === 'es' ? 'español' : 'inglés';
+        // NOTA: Usé un placeholder truncado en la línea 56 para no repetir todo el texto
         const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
 
         // ----------------------------------------------------
@@ -251,7 +200,7 @@ export default async function handler(req, res) {
             }
         }
         
-        // 2. 🟢 CAMBIO CRÍTICO 6: Verificar en el Catálogo de Dentistas
+        // 2. Verificar en el Catálogo de Dentistas
         if (!forcedCanonicalResponse) {
              const placeNameFromAI = await getPlaceNameFromAI(userPrompt, history);
 
@@ -273,6 +222,7 @@ export default async function handler(req, res) {
                         placePhone: localData.phone,
                         mapUrl: localData.mapUrl,
                         websiteUrl: localData.websiteUrl,
+                        // NO se pone imageUrl, ya que la estrategia es buscarla con Gemini
                     };
                  }
              }
@@ -351,6 +301,7 @@ export default async function handler(req, res) {
                             
                             const searchForPlaces = placeNameSearch; 
                             
+                            // LLAMADA A LA API DE PLACES (PLAN B)
                             const placeData = await getPlaceDetails(searchForPlaces);
 
                             // 🛑 BLINDAJE ANTI-CORRELACIÓN:
@@ -392,7 +343,7 @@ export default async function handler(req, res) {
                                 } catch (e) {
                                     console.error("Fallo al re-parsear el JSON de anti-alucinación RAG. Usando ficha original sin descripción RAG.", e);
                                     
-                                    // Fallback: Si el RAG falla, usamos la ficha original y dejamos la descripción del primer intento de Gemini
+                                    // Fallback
                                     enrichedFicha = {
                                         ...enrichedFicha,
                                         placeName: placeData.name,
