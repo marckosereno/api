@@ -525,6 +525,7 @@ font-family:Spline Sans Light;
             box-shadow: none !important; 
         }
 
+
         /* 🛑 NUEVO ESTILO: Glass Chip Azulado para Botones de Acción (Mapa, Google, etc.) */
         .blue-glass-chip {
             /* Tono Azul Claro para el fondo */
@@ -1276,12 +1277,14 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         );
         
         // 🛑 CORRECCIÓN CLAVE: El autocompletado debe ser re-creado/limpiado para evitar errores de vinculación.
-        // Si ya existe, lo quitamos antes de crear uno nuevo (aunque al hacer un nuevo new ya se desvincula el anterior)
         
         autocomplete = new google.maps.places.Autocomplete(inputElement, {
             bounds: progressoBounds,
             strictBounds: true, // Restringe la búsqueda a la zona de Progreso (CRÍTICO)
-            types: ['establishment', 'geocode'], // Buscar negocios y direcciones
+            
+            // 🛑 CAMBIO SOLICITADO: Priorizar 'establishment' (Puntos de Interés) sobre solo 'geocode' (Direcciones)
+            types: ['establishment', 'geocode'], 
+            
             componentRestrictions: { country: 'mx' } // Restringir a México
         });
 
@@ -1344,8 +1347,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             // Esto puede pasar si el usuario presiona Enter sin seleccionar una sugerencia
             alertUser(currentLanguage === 'es' ? "Por favor, selecciona un lugar de la lista de sugerencias." : "Please select a place from the suggestions list.", 'i', 'news');
             inputElement.value = '';
-            // 🛑 CLAVE 7: Mantenemos el modo activo para que el usuario pueda volver a buscar (NO SE DESACTIVA HASTA QUE SELECCIONE).
-            // No hacemos `toggleSearchMode()` aquí.
+            // 🛑 CLAVE 7: Mantenemos el modo activo para que el usuario pueda volver a buscar.
             return;
         }
 
@@ -1363,8 +1365,11 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         if (typeof renderChat === 'function') renderChat();
         
         inputElement.value = '';
-        toggleSearchMode(); // 🛑 Volver a Modo Chat DESPUÉS de la búsqueda exitosa
-
+        
+        // 🛑 LÍNEA MODIFICADA (Antes: toggleSearchMode();)
+        // Mantenemos el modo SPS activo, el usuario deberá desactivarlo manualmente.
+        // **toggleSearchMode();** // LÍNEA DE DESACTIVACIÓN ELIMINADA/COMENTADA POR SOLICITUD
+        
         // 2. Disparar el envío al backend con el PLACE ID
         handleSend(`Búsqueda geográfica directa del lugar ${query}`, placeId);
     }
