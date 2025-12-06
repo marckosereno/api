@@ -8,6 +8,7 @@ const MODEL_NAME = "gemini-2.5-flash";
 const GEOGRAPHIC_CONTEXT = ", Nuevo Progreso, Tamaulipas, México";
 
 // Mapeo de intención de usuario a Categoría (Simplificado)
+// (Dejado para el caso de que el sistema decida usarlo, aunque la lógica es más compleja)
 const CATEGORY_MAP = {
     'tacos': 'Taquerías y Tacos',
     'taqueria': 'Taquerías y Tacos',
@@ -19,7 +20,6 @@ const CATEGORY_MAP = {
 };
 
 // ⭐️ MAPA DE EXCEPCIONES CON DESCRIPCIONES CANÓNICAS PARA CORREGIR ALUCINACIONES
-// Si la alucinación persiste, el servidor BYPASS el re-prompt y usa estos datos.
 const EXCEPTION_DATA_MAP = {
     // Nombre exacto a buscar (en minúsculas, sin espacios extra): { category, description }
     'yomis': { 
@@ -89,7 +89,6 @@ REGLAS DE FORMATO:
    }
    
    // REGLA CLAVE: Si la respuesta requiere MÚLTIPLES FICHAS, debes envolver todas las fichas en un array y añadir la propiedad "isMultiStructured": true.
-   // Ejemplo para múltiples categorías (la respuesta al usuario debe ser el JSON completo, texto conversacional opcional):
    {
      "isMultiStructured": true,
      "response": [
@@ -104,7 +103,7 @@ REGLAS DE FORMATO:
 
 /**
  * Función que busca el nombre de un lugar en la API de Google Places.
- * NOTA: Se solicitan SOLO campos básicos para minimizar costos. La descripción se extraerá de Google Search RAG.
+ * NOTA: Se solicitan SOLO campos básicos para minimizar costos (no reviews, no editorial_summary).
  * @param {string} query Nombre del lugar a buscar.
  * @returns {object|null} Objeto con detalles del lugar o null si NO existe el lugar exacto en Nuevo Progreso.
  */
@@ -170,7 +169,7 @@ async function getPlaceDetails(query) {
             name: place.name,
             phone: place.formatted_phone_number || null,
             mapUrl: place.url || null,
-            reviewUrl: place.url || null,
+            reviewUrl: place.url || null, // Usamos la URL base para el botón de reseña/Google Maps
             websiteUrl: place.websiteUrl || null,
             imageUrl: imageUrl
         };
@@ -210,7 +209,7 @@ export default async function handler(req, res) {
             if (categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('tacos')) categoryName = "Taquerías y Tacos";
             else if (categoryKeyRaw.includes('restaurante') || categoryKeyRaw.includes('comer')) categoryName = "Restaurantes y Comida";
             else if (categoryKeyRaw.includes('artesanias') || categoryKeyRaw.includes('souvenirs')) categoryName = "Tiendas de Artesanías y Souvenirs";
-            else if (categoryKeyRaw.includes('barbacoa')) categoryKeyRaw.includes('barbacoa')) categoryName = "Barbacoa y Birria";
+            else if (categoryKeyRaw.includes('barbacoa')) categoryName = "Barbacoa y Birria";
             else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = "Salud y Estética";
             
             // 2. SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA
@@ -304,7 +303,7 @@ export default async function handler(req, res) {
                                         mapUrl: placeData.mapUrl,
                                         imageUrl: placeData.imageUrl,
                                         placePhone: isHealthPlace ? null : placeData.phone, 
-                                        reviewUrl: isHealthPlace ? null : placeData.reviewUrl, 
+                                        reviewUrl: placeData.reviewUrl, 
                                         websiteUrl: isHealthPlace ? null : placeData.websiteUrl,
                                     };
 
@@ -338,7 +337,7 @@ export default async function handler(req, res) {
                                             imageUrl: placeData.imageUrl,
                                             // Restricciones de salud
                                             placePhone: isHealthPlace ? null : placeData.phone, 
-                                            reviewUrl: placeData.reviewUrl, // Usamos la URL base para el botón de reseña/Google Maps
+                                            reviewUrl: placeData.reviewUrl, 
                                             websiteUrl: isHealthPlace ? null : placeData.websiteUrl,
                                         };
                                     } catch (e) {
@@ -370,7 +369,7 @@ export default async function handler(req, res) {
                         } else if (ficha.type === 'category') {
                              // ENRIQUECIMIENTO PARA CATEGORÍA (Permitir "Ver en Mapa")
                              
-                             const categorySearch = ficha.categoryName.replace(/en Progreso/i, '',).trim();
+                             const categorySearch = ficha.categoryName.replace(/en Progreso/i, '').trim();
                              const mapUrlQuery = categorySearch + GEOGRAPHIC_CONTEXT;
                              
                              // URL de Google Maps para búsqueda de categorías
@@ -388,7 +387,6 @@ export default async function handler(req, res) {
                         let finalConversationText = parsedJson.conversationText || modelResponseText.replace(jsonString, '').trim() || '';
 
                         // 🛑 REGLA BLINDADA: SI ALGUNA FICHA ES UNA EXCEPCIÓN, ELIMINAR EL TEXTO CONVERSACIONAL
-                        // Esto previene que Gemini alucine sobre "tienda" o "restaurante" fuera del JSON.
                         const hasExceptionFicha = enrichedFichas.some(f => {
                             const placeName = f.placeToSearch ? f.placeToSearch.toLowerCase().replace(/\s/g, '') : null;
                             return placeName && EXCEPTION_DATA_MAP[placeName];
