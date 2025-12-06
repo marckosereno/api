@@ -1,4 +1,4 @@
-// Archivo: chat.js (Versión Definitiva 5.1 - Corrección de Client Not Defined)
+// Archivo: chat.js (Versión Definitiva 5.2 - Blindaje de Descripción y Fallbacks)
 
 import { GoogleGenAI } from '@google/genai';
 import { Client as PlacesClient } from '@googlemaps/google-maps-services-js'; 
@@ -35,7 +35,7 @@ const EXCEPTION_DATA_MAP = {
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
-// 🟢 CORRECCIÓN: Usar PlacesClient, no Client.
+// CORRECCIÓN: Usar PlacesClient, no Client.
 const placesClient = new PlacesClient({});
 
 // 2. Definimos la Instrucción del Sistema 
@@ -119,7 +119,8 @@ function searchLocalCatalog(query) {
                 phone: dentist.phone || null,
                 mapUrl: dentist.google_url || null,
                 websiteUrl: dentist.website || null,
-                description: dentist.description_summary || 'Clínica dental verificada en Nuevo Progreso.',
+                // 🟢 MEJORA v5.2: Forzar descripción si está vacía
+                description: dentist.description_summary || `Clínica dental verificada en Nuevo Progreso: ${dentist.name}`,
                 latitude: dentist.latitude,
                 longitude: dentist.longitude,
                 isHealthPlace: true 
@@ -133,7 +134,8 @@ function searchLocalCatalog(query) {
                 phone: dentist.phone || null,
                 mapUrl: dentist.google_url || null,
                 websiteUrl: dentist.website || null,
-                description: dentist.description_summary || 'Clínica dental verificada en Nuevo Progreso.',
+                // 🟢 MEJORA v5.2: Forzar descripción si está vacía
+                description: dentist.description_summary || `Clínica dental verificada en Nuevo Progreso: ${dentist.name}`,
                 latitude: dentist.latitude,
                 longitude: dentist.longitude,
                 isHealthPlace: true 
@@ -155,7 +157,8 @@ function searchLocalCatalog(query) {
                 phone: dentist.phone || null,
                 mapUrl: dentist.google_url || null,
                 websiteUrl: dentist.website || null,
-                description: dentist.description_summary || 'Clínica dental verificada en Nuevo Progreso.',
+                // 🟢 MEJORA v5.2: Forzar descripción si está vacía
+                description: dentist.description_summary || `Clínica dental verificada en Nuevo Progreso: ${dentist.name}`,
                 latitude: dentist.latitude,
                 longitude: dentist.longitude,
                 isHealthPlace: true 
@@ -328,7 +331,8 @@ export default async function handler(req, res) {
                         placeToSearch: localData.name,
                         placeCategory: 'Clínica Dental',
                         isHealthPlace: localData.isHealthPlace,
-                        description: localData.description, 
+                        // 🟢 MEJORA v5.2: Asegurar que la descripción es válida.
+                        description: localData.description || `Clínica dental verificada en Nuevo Progreso: ${localData.name}.`, 
                         isStructured: true,
                         // Datos del JSON
                         placePhone: localData.phone,
@@ -474,11 +478,12 @@ export default async function handler(req, res) {
                                 }
                                 
                             } else { 
-                                // Si NO existe 
+                                // Si NO existe, creamos un FALLO personalizado
                                 enrichedFicha = {
                                     type: "place_not_found", 
                                     placeToSearch: placeNameSearch, 
-                                    description: `Disculpa, no se encontró un lugar llamado **${placeNameSearch}** ubicado en Nuevo Progreso.`,
+                                    // 🟢 MEJORA v5.2: Mensaje claro para evitar N/A
+                                    description: `Disculpa, no se encontró un lugar llamado **${placeNameSearch}** ubicado en Nuevo Progreso en nuestra base de datos. Por favor, verifica el nombre.`,
                                     isStructured: true
                                 };
                             }
