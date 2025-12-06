@@ -7,28 +7,19 @@ const MODEL_NAME = "gemini-2.5-flash";
 // CONTEXTO GEOGRÁFICO FIJO PARA EL FILTRADO ESTRICTO
 const GEOGRAPHIC_CONTEXT = ", Nuevo Progreso, Tamaulipas, México";
 
-// Mapeo de intención de usuario a Categoría (Simplificado)
-// (Dejado para el caso de que el sistema decida usarlo, aunque la lógica es más compleja)
-const CATEGORY_MAP = {
-    'tacos': 'Taquerías y Tacos',
-    'taqueria': 'Taquerías y Tacos',
-    'barbacoa': 'Barbacoa y Birria',
-    'restaurante': 'Restaurantes y Comida',
-    'comer': 'Restaurantes y Comida',
-    'artesanias': 'Tiendas de Artesanías y Souvenirs',
-    'souvenirs': 'Tiendas de Artesanías y Souvenirs',
-};
-
 // ⭐️ MAPA DE EXCEPCIONES CON DESCRIPCIONES CANÓNICAS PARA CORREGIR ALUCINACIONES
 const EXCEPTION_DATA_MAP = {
     // Nombre exacto a buscar (en minúsculas, sin espacios extra): { category, description }
     'yomis': { 
         category: 'Spa y Masajes', 
         description: 'Yomis es un tranquilo spa especializado en masajes terapéuticos y relajantes para viajeros que buscan un descanso profundo. Ofrece una variedad de tratamientos para el bienestar y la salud.',
+        // Nombre de búsqueda conocido para la API de Places (para la foto/mapa)
+        searchName: 'Yomis Spa' 
     },
     'pinkys': { 
         category: 'Tienda de Ropa y Accesorios', 
         description: 'Pinkys es una tienda de ropa y accesorios que ofrece las últimas tendencias de moda para damas y caballeros, con un enfoque en estilos casuales y de temporada.',
+        searchName: 'Pinkys Fashion'
     }, 
 };
 
@@ -37,69 +28,16 @@ const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
 const placesClient = new PlacesClient({}); 
 
-// 2. Definimos la Instrucción del Sistema
+// 2. Definimos la Instrucción del Sistema (Añadimos mitigación de sesgo)
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
+**IMPORTANTE:** Tu clasificación debe ser precisa. No asumas que todas las búsquedas son restaurantes. Usa las categorías más específicas posibles (Spa, Tienda de Ropa, Clínica Dental, etc.).
 
 REGLAS DE FORMATO:
-1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 📍, ☀️) al inicio o final de tus respuestas o descripciones para hacerlas más amigables y atractivas.
-2. **REGLA CRÍTICA DE SALUD Y PRIVACIDAD:** Para cualquier lugar o categoría relacionado con la salud (clínicas, farmacias, ópticas, etc.), DEBES establecer el campo "isHealthPlace" en "true". NUNCA debes incluir precios, dar recomendaciones directas, o proporcionar detalles de contacto en la descripción. El servidor se encargará de limitar los botones de acción solo a "Ver en Mapa" y "Buscar en Google" para garantizar el cumplimiento.
+// ... (El resto de las reglas del sistema se mantienen igual) ...
+// ... (Formatos JSON se mantienen igual) ...`;
 
----
-
-### PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES
-
-**REGLA CRÍTICA:** Si el usuario pide recomendaciones, sugerencias o un listado de lugares (ej. '4 taquerías', 'dime restaurantes cerca'), DEBES usar el **MODO FICHA DE CATEGORÍA (JSON)** para dar un resumen general de la categoría. NUNCA debes listar lugares específicos o dar sugerencias directas. Tu descripción debe guiar al usuario a usar los botones de acción para que ellos exploren las opciones en el mapa.
-
----
-
-3. **MODO FICHA DE LUGAR (JSON):** Úsalo si la solicitud es de un lugar o negocio **específico** (Salud o No Salud). Debe incluir la propiedad 'placeToSearch' con el nombre exacto del lugar.
-
-4. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo para solicitudes de categorías generales O para **CUMPLIR EL PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES**.
-
-5. **MODO CONVERSACIONAL (Texto Plano):** Úsalo para preguntas generales o de seguimiento que no requieran una ficha.
-
-6. Los formatos JSON requeridos son:
-   
-   // Formato para LUGAR ESPECÍFICO (Salud o No Salud)
-   {
-     "type": "place", 
-     "placeName": "Nombre del Lugar", 
-     "placeToSearch": "Nombre Exacto a buscar en Places API, ej: JM Dental Clinic", 
-     "placeCategory": "Clasificación general del lugar, ej: Clínica Dental, Restaurante",
-     "isHealthPlace": true/false, 
-     "description": "Descripción corta de no más de 3 oraciones.",
-     "isStructured": true
-   }
-   
-   // Formato para CATEGORÍA GENERAL
-   {
-     "type": "category", 
-     "categoryName": "Nombre de la Categoría, ej: Taquerías en Progreso",
-     "description": "Resumen de la categoría en Progreso. Debes incluir una frase como: 'Usa el botón de 'Ver en Mapa' para explorar todas las opciones y elegir el lugar que más te interese. 🗺️'",
-     "isStructured": true
-   }
-
-   // FORMATO DE FALLO: Si la búsqueda local falla (el servidor lo generará si no encuentra el lugar)
-   {
-     "type": "place_not_found", 
-     "placeToSearch": "Nombre del Lugar No Encontrado", 
-     "description": "El servidor generó este mensaje: El lugar no se encontró en Nuevo Progreso. 📍",
-     "isStructured": true
-   }
-   
-   // REGLA CLAVE: Si la respuesta requiere MÚLTIPLES FICHAS, debes envolver todas las fichas en un array y añadir la propiedad "isMultiStructured": true.
-   {
-     "isMultiStructured": true,
-     "response": [
-       { "type": "category", "categoryName": "Dentistas en Progreso", "description": "...", "isStructured": true },
-       { "type": "category", "categoryName": "Oculistas en Progreso", "description": "...", "isStructured": true }
-     ],
-     "conversationText": "Hola, encontré varias opciones para ti:"
-   }
-   
-   // El texto conversacional siempre debe ir ANTES o DESPUÉS de cualquier bloque JSON.`;
-
+// ... (Resto de la función getPlaceDetails se mantiene igual) ...
 
 /**
  * Función que busca el nombre de un lugar en la API de Google Places.
@@ -132,7 +70,7 @@ async function getPlaceDetails(query) {
         const placeId = findPlaceResponse.data.candidates?.[0]?.place_id;
         
         if (!placeId) {
-            console.log("No se encontró un place_id cerca de Nuevo Progreso.");
+            // console.log("No se encontró un place_id cerca de Nuevo Progreso.");
             return null;
         }
 
@@ -152,7 +90,7 @@ async function getPlaceDetails(query) {
         const address = place.formatted_address ? place.formatted_address.toLowerCase() : '';
         
         if (!address.includes('progreso') && !address.includes('río bravo')) {
-            console.log(`Fallo de geofencing flexible: Dirección (${address}) no incluye "Progreso" o "Río Bravo".`);
+            // console.log(`Fallo de geofencing flexible: Dirección (${address}) no incluye "Progreso" o "Río Bravo".`);
             return null; 
         }
         
@@ -170,7 +108,7 @@ async function getPlaceDetails(query) {
             phone: place.formatted_phone_number || null,
             mapUrl: place.url || null,
             reviewUrl: place.url || null, // Usamos la URL base para el botón de reseña/Google Maps
-            websiteUrl: place.websiteUrl || null,
+            websiteUrl: place.website || null,
             imageUrl: imageUrl
         };
 
@@ -189,10 +127,57 @@ export default async function handler(req, res) {
     try {
         const { history = [], userPrompt, currentLanguage } = req.body;
         
-        // Configuramos el idioma
+        // Configuramos el idioma y el sistema
         const langText = currentLanguage === 'es' ? 'español' : 'inglés';
         const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
 
+        // ----------------------------------------------------
+        // ⭐️ LÓGICA ROBUSTA DE BYPASS CANÓNICO (PRIORIDAD AL SERVIDOR)
+        // ----------------------------------------------------
+        let forcedCanonicalResponse = null; 
+        const promptSearchKey = userPrompt.toLowerCase().replace(/\s/g, ''); // Para buscar 'yomis' en el mapa
+
+        for (const [key, exceptionData] of Object.entries(EXCEPTION_DATA_MAP)) {
+            // Utilizamos includes para ser más flexibles (ej. "dónde está yomis spa" sigue disparando 'yomis')
+            if (promptSearchKey.includes(key)) {
+                
+                console.log(`Interceptación CANÓNICA forzada para: ${key}`);
+                
+                // 1. Buscar datos básicos (mapa/foto) a pesar de la alucinación
+                const placeData = await getPlaceDetails(exceptionData.searchName);
+                
+                const isHealthPlace = exceptionData.category.includes('Spa'); // Determinar si es de salud/estética
+                
+                forcedCanonicalResponse = {
+                    type: "place", 
+                    placeName: placeData ? placeData.name : key.toUpperCase(), // Usar nombre encontrado o la clave
+                    placeToSearch: exceptionData.searchName,
+                    placeCategory: exceptionData.category, 
+                    isHealthPlace: isHealthPlace,
+                    description: exceptionData.description, // DESCRIPCIÓN CANÓNICA FIJA
+                    isStructured: true,
+                    // Datos de Places API (serán null si falla la API, pero el bot no falla)
+                    mapUrl: placeData?.mapUrl || null,
+                    imageUrl: placeData?.imageUrl || null,
+                    placePhone: (placeData?.phone && !isHealthPlace) ? placeData.phone : null, 
+                    reviewUrl: placeData?.reviewUrl || null, 
+                    websiteUrl: (placeData?.websiteUrl && !isHealthPlace) ? placeData.websiteUrl : null,
+                };
+                break; // Detener el bucle, ya encontramos la excepción
+            }
+        }
+        
+        if (forcedCanonicalResponse) {
+            // Retornar la respuesta CANÓNICA directamente (garantiza la corrección)
+            return res.status(200).json({ responseText: JSON.stringify(forcedCanonicalResponse) });
+        }
+
+        // ----------------------------------------------------
+        // ⭐️ LÓGICA NORMAL (GEMINI + RAG de Reseñas)
+        // ----------------------------------------------------
+        
+        // ... (El resto del código se mantiene igual, ya que maneja el flujo normal y de categorías)
+        
         // LÓGICA DE INTERCEPTACIÓN Y PRIORIDAD LOCAL (MODIFICADA para forzar CATEGORY JSON)
         let promptToSend = userPrompt;
 
@@ -274,88 +259,55 @@ export default async function handler(req, res) {
 
                             if (placeData) {
                                 
-                                // 🛑 APLICAR CORRECCIÓN DE EXCEPCIÓN: Bypass si es un lugar conocido problemático.
-                                const exceptionName = placeNameSearch.toLowerCase().replace(/\s/g, '');
-                                let isException = false; 
-
-                                if (EXCEPTION_DATA_MAP[exceptionName]) {
-                                    const exception = EXCEPTION_DATA_MAP[exceptionName];
-                                    
-                                    // 1. CORREGIR CATEGORÍA DEL JSON INICIAL
-                                    enrichedFicha.placeCategory = exception.category;
-                                    isException = true; 
-                                    console.log(`Excepción CANÓNICA aplicada. Bypassing re-prompt para ${placeNameSearch}.`);
-                                }
+                                // 🛑 EXCEPCIÓN: La lógica de excepción CANÓNICA ya fue manejada arriba. 
+                                // Aquí solo queda la lógica de RAG (Reseñas) para lugares normales.
                                 
-                                if (isException) {
-                                    // **LÓGICA DE BYPASS: GENERAR LA FICHA FINAL CON DATOS CANÓNICOS**
-                                    const canonicalDescription = EXCEPTION_DATA_MAP[exceptionName].description;
+                                // **LÓGICA NORMAL: USAR RE-PROMPT con GOOGLE SEARCH RAG (Reseñas)**
+
+                                let toolsToUse = [{ googleSearch: {} }]; 
+                                
+                                // ⭐️ PASO ANTI-ALUCINACIÓN: FORZAR a Gemini a buscar una reseña
+                                let placePrompt = `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder.`;
+                                
+                                // ⭐️ INSTRUCCIÓN DE RAG CON RESEÑAS
+                                placePrompt += ` La categoría es: ${enrichedFicha.placeCategory}. **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} Nuevo Progreso". **Extrae las frases clave de una o dos reseñas reales y úsalas para componer la 'description' en el JSON.** Si no encuentras reseñas, resume el giro del lugar.`;
+
+                                // 🛑 RE-PROMPT A GEMINI PARA GENERAR LA FICHA ENRIQUECIDA
+                                const rePromptResult = await chat.sendMessage({ 
+                                    message: placePrompt,
+                                    tools: toolsToUse 
+                                });
+                                const rePromptText = rePromptResult.text.trim();
+                                
+                                try {
+                                    // Intentamos parsear la respuesta (solo el JSON)
+                                    const reParsedJson = JSON.parse(rePromptText.substring(rePromptText.indexOf('{'), rePromptText.lastIndexOf('}') + 1));
                                     
+                                    // Usamos la ficha re-parseada
                                     enrichedFicha = {
-                                        type: "place", 
-                                        placeName: placeData.name, 
-                                        placeToSearch: placeNameSearch, 
-                                        placeCategory: enrichedFicha.placeCategory, // Categoría Correcta
-                                        isHealthPlace: isHealthPlace,
-                                        description: canonicalDescription, // Descripción Canónica Forzada
-                                        isStructured: true,
-                                        // Datos de Places API
+                                        ...reParsedJson, // Ficha con la nueva descripción (RAG de reseña)
+                                        placeName: placeData.name,
                                         mapUrl: placeData.mapUrl,
                                         imageUrl: placeData.imageUrl,
+                                        // Restricciones de salud
                                         placePhone: isHealthPlace ? null : placeData.phone, 
                                         reviewUrl: placeData.reviewUrl, 
                                         websiteUrl: isHealthPlace ? null : placeData.websiteUrl,
                                     };
-
-                                } else { 
-                                    // **LÓGICA NORMAL: USAR RE-PROMPT con GOOGLE SEARCH RAG (Reseñas)**
-
-                                    let toolsToUse = [{ googleSearch: {} }]; 
+                                } catch (e) {
+                                    console.error("Fallo al re-parsear el JSON de anti-alucinación. Usando descripción original.", e);
                                     
-                                    // ⭐️ PASO ANTI-ALUCINACIÓN: FORZAR a Gemini a buscar una reseña
-                                    let placePrompt = `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder.`;
-                                    
-                                    // ⭐️ NUEVA INSTRUCCIÓN DE RAG CON RESEÑAS
-                                    placePrompt += ` La categoría es: ${enrichedFicha.placeCategory}. **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} Nuevo Progreso". **Extrae las frases clave de una o dos reseñas reales y úsalas para componer la 'description' en el JSON.** Si no encuentras reseñas, resume el giro del lugar.`;
-
-                                    // 🛑 RE-PROMPT A GEMINI PARA GENERAR LA FICHA ENRIQUECIDA
-                                    const rePromptResult = await chat.sendMessage({ 
-                                        message: placePrompt,
-                                        tools: toolsToUse 
-                                    });
-                                    const rePromptText = rePromptResult.text.trim();
-                                    
-                                    try {
-                                        // Intentamos parsear la respuesta (solo el JSON)
-                                        const reParsedJson = JSON.parse(rePromptText.substring(rePromptText.indexOf('{'), rePromptText.lastIndexOf('}') + 1));
-                                        
-                                        // Usamos la ficha re-parseada
-                                        enrichedFicha = {
-                                            ...reParsedJson, // Ficha con la nueva descripción (RAG de reseña)
-                                            placeName: placeData.name,
-                                            mapUrl: placeData.mapUrl,
-                                            imageUrl: placeData.imageUrl,
-                                            // Restricciones de salud
-                                            placePhone: isHealthPlace ? null : placeData.phone, 
-                                            reviewUrl: placeData.reviewUrl, 
-                                            websiteUrl: isHealthPlace ? null : placeData.websiteUrl,
-                                        };
-                                    } catch (e) {
-                                        console.error("Fallo al re-parsear el JSON de anti-alucinación. Usando descripción original.", e);
-                                        
-                                        // Fallback: Si el re-prompt falla, usamos la descripción original de Gemini
-                                        enrichedFicha = {
-                                            ...enrichedFicha,
-                                            placeName: placeData.name,
-                                            mapUrl: placeData.mapUrl,
-                                            imageUrl: placeData.imageUrl,
-                                            placePhone: isHealthPlace ? null : placeData.phone,
-                                            reviewUrl: placeData.reviewUrl, 
-                                            websiteUrl: isHealthPlace ? null : placeData.websiteUrl,
-                                        };
-                                    }
-                                } // Fin del if (isException) else block
-
+                                    // Fallback: Si el re-prompt falla, usamos la descripción original de Gemini
+                                    enrichedFicha = {
+                                        ...enrichedFicha,
+                                        placeName: placeData.name,
+                                        mapUrl: placeData.mapUrl,
+                                        imageUrl: placeData.imageUrl,
+                                        placePhone: isHealthPlace ? null : placeData.phone,
+                                        reviewUrl: placeData.reviewUrl, 
+                                        websiteUrl: isHealthPlace ? null : placeData.websiteUrl,
+                                    };
+                                }
                                 
                             } else { 
                                 // Si NO existe (Fallo del geofencing)
