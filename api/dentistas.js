@@ -1,11 +1,9 @@
-// Archivo: api/dentistas.js (Versión 3.0 - Completa con Campos Recomendados)
+// Archivo: api/dentistas.js (Versión 3.1 - FINAL: Búsqueda extendida y campos potentes)
 
 const PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 
-// ⭐ CAMPOS RECOMENDADOS AÑADIDOS:
-// - icon: Para una representación visual rápida.
-// - rating: Para filtrar por calidad.
-// - geometry: Para las coordenadas exactas de ubicación (lat/lng).
+// CAMPOS SOLICITADOS (Place Details)
+// Se incluyen: Descripción (editorial_summary), Coordenadas (geometry), Icono, Rating, etc.
 const DETAIL_FIELDS = [
     'place_id',
     'name',
@@ -22,23 +20,35 @@ const DETAIL_FIELDS = [
     'geometry' 
 ];
 
-// Consultas Variadas (Sin Cambios)
+// ARRAY DE CONSULTAS EXPANDIDO (20 TÉRMINOS)
 const searchQueries = [
+    // Búsquedas de alto tráfico
     'dentistas Nuevo Progreso',
-    'implantes dentales Nuevo Progreso',
-    'ortodoncia Nuevo Progreso',
     'clínica dental cosmética Nuevo Progreso',
     'dentistas Avenida Benito Juárez Nuevo Progreso',
-    'dentistas Plaza Río Nuevo Progreso',
-    'dentistas Calle Coahuila Nuevo Progreso',
-    'odontología infantil Nuevo Progreso',
-    'coronas dentales Nuevo Progreso',
-    'endodoncia Nuevo Progreso',
-    'blanqueamiento dental Nuevo Progreso',
     'dentistas cerca de la Aduana Nuevo Progreso',
+    'dentistas Plaza Río Nuevo Progreso',
+    
+    // Búsquedas geográficas amplias (para capturar expansión a calles secundarias)
+    'dentistas Colonias Nuevo Progreso',
+    'dentistas calles secundarias Nuevo Progreso',
+    'dentistas zona comercial Nuevo Progreso',
+    'dentistas zona residencial Nuevo Progreso',
+    'dentistas sobre el río Nuevo Progreso',
+    
+    // Búsquedas de nicho/especialidad
+    'implantes dentales Nuevo Progreso',
+    'ortodoncia Nuevo Progreso',
+    'endodoncia Nuevo Progreso',
     'periodoncista Nuevo Progreso',
-    'dentistas rating 5 Nuevo Progreso',
-    'clínicas dentales económicas Nuevo Progreso'
+    'odontología infantil Nuevo Progreso',
+    'cirugía maxilofacial Nuevo Progreso',
+    
+    // Búsquedas de servicio
+    'laboratorio dental Nuevo Progreso',
+    'clínicas dentales económicas Nuevo Progreso',
+    'coronas dentales Nuevo Progreso',
+    'servicios dentales emergencia Nuevo Progreso'
 ];
 
 export default async function handler(req, res) {
@@ -50,7 +60,7 @@ export default async function handler(req, res) {
 
     try {
         // =========================================================
-        // PASO 1: Obtener Place IDs únicos (Text Search)
+        // PASO 1: Obtener Place IDs únicos (Text Search con paginación extendida)
         // =========================================================
         for (const query of searchQueries) {
             let next_page_token = null;
@@ -92,7 +102,7 @@ export default async function handler(req, res) {
         const detailedList = [];
 
         // =========================================================
-        // PASO 2: Obtener detalles completos (Place Details)
+        // PASO 2: Obtener detalles completos para cada ID (Place Details)
         // =========================================================
         for (const [index, placeId] of idsToFetch.entries()) {
             await new Promise(resolve => setTimeout(resolve, 100)); 
@@ -120,12 +130,12 @@ export default async function handler(req, res) {
                     website: details.website || 'Sitio Web N/A',
                     google_url: details.url || 'URL de Maps N/A',
                     
-                    // ⭐ CAMPOS POTENTES AÑADIDOS
+                    // CAMPOS POTENTES
                     rating: details.rating || 'N/A',
                     total_ratings: details.user_ratings_total || 0,
-                    latitude: details.geometry?.location?.lat || 'N/A', // Coordenadas
-                    longitude: details.geometry?.location?.lng || 'N/A', // Coordenadas
-                    icon_url: details.icon || 'Icono N/A', // Icono para identificación
+                    latitude: details.geometry?.location?.lat || 'N/A',
+                    longitude: details.geometry?.location?.lng || 'N/A',
+                    icon_url: details.icon || 'Icono N/A',
                     
                     // DESCRIPCIÓN Y HORARIO
                     hours: hours,
@@ -154,7 +164,7 @@ export default async function handler(req, res) {
 }
 
 // ----------------------------------------------------------------
-// Funciones Auxiliares (Sin Cambios)
+// Funciones Auxiliares 
 // ----------------------------------------------------------------
 
 function buildPlaceDetailsUrl(placeId) {
