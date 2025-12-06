@@ -1,10 +1,13 @@
-// Archivo: chat.js (Versión Definitiva con Carga Estática de JSON)
+// Archivo: chat.js (Versión Definitiva 3.0 - Carga Estática Compatible con ESM)
 
 import { GoogleGenAI } from '@google/genai';
 import { Client as PlacesClient } from '@googlemaps/google-maps-services-js'; 
+// 🟢 CRÍTICO: Módulo nativo para crear una función 'require' dentro del scope ESM
+import { createRequire } from 'module'; 
 
-// 🛑 SOLUCIÓN CRÍTICA: Carga estática y síncrona del JSON usando require.
-// Vercel garantiza que este archivo se incluya y se cargue al inicio.
+const require = createRequire(import.meta.url); // Inicializa la función require localmente
+
+// 🛑 SOLUCIÓN CRÍTICA: Carga estática y síncrona del JSON usando el 'require' local.
 const DENTIST_CATALOG = require('./dentists_data.json'); 
 const CATALOG_LOADED = true; 
 console.log(`✅ Catálogo de Dentistas cargado estáticamente: ${DENTIST_CATALOG.length} entradas.`);
@@ -220,7 +223,6 @@ function areNamesSimilar(searchName, returnedName) {
 
 
 export default async function handler(req, res) {
-    // 🛑 Nota: No se requiere loadDentistCatalog(), la carga es estática.
     
     if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Método no permitido' });
@@ -289,7 +291,6 @@ export default async function handler(req, res) {
                         placePhone: localData.phone,
                         mapUrl: localData.mapUrl,
                         websiteUrl: localData.websiteUrl,
-                        // NO se pone imageUrl aquí, ya que la estrategia es buscarla con Gemini
                     };
                  }
              }
