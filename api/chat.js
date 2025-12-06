@@ -1,11 +1,10 @@
-// Archivo: chat.js (Versión Definitiva 3.0 - Carga Estática Compatible con ESM)
+// Archivo: chat.js (Versión Definitiva 4.0 - Búsqueda Tolerante y Enriquecimiento de Imagen)
 
 import { GoogleGenAI } from '@google/genai';
 import { Client as PlacesClient } from '@googlemaps/google-maps-services-js'; 
-// 🟢 CRÍTICO: Módulo nativo para crear una función 'require' dentro del scope ESM
 import { createRequire } from 'module'; 
 
-const require = createRequire(import.meta.url); // Inicializa la función require localmente
+const require = createRequire(import.meta.url); 
 
 // 🛑 SOLUCIÓN CRÍTICA: Carga estática y síncrona del JSON usando el 'require' local.
 const DENTIST_CATALOG = require('./dentists_data.json'); 
@@ -37,7 +36,7 @@ const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
 const placesClient = new PlacesClient({});
 
-// 2. Definimos la Instrucción del Sistema (MODIFICADA PARA FORZAR CONTEXTO FRESCO)
+// 2. Definimos la Instrucción del Sistema 
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 **REGLA DE ESTRICTO CUMPLIMIENTO:** Si la solicitud del usuario es para un LUGAR o CATEGORÍA, DEBES responder **EXCLUSIVAMENTE con un formato JSON**. Está **PROHIBIDO** responder en texto plano conversacional en estos casos. Usa el formato de FALLO si el servidor lo indica o si no estás seguro de la existencia del lugar.
@@ -94,23 +93,62 @@ REGLAS DE FORMATO:
 
 
 /**
- * Función de búsqueda en el JSON local (Catálogo de Dentistas).
+ * Función de búsqueda en el JSON local (Catálogo de Dentistas) con tolerancia.
  * @param {string} query Nombre del lugar a buscar (ej: "Dr. Juarez").
  * @returns {object|null} Detalles completos del JSON o null.
  */
 function searchLocalCatalog(query) {
     if (!CATALOG_LOADED) return null;
     
-    // Normalización de la búsqueda: minúsculas y sin caracteres especiales
-    const normalizedQuery = query.toLowerCase().replace(/[^a-z0-9]/g, '');
+    // Normalización de la búsqueda
+    const normalizedQuery = query.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+    
+    // Si la consulta es demasiado corta después de la normalización, regresamos null (para evitar falsos positivos)
+    if (normalizedQuery.length < 3) return null; 
 
     for (const dentist of DENTIST_CATALOG) {
-        const normalizedName = dentist.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        // Normaliza el nombre del dentista en el JSON
+        const normalizedName = dentist.name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
         
-        // Búsqueda por inclusión: si la consulta del usuario es parte del nombre CANÓNICO
+        // 1. Coincidencia exacta
+        if (normalizedName === normalizedQuery) {
+            return { 
+                name: dentist.name,
+                phone: dentist.phone || null,
+                mapUrl: dentist.google_url || null,
+                websiteUrl: dentist.website || null,
+                description: dentist.description_summary || 'Clínica dental verificada en Nuevo Progreso.',
+                latitude: dentist.latitude,
+                longitude: dentist.longitude,
+                isHealthPlace: true 
+            };
+        }
+
+        // 2. Coincidencia por inclusión (si la consulta incluye el nombre completo o viceversa)
         if (normalizedName.includes(normalizedQuery) || normalizedQuery.includes(normalizedName)) {
-            // ¡ENCONTRADO!
-            return {
+            return { 
+                name: dentist.name,
+                phone: dentist.phone || null,
+                mapUrl: dentist.google_url || null,
+                websiteUrl: dentist.website || null,
+                description: dentist.description_summary || 'Clínica dental verificada en Nuevo Progreso.',
+                latitude: dentist.latitude,
+                longitude: dentist.longitude,
+                isHealthPlace: true 
+            };
+        }
+        
+        // 3. Coincidencia por palabra clave (útil para buscar por apellido o fragmento)
+        const queryWords = normalizedQuery.split(/\s+/).filter(word => word.length > 2);
+        const nameWords = normalizedName.split(/\s+/).filter(word => word.length > 2);
+        
+        // Si cualquier palabra clave (de más de 2 letras) de la búsqueda coincide con una del nombre
+        const commonWord = queryWords.some(qWord => 
+            nameWords.some(nWord => nWord.includes(qWord))
+        );
+
+        if (commonWord) {
+             return { 
                 name: dentist.name,
                 phone: dentist.phone || null,
                 mapUrl: dentist.google_url || null,
@@ -126,7 +164,7 @@ function searchLocalCatalog(query) {
 }
 
 /**
- * Función que busca el nombre de un lugar en la API de Google Places (Plan B).
+ * Función que busca el nombre de un lugar en la API de Google Places (Plan B / Enriquecimiento de imagen).
  * @param {string} query Nombre del lugar a buscar.
  * @returns {object|null} Objeto con detalles del lugar o null si NO existe el lugar exacto.
  */
@@ -269,7 +307,7 @@ export default async function handler(req, res) {
             }
         }
         
-        // 2. Verificar en el Catálogo de Dentistas
+        // 2. Verificar en el Catálogo de Dentistas (Con Búsqueda Tolerante)
         if (!forcedCanonicalResponse) {
              const placeNameFromAI = await getPlaceNameFromAI(userPrompt, history);
 
@@ -277,7 +315,11 @@ export default async function handler(req, res) {
                  const localData = searchLocalCatalog(placeNameFromAI);
                  
                  if (localData) {
-                    console.log(`Interceptación LOCAL (Dentista) forzada para: ${placeNameFromAI}`);
+                    console.log(`Interceptación LOCAL (Dentista) forzada para: ${localData.name} con búsqueda: ${placeNameFromAI}`);
+                    
+                    // 🟢 ENRIQUECIMIENTO: Llama a Places API SOLO para obtener la imagen
+                    // Nota: Usamos localData.name para la búsqueda de imagen, que es el nombre canónico del JSON.
+                    const placeDataForImage = await getPlaceDetails(localData.name);
                     
                     forcedCanonicalResponse = {
                         type: "place", 
@@ -291,6 +333,10 @@ export default async function handler(req, res) {
                         placePhone: localData.phone,
                         mapUrl: localData.mapUrl,
                         websiteUrl: localData.websiteUrl,
+                        // 🟢 AGREGADO: Imagen de Places API
+                        imageUrl: placeDataForImage?.imageUrl || null, 
+                        latitude: localData.latitude, 
+                        longitude: localData.longitude
                     };
                  }
              }
