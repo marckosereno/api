@@ -630,6 +630,11 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             color: white;
         }
         /* FIN NUEVOS ESTILOS DE BÚSQUEDA */
+        /* 🛑 NUEVO: Estilo del icono para el emoji ⚡️ */
+        #mode-icon {
+            font-size: 1.5rem; /* Asegura que el emoji se vea grande */
+            line-height: 1; /* Para centrarlo correctamente */
+        }
 
     </style>
     <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
@@ -717,7 +722,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             
             <div class="p-4 flex-shrink-0 pt-2 flex items-center space-x-2"> 
                 <button id="toggle-mode-button" title="Alternar Modo Búsqueda Geográfica">
-                    <i id="toggle-icon" class="fas fa-search"></i> 
+                    <span id="mode-icon">⚡️</span> 
                 </button>
                 
                 <div class="map-search-bar w-full">
@@ -846,7 +851,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     
     // 🛑 NUEVAS REFERENCIAS PARA EL MODO BÚSQUEDA DIRECTA
     const toggleButton = document.getElementById('toggle-mode-button');
-    const toggleIcon = document.getElementById('toggle-icon');
+    const modeIconSpan = document.getElementById('mode-icon'); // 🛑 CAMBIO CLAVE: Referencia al SPAN del emoji
 
     // 🛑 NUEVO: Objeto de mapeo de Subcategorías (Clave: Query del Chip de Categoría General)
     const SUBCATEGORIES_MAP = {
@@ -1234,7 +1239,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             // Activar Modo Búsqueda
             inputElement.classList.add('search-mode');
             toggleButton.classList.add('active');
-            toggleIcon.className = 'fas fa-times'; // Icono de cerrar (para salir)
+            modeIconSpan.textContent = '❌'; // 🛑 CAMBIO CLAVE: Icono de cerrar (para salir)
             inputElement.placeholder = UI_STRINGS[currentLanguage].searchPlaceholder;
             sendButton.disabled = true; // Deshabilitar el botón de enviar texto (solo autocompletado)
             
@@ -1247,7 +1252,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             // Activar Modo Chat
             inputElement.classList.remove('search-mode');
             toggleButton.classList.remove('active');
-            toggleIcon.className = 'fas fa-search'; // Icono de búsqueda/chat
+            modeIconSpan.textContent = '⚡️'; // 🛑 CAMBIO CLAVE: Icono de rayo (para activar)
             inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
             
             // Habilitar el botón de enviar solo si hay texto
@@ -2134,6 +2139,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         
         // 5. Establecer el modo inicial (Chat) y ocultar el indicador de carga
         // El toggleSearchMode inicializa correctamente el botón y el input
+        // Se llama dos veces para asegurar que inicie en modo 'chat' (rayo ⚡️)
         toggleSearchMode();
         toggleSearchMode(); 
         hideLoadingIndicator(); 
@@ -2141,8 +2147,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         // 6. Mensaje de bienvenida inicial (solo si el historial está vacío)
         if (chatHistory.length === 0) {
              const welcomeMessage = currentLanguage === 'es'
-                ? "¡Hola! Soy tu **PROGRESO TOUR GUIDE**. Estoy listo para ayudarte. Usa el icono azul <i class='fas fa-search'></i> para activar la **Búsqueda Geográfica Directa** 📍."
-                : "Hello! I'm your **PROGRESO TOUR GUIDE**. I'm ready to help. Use the blue icon <i class='fas fa-search'></i> to activate **Direct Geographic Search** 📍.";
+                ? "¡Hola! Soy tu **PROGRESO TOUR GUIDE**. Estoy listo para ayudarte. Usa el icono azul **⚡️** para activar la **Búsqueda Geográfica Directa** 📍."
+                : "Hello! I'm your **PROGRESO TOUR GUIDE**. I'm ready to help. Use the blue icon **⚡️** to activate **Direct Geographic Search** 📍.";
              
              chatHistory.push({ role: 'model', text: welcomeMessage, timestamp: new Date(), isStructured: false });
              renderChat();
