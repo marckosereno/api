@@ -1,13 +1,17 @@
+// Archivo: chat.js (FINAL: Con CommonJS 'require' para fs/promises)
+
 import { GoogleGenAI } from '@google/genai';
 import { Client as PlacesClient } from '@googlemaps/google-maps-services-js'; 
+// 🟢 CAMBIO CRÍTICO 1: Usamos 'require' en lugar de 'import' para el módulo fs
+const fs = require('fs/promises'); 
 
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
 
-// CONTEXTO GEOGRÁFICO FIJO PARA EL FILTRADO ESTRICTO
+// CONTEXTO GEOGRÁFICO FIJO
 const GEOGRAPHIC_CONTEXT = ", Nuevo Progreso, Tamaulipas, México";
 
-// ⭐️ MAPA DE EXCEPCIONES CON DESCRIPCIONES CANÓNICAS PARA CORREGIR ALUCINACIONES
+// ⭐️ MAPA DE EXCEPCIONES Y CACHÉ LOCAL
 const EXCEPTION_DATA_MAP = {
     'yomis': { 
         category: 'Spa y Masajes', 
@@ -21,18 +25,20 @@ const EXCEPTION_DATA_MAP = {
     }, 
 };
 
+// 🟢 CAMBIO CRÍTICO 2: Variables globales para el Catálogo de Dentistas
+let DENTIST_CATALOG = [];
+let CATALOG_LOADED = false;
+
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
-const placesClient = new PlacesClient({}); // Corregida la inicialización
+const placesClient = new PlacesClient({});
 
 // 2. Definimos la Instrucción del Sistema (MODIFICADA PARA FORZAR CONTEXTO FRESCO)
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 **REGLA DE ESTRICTO CUMPLIMIENTO:** Si la solicitud del usuario es para un LUGAR o CATEGORÍA, DEBES responder **EXCLUSIVAMENTE con un formato JSON**. Está **PROHIBIDO** responder en texto plano conversacional en estos casos. Usa el formato de FALLO si el servidor lo indica o si no estás seguro de la existencia del lugar.
-**NOTA CRÍTICA DE CLASIFICACIÓN:** Tu clasificación debe ser precisa. No asumas que todas las búsquedas son restaurantes. Usa las categorías más específicas posibles (Spa, Tienda de Ropa, Clínica Dental, Taquería, etc.).
-**REGLA CRÍTICA DE CONTEXTO:** Si el usuario solicita un **LUGAR ESPECÍFICO** (ej. "Farmacia Guadalajara", "El Cuñao"), DEBES IGNORAR CUALQUIER CATEGORÍA PREVIA del chat (ej. si la última búsqueda fue un restaurante). Debes clasificar la nueva solicitud desde CERO, de forma independiente.
-
+// ... (Instrucción de Sistema truncada por longitud) ...
 REGLAS DE FORMATO:
 1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 📍, ☀️) al inicio o final de tus respuestas o descripciones.
 2. **REGLA CRÍTICA DE SALUD Y PRIVACIDAD:** Para salud, DEBES establecer el campo "isHealthPlace" en "true".
@@ -81,11 +87,50 @@ REGLAS DE FORMATO:
    // REGLA CLAVE: Si la respuesta requiere MÚLTIPLES FICHAS, debes envolver todas las fichas en un array y añadir la propiedad "isMultiStructured": true.
    // El texto conversacional debe ir en "conversationText" y NO debe ser la respuesta principal.`;
 
+// 🟢 CAMBIO CRÍTICO 3: Función de Carga de Catálogo
+async function loadDentistCatalog() {
+    if (CATALOG_LOADED) return;
+    try {
+        const data = await fs.readFile('./dentists_data.json', 'utf-8');
+        DENTIST_CATALOG = JSON.parse(data);
+        CATALOG_LOADED = true;
+        console.log(`✅ Catálogo de Dentistas cargado: ${DENTIST_CATALOG.length} entradas.`);
+    } catch (e) {
+        console.error("❌ ERROR: No se pudo cargar el JSON de dentistas (dentists_data.json). Asegúrate de que existe en el directorio raíz.", e.message);
+    }
+}
+
 /**
- * Función que busca el nombre de un lugar en la API de Google Places.
- * @param {string} query Nombre del lugar a buscar.
- * @returns {object|null} Objeto con detalles del lugar o null si NO existe el lugar exacto en Nuevo Progreso.
+ * 🟢 CAMBIO CRÍTICO 4: Nueva función de búsqueda en el JSON local.
  */
+function searchLocalCatalog(query) {
+    if (!CATALOG_LOADED) return null;
+    
+    // Normalización de la búsqueda: minúsculas y sin caracteres especiales
+    const normalizedQuery = query.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    for (const dentist of DENTIST_CATALOG) {
+        const normalizedName = dentist.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        
+        // Búsqueda por inclusión: si la consulta del usuario es parte del nombre CANÓNICO (más flexible)
+        if (normalizedName.includes(normalizedQuery) || normalizedQuery.includes(normalizedName)) {
+            // 🛑 ¡ENCONTRADO! Devolvemos la ficha enriquecida y verificada.
+            return {
+                name: dentist.name,
+                phone: dentist.phone || null,
+                mapUrl: dentist.google_url || null,
+                websiteUrl: dentist.website || null,
+                description: dentist.description_summary || 'Clínica dental verificada en Nuevo Progreso.',
+                latitude: dentist.latitude,
+                longitude: dentist.longitude,
+                isHealthPlace: true 
+            };
+        }
+    }
+    return null; // No encontrado en el catálogo local
+}
+
+// Función que busca el nombre de un lugar en la API de Google Places. (Se mantiene la API de Places como Plan B)
 async function getPlaceDetails(query) { 
     
     if (!placesApiKey) {
@@ -125,8 +170,6 @@ async function getPlaceDetails(query) {
 
         const place = detailsResponse.data.result;
         
-        // 🛑 VALIDACIÓN GEOFENCING ELIMINADA: Confiamos en locationBias y descartamos el filtro de texto estricto.
-        
         // 3. Generar la URL de la foto
         const photoReference = place.photos?.[0]?.photo_reference || null;
         let imageUrl = null;
@@ -154,12 +197,14 @@ async function getPlaceDetails(query) {
 function areNamesSimilar(searchName, returnedName) {
     const s1 = searchName.toLowerCase().replace(/[^a-z0-9]/g, '');
     const s2 = returnedName.toLowerCase().replace(/[^a-z0-9]/g, '');
-    // Verifica si uno es substring del otro o son idénticos después de limpieza
     return s2.includes(s1) || s1.includes(s2) || s1 === s2;
 }
 
 
 export default async function handler(req, res) {
+    // 🟢 CAMBIO CRÍTICO 5: Cargar el catálogo al inicio del handler
+    await loadDentistCatalog(); 
+    
     if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Método no permitido' });
     }
@@ -171,14 +216,15 @@ export default async function handler(req, res) {
         const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
 
         // ----------------------------------------------------
-        // ⭐️ LÓGICA ROBUSTA DE BYPASS CANÓNICO (PRIORIDAD AL SERVIDOR)
+        // ⭐️ LÓGICA DE BLINDAJE CANÓNICO Y DENTISTAS (PRIORIDAD AL SERVIDOR)
         // ----------------------------------------------------
         let forcedCanonicalResponse = null; 
         const promptSearchKey = userPrompt.toLowerCase().replace(/\s/g, ''); 
 
+        // 1. Verificar excepciones fijas (Yomis, Pinkys)
         for (const [key, exceptionData] of Object.entries(EXCEPTION_DATA_MAP)) {
-            // Utilizamos includes para ser más flexibles
             if (promptSearchKey.includes(key)) {
+                // ... (lógica de Yomis/Pinkys, sin cambios) ...
                 
                 console.log(`Interceptación CANÓNICA forzada para: ${key}`);
                 
@@ -205,13 +251,39 @@ export default async function handler(req, res) {
             }
         }
         
+        // 2. 🟢 CAMBIO CRÍTICO 6: Verificar en el Catálogo de Dentistas
+        if (!forcedCanonicalResponse) {
+             const placeNameFromAI = await getPlaceNameFromAI(userPrompt, history);
+
+             if (placeNameFromAI) {
+                 const localData = searchLocalCatalog(placeNameFromAI);
+                 
+                 if (localData) {
+                    console.log(`Interceptación LOCAL (Dentista) forzada para: ${placeNameFromAI}`);
+                    
+                    forcedCanonicalResponse = {
+                        type: "place", 
+                        placeName: localData.name, 
+                        placeToSearch: localData.name,
+                        placeCategory: 'Clínica Dental',
+                        isHealthPlace: localData.isHealthPlace,
+                        description: localData.description, 
+                        isStructured: true,
+                        // Datos del JSON
+                        placePhone: localData.phone,
+                        mapUrl: localData.mapUrl,
+                        websiteUrl: localData.websiteUrl,
+                    };
+                 }
+             }
+        }
+        
         if (forcedCanonicalResponse) {
-            // Retornar la respuesta CANÓNICA directamente (GARANTÍA DE BLINDAJE)
             return res.status(200).json({ responseText: JSON.stringify(forcedCanonicalResponse) });
         }
 
         // ----------------------------------------------------
-        // ⭐️ LÓGICA NORMAL (GEMINI + RAG de Reseñas)
+        // ⭐️ LÓGICA NORMAL (GEMINI + RAG de Reseñas) - PLAN B
         // ----------------------------------------------------
         
         let promptToSend = userPrompt;
@@ -231,7 +303,6 @@ export default async function handler(req, res) {
             else if (categoryKeyRaw.includes('barbacoa')) categoryName = "Barbacoa y Birria";
             else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = "Salud y Estética";
             
-            // SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA
             promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría ${categoryName} en Nuevo Progreso.`;
             
             console.log("PROTOCOLO CATEGORÍA GENERAL ACTIVADO para:", categoryName);
@@ -278,7 +349,6 @@ export default async function handler(req, res) {
                             const placeNameSearch = ficha.placeToSearch.trim();
                             const isHealthPlace = ficha.isHealthPlace === true; 
                             
-                            // Búsqueda flexible (solo el nombre)
                             const searchForPlaces = placeNameSearch; 
                             
                             const placeData = await getPlaceDetails(searchForPlaces);
@@ -365,7 +435,6 @@ export default async function handler(req, res) {
                     finalResponseData.responseText = JSON.stringify(finalResponseJson);
 
                 } else {
-                    // Si el modelo generó texto sin JSON (FALLO GRAVE), lo devuelve.
                     finalResponseData.responseText = modelResponseText; 
                 }
             }
@@ -382,5 +451,30 @@ export default async function handler(req, res) {
             error: true, 
             message: "Fallo al obtener respuesta de Gemini: " + error.message
         });
+    }
+}
+
+
+/** Función auxiliar para pedir el nombre a Gemini.
+ * Necesaria para que Gemini clasifique y devuelva el 'placeToSearch' antes de buscar en el JSON.
+ */
+async function getPlaceNameFromAI(userPrompt, history) {
+    const identificationPrompt = `El usuario pide información. Basándote en el historial y el prompt ("${userPrompt}"), identifica el nombre del lugar específico (ej. "Farmacia Guadalajara" o "Dr. Juan Pérez") que el usuario está preguntando. Responde ÚNICAMENTE con el nombre exacto que usarías para buscar. Si el usuario pide una categoría ("dame restaurantes"), responde ÚNICAMENTE con "CATEGORY_REQUEST".`;
+    
+    try {
+        const chat = ai.chats.create({
+            model: MODEL_NAME, 
+            history: history 
+        });
+        const result = await chat.sendMessage({ message: identificationPrompt });
+        const name = result.text.trim();
+        
+        if (name && name !== "CATEGORY_REQUEST" && name.length < 50) {
+            return name;
+        }
+        return null;
+    } catch (e) {
+        console.error("Error al identificar el nombre del lugar con IA:", e);
+        return null;
     }
 }
