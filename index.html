@@ -96,7 +96,7 @@ font-family:Spline Sans Light;
 
         .chip-group-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 10px; padding-bottom: 5px }
         
-        /* Estilo de la barra de chat NUEVO (GLASSMOPRHISM) */
+        /* Estilo de la barra de chat ANTERIOR */
         .map-search-bar {
             background-color: #ffffffb8; /* Fondo blanco con 72% de opacidad (Glassmorphism) */
             border-radius: 20px;
@@ -107,6 +107,14 @@ font-family:Spline Sans Light;
             padding: 4px; 
             width: 100%; 
             box-sizing: border-box; 
+        }
+
+        /* 🛑 NUEVO CSS CRÍTICO: Estilos para el Modo SPS (Búsqueda Exclusiva Nuevo Progreso) */
+        .map-search-bar.sps-active {
+            /* Diseño rectangular similar al de la flecha, pero con indicador de activación */
+            border: 2px solid #FFD700; /* Borde amarillo brillante/oro */
+            background-color: #FFFBE6; /* Fondo más claro para indicar el modo activo */
+            box-shadow: 0 0 8px rgba(255, 215, 0, 0.5); /* Sombra suave para destacar */
         }
         
         .map-input {
@@ -120,6 +128,13 @@ font-family:Spline Sans Light;
             outline: none !important;
             box-shadow: none !important;
         }
+        
+        /* 🛑 Nuevo estilo para el placeholder en modo activo */
+        .map-search-bar.sps-active .map-input::placeholder {
+            color: #DAA520; /* Texto oscuro para el placeholder */
+            font-style: italic;
+        }
+
         .go-button {
             background-color: black;
             color: white;
@@ -598,12 +613,17 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         }
         
         /* --- NUEVO ESTILO: MODO BÚSQUEDA (SEARCH MODE) --- */
+        /* Eliminamos los estilos previos (rojo) y adoptamos el estilo del SPS */
+        
+        /* 🛑 ELIMINACIÓN DEL ESTILO .search-mode en inputElement
         #user-input.search-mode {
             border-color: #dc3545; 
-            background-color: #fff0f0; /* Fondo sutilmente rojo para indicar el modo */
+            background-color: #fff0f0; 
             font-weight: bold;
-            color: #dc3545; /* Texto del input en rojo para indicar el modo */
-        }
+            color: #dc3545; 
+        } */
+        
+        /* 🛑 MODIFICACIÓN: Color del botón en modo ACTIVADO (Rayo ⚡️) */
         #toggle-mode-button {
             background-color: #2563eb; /* Azul por defecto (Modo CHAT) */
             color: white;
@@ -625,11 +645,14 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         #toggle-mode-button:active {
             transform: scale(0.95);
         }
+        /* 🛑 CRÍTICO: Color del botón cuando el SPS está ACTIVO (para conservarlo) */
         #toggle-mode-button.active {
-            background-color: #dc3545; /* Rojo cuando está en modo Búsqueda */
-            color: white;
+            background-color: #FFA500; /* Naranja/Amarillo (Rayo Activo) */
+            color: black; /* Texto/Icono oscuro */
+            box-shadow: 0 0 10px rgba(255, 165, 0, 0.7); /* Efecto de brillo */
         }
         /* FIN NUEVOS ESTILOS DE BÚSQUEDA */
+        
         /* 🛑 NUEVO: Estilo del icono para el emoji ⚡️ */
         #mode-icon {
             font-size: 1.5rem; /* Asegura que el emoji se vea grande */
@@ -725,7 +748,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                     <span id="mode-icon">⚡️</span> 
                 </button>
                 
-                <div class="map-search-bar w-full">
+                <div id="main-search-bar" class="map-search-bar w-full">
                     <input type="text" id="user-input" class="map-input focus:outline-none focus:ring-0" placeholder="Pregúntale al mapa">
                     
                     <button id="go-button" class="go-button transition hover:opacity-90 disabled:opacity-50">
@@ -852,6 +875,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     // 🛑 NUEVAS REFERENCIAS PARA EL MODO BÚSQUEDA DIRECTA
     const toggleButton = document.getElementById('toggle-mode-button');
     const modeIconSpan = document.getElementById('mode-icon'); // 🛑 CAMBIO CLAVE: Referencia al SPAN del emoji
+    const mainSearchBar = document.getElementById('main-search-bar'); // 🛑 NUEVO: Referencia a la barra contenedora
 
     // 🛑 NUEVO: Objeto de mapeo de Subcategorías (Clave: Query del Chip de Categoría General)
     const SUBCATEGORIES_MAP = {
@@ -890,7 +914,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         es: {
             header: "PROGRESO TOUR GUIDE",
             placeholder: "Pregúntale al mapa",
-            searchPlaceholder: "Búsqueda Exacta (Selecciona el lugar)...", // 🛑 NUEVO
+            searchPlaceholder: "Búsqueda Geográfica: Nuevo Progreso...", // 🛑 MODIFICADO para indicar el enfoque
             goButton: "Ir",
             loadingStatus: "Respondiendo tu petición...", // NUEVO: Estado de carga
             categories: "✨️ Categorías",
@@ -912,7 +936,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         en: {
             header: "PROGRESO TOUR GUIDE",
             placeholder: "Ask the map",
-            searchPlaceholder: "Exact Search (Select the place)...", // 🛑 NUEVO
+            searchPlaceholder: "Geographic Search: Nuevo Progreso...", // 🛑 MODIFICADO para indicar el enfoque
             goButton: "Go",
             loadingStatus: "Processing your request...", // NUEVO: Estado de carga
             categories: "✨️ Categories",
@@ -1210,17 +1234,18 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     
     /**
      * Inicializa el autocompletado de Google Places.
+     * 🛑 CRÍTICO: Usa las coordenadas fijas de Nuevo Progreso para acotar.
      */
     function initAutocomplete() {
         // Coordenadas de Nuevo Progreso (26.064, -98.005)
         const progressoBounds = new google.maps.LatLngBounds(
-            new google.maps.LatLng(26.0, -98.1), // SW
-            new google.maps.LatLng(26.1, -97.9)  // NE
+            new google.maps.LatLng(26.04, -98.02), // SW
+            new google.maps.LatLng(26.08, -97.98)  // NE
         );
 
         autocomplete = new google.maps.places.Autocomplete(inputElement, {
             bounds: progressoBounds,
-            strictBounds: true, // Restringe la búsqueda a la zona de Progreso
+            strictBounds: true, // Restringe la búsqueda a la zona de Progreso (CRÍTICO)
             types: ['establishment', 'geocode'], // Buscar negocios y direcciones
             componentRestrictions: { country: 'mx' } // Restringir a México
         });
@@ -1236,23 +1261,28 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         isSearchMode = !isSearchMode;
 
         if (isSearchMode) {
-            // Activar Modo Búsqueda
-            inputElement.classList.add('search-mode');
-            toggleButton.classList.add('active');
-            modeIconSpan.textContent = '❌'; // 🛑 CAMBIO CLAVE: Icono de cerrar (para salir)
-            inputElement.placeholder = UI_STRINGS[currentLanguage].searchPlaceholder;
+            // Activar Modo Búsqueda (SPS)
+            mainSearchBar.classList.add('sps-active'); // 🛑 Aplica el estilo SPS a la barra
+            toggleButton.classList.add('active'); // 🛑 Ilumina el botón del Rayo
+            modeIconSpan.textContent = '⚡️'; // 🛑 Mantiene el Rayo (pero iluminado por CSS .active)
+            
+            // Establecer el placeholder específico del modo SPS
+            inputElement.placeholder = UI_STRINGS[currentLanguage].searchPlaceholder; 
+            
             sendButton.disabled = true; // Deshabilitar el botón de enviar texto (solo autocompletado)
             
             // Si Google Maps API está disponible, inicializa el autocompletado
             if (window.google && window.google.maps) {
+                // Re-inicializar el autocompletado cada vez que se activa.
                 initAutocomplete(); 
             }
 
         } else {
             // Activar Modo Chat
-            inputElement.classList.remove('search-mode');
-            toggleButton.classList.remove('active');
-            modeIconSpan.textContent = '⚡️'; // 🛑 CAMBIO CLAVE: Icono de rayo (para activar)
+            mainSearchBar.classList.remove('sps-active'); // 🛑 Quita el estilo SPS
+            toggleButton.classList.remove('active'); // 🛑 Quita la iluminación del Rayo
+            modeIconSpan.textContent = '⚡️'; // Mantiene el Rayo (pero apagado)
+            
             inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
             
             // Habilitar el botón de enviar solo si hay texto
@@ -1284,8 +1314,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         chatHistory.push({ 
             role: 'user', 
             text: currentLanguage === 'es' 
-                ? `🔎 Búsqueda Directa del lugar: **${query}**`
-                : `🔎 Direct Search for place: **${query}**`, 
+                ? `🔎 Búsqueda Geográfica Directa: **${query}**`
+                : `🔎 Direct Geographic Search: **${query}**`, 
             timestamp: new Date() 
         });
         if (typeof renderChat === 'function') renderChat();
@@ -1294,7 +1324,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         toggleSearchMode(); // Volver a Modo Chat después de la búsqueda
 
         // 2. Disparar el envío al backend con el PLACE ID
-        handleSend(`Búsqueda directa del lugar ${query}`, placeId);
+        // El backend usará el Place ID para una búsqueda estricta y enfocada en Nuevo Progreso.
+        handleSend(`Búsqueda geográfica directa del lugar ${query}`, placeId);
     }
 
     // --- Funciones de INTERACCIÓN (SIN CAMBIOS EN LÓGICA) ---
@@ -1339,7 +1370,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         hideChipGroup(languageChipsGroup, languageChips);
         languageMenuVisible = false;
 
-        inputElement.placeholder = isSearchMode ? strings.searchPlaceholder : strings.placeholder; // 🛑 NUEVO: Ajustar al modo actual
+        // 🛑 MODIFICACIÓN: Ajustar placeholder según el modo actual
+        inputElement.placeholder = isSearchMode ? strings.searchPlaceholder : strings.placeholder; 
         document.getElementById('go-text').textContent = strings.goButton; 
 
         document.getElementById('btn-categorias').textContent = strings.categories;
@@ -2138,7 +2170,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         loadNotificationPreferences(); 
         
         // 5. Establecer el modo inicial (Chat) y ocultar el indicador de carga
-        // El toggleSearchMode inicializa correctamente el botón y el input
         // Se llama dos veces para asegurar que inicie en modo 'chat' (rayo ⚡️)
         toggleSearchMode();
         toggleSearchMode(); 
