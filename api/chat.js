@@ -1,4 +1,4 @@
-// Archivo: chat.js (Versión Definitiva 5.0 - Búsqueda Tolerante y Enriquecimiento de Imagen)
+// Archivo: chat.js (Versión Definitiva 5.1 - Corrección de Client Not Defined)
 
 import { GoogleGenAI } from '@google/genai';
 import { Client as PlacesClient } from '@googlemaps/google-maps-services-js'; 
@@ -35,7 +35,8 @@ const EXCEPTION_DATA_MAP = {
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
-const placesClient = new Client({});
+// 🟢 CORRECCIÓN: Usar PlacesClient, no Client.
+const placesClient = new PlacesClient({});
 
 // 2. Definimos la Instrucción del Sistema 
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
