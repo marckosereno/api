@@ -30,6 +30,7 @@ const placesClient = new PlacesClient({});
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 **REGLA DE ESTRICTO CUMPLIMIENTO:** Si la solicitud del usuario es para un LUGAR o CATEGORÍA, DEBES responder **EXCLUSIVAMENTE con un formato JSON**. Está **PROHIBIDO** responder en texto plano conversacional en estos casos. Usa el formato de FALLO si el servidor lo indica o si no estás seguro de la existencia del lugar.
+**NOTA CRÍTICA:** Tu clasificación debe ser precisa. No asumas que todas las búsquedas son restaurantes. Usa las categorías más específicas posibles (Spa, Tienda de Ropa, Clínica Dental, Taquería, etc.).
 
 REGLAS DE FORMATO:
 1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 📍, ☀️) al inicio o final de tus respuestas o descripciones.
@@ -79,19 +80,19 @@ REGLAS DE FORMATO:
    // REGLA CLAVE: Si la respuesta requiere MÚLTIPLES FICHAS, debes envolver todas las fichas en un array y añadir la propiedad "isMultiStructured": true.
    // El texto conversacional debe ir en "conversationText" y NO debe ser la respuesta principal.`;
 
-
 /**
  * Función que busca el nombre de un lugar en la API de Google Places.
  * @param {string} query Nombre del lugar a buscar.
  * @returns {object|null} Objeto con detalles del lugar o null si NO existe el lugar exacto en Nuevo Progreso.
  */
 async function getPlaceDetails(query) { 
-    // ... (Esta función se mantiene igual, ya que es la que extrae los datos básicos)
+    
     if (!placesApiKey) {
         console.error("GOOGLE_PLACES_API_KEY no definida.");
         return null;
     }
     
+    // Coordenadas aproximadas de Nuevo Progreso para locationBias (26.064, -98.005)
     const LOCATION_BIAS = { lat: 26.064, lng: -98.005 };
 
     try {
@@ -153,6 +154,14 @@ async function getPlaceDetails(query) {
     }
 }
 
+// Función de utilidad para verificar similitud de nombres (Nuevo en esta versión)
+function areNamesSimilar(searchName, returnedName) {
+    const s1 = searchName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const s2 = returnedName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    // Verifica si uno es substring del otro o son idénticos después de limpieza
+    return s2.includes(s1) || s1.includes(s2) || s1 === s2;
+}
+
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -179,7 +188,7 @@ export default async function handler(req, res) {
                 
                 const placeData = await getPlaceDetails(exceptionData.searchName);
                 
-                const isHealthPlace = exceptionData.category.includes('Spa'); // Asumimos que Spa/Masajes se maneja como Health
+                const isHealthPlace = exceptionData.category.includes('Spa');
                 
                 forcedCanonicalResponse = {
                     type: "place", 
@@ -273,18 +282,28 @@ export default async function handler(req, res) {
                             const placeNameSearch = ficha.placeToSearch.trim();
                             const isHealthPlace = ficha.isHealthPlace === true; 
                             
-                            const placeData = await getPlaceDetails(placeNameSearch);
+                            // ⭐️ CORRECCIÓN CRÍTICA: BUSCAR CON CATEGORÍA PARA MEJORAR LA COINCIDENCIA DE PLACES API
+                            const searchForPlaces = `${placeNameSearch} ${ficha.placeCategory}`;
+                            
+                            const placeData = await getPlaceDetails(searchForPlaces);
 
-                            if (placeData) {
+                            // 🛑 NUEVO BLINDAJE ANTI-CORRELACIÓN:
+                            // Si placeData existe, pero el nombre devuelto es dramáticamente diferente, lo descartamos.
+                            let isNameMiscorrelated = false;
+                            if (placeData && !areNamesSimilar(placeNameSearch, placeData.name)) {
+                                console.warn(`¡Fallo de correlación! Se buscó "${placeNameSearch}" pero Places devolvió "${placeData.name}". Descartando resultado.`);
+                                isNameMiscorrelated = true;
+                            }
+
+
+                            if (placeData && !isNameMiscorrelated) {
                                 // **LÓGICA NORMAL: USAR RE-PROMPT con GOOGLE SEARCH RAG (Reseñas)**
-                                // (La lógica canónica ya se saltó este bloque)
                                 
+                                // ⭐️ REFUERZO RAG: MÁS AGRESIVO EN LAS INSTRUCCIONES
                                 let placePrompt = `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder.`;
                                 
-                                // INSTRUCCIÓN DE RAG CON RESEÑAS
-                                placePrompt += ` La categoría es: ${enrichedFicha.placeCategory}. **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} Nuevo Progreso". **Extrae las frases clave de una o dos reseñas reales y úsalas para componer la 'description' en el JSON.** Si no encuentras reseñas, resume el giro del lugar. **NOTA CRÍTICA:** Solo usa la descripción que el RAG te proporciona.`;
+                                placePrompt += ` La categoría es: ${enrichedFicha.placeCategory}. **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **Extrae las frases clave de una o dos reseñas REALES y úsalas para componer la 'description' en el JSON. La descripción debe ser corta y basada SÓLO en reseñas.** Si no encuentras reseñas, resume el giro del lugar. **NOTA CRÍTICA:** Solo usa la descripción que el RAG te proporciona.`;
 
-                                // RE-PROMPT A GEMINI PARA GENERAR LA FICHA ENRIQUECIDA
                                 const rePromptResult = await chat.sendMessage({ 
                                     message: placePrompt,
                                     tools: [{ googleSearch: {} }] 
@@ -308,7 +327,7 @@ export default async function handler(req, res) {
                                 } catch (e) {
                                     console.error("Fallo al re-parsear el JSON de anti-alucinación RAG. Usando ficha original sin descripción RAG.", e);
                                     
-                                    // Fallback: Si el RAG falla, usamos la ficha original y dejamos la descripción vacía o la original.
+                                    // Fallback: Si el RAG falla, usamos la ficha original y dejamos la descripción del primer intento de Gemini
                                     enrichedFicha = {
                                         ...enrichedFicha,
                                         placeName: placeData.name,
@@ -321,7 +340,7 @@ export default async function handler(req, res) {
                                 }
                                 
                             } else { 
-                                // Si NO existe (Fallo del geofencing) - Usamos el JSON de fallo
+                                // Si NO existe (Fallo de geofencing, API, o Correlación de nombres)
                                 enrichedFicha = {
                                     type: "place_not_found", 
                                     placeToSearch: placeNameSearch, 
@@ -335,7 +354,6 @@ export default async function handler(req, res) {
                              const categorySearch = ficha.categoryName.replace(/en Progreso/i, '').trim();
                              const mapUrlQuery = categorySearch + GEOGRAPHIC_CONTEXT;
                              
-                             // Corrección de URL: Se usaba una URL que Vercel intentaría parsear. Usamos la URL correcta.
                              const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapUrlQuery)}`;
                              
                              enrichedFicha.mapUrl = mapUrl; 
@@ -353,8 +371,6 @@ export default async function handler(req, res) {
 
                 } else {
                     // Si el modelo generó texto sin JSON (FALLO GRAVE), lo devuelve.
-                    console.error("Fallo grave: Modelo ignoró la instrucción JSON y respondió en texto plano para una solicitud de lugar/categoría.");
-                    // Aquí podríamos forzar un JSON de fallo si el userPrompt era una solicitud.
                     finalResponseData.responseText = modelResponseText; 
                 }
             }
