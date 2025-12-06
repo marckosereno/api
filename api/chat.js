@@ -1,4 +1,4 @@
-// Archivo: chat.js (Versión Definitiva 5.3 - Refuerzo de Flujo de Categoría Dental)
+// Archivo: chat.js (Versión Definitiva 5.4 - Neutralización del Fallback Dental)
 
 import { GoogleGenAI } from '@google/genai';
 import { Client as PlacesClient } from '@googlemaps/google-maps-services-js'; 
@@ -373,9 +373,9 @@ export default async function handler(req, res) {
             else if (categoryKeyRaw.includes('barbacoa')) categoryName = "Barbacoa y Birria";
             // CRÍTICO: Si solo dice "dental" o "clinica", lo forzamos a ser CATEGORÍA
             else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) {
-                categoryName = "Salud y Estética (Dentistas, Ópticas, Farmacias)";
+                categoryName = "Salud y Estética (Clínicas Odontológicas y Ópticas)";
                 
-                // 🛑 NUEVA REGLA v5.3: Prohibir el término "dental" para evitar el fallo de la boca.
+                // 🛑 REGLA v5.3: Prohibir el término "dental" para evitar el fallo de la boca.
                 promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría **CLÍNICAS ODONTOLÓGICAS Y ÓPTICAS** en Nuevo Progreso. **PROHIBIDO** mencionar la palabra 'dental' en tu respuesta conversacional o en la descripción del JSON.`;
                 
             } else {
@@ -485,13 +485,21 @@ export default async function handler(req, res) {
                                 
                             } else { 
                                 // Si NO existe, creamos un FALLO personalizado
+                                // 🛑 CAMBIO CRÍTICO V5.4: Eliminar propiedades de salud para evitar el fallback del cliente.
+                                const isHealthPlace = ficha.isHealthPlace;
+                                delete ficha.isHealthPlace;
+                                delete ficha.placeCategory;
+
                                 enrichedFicha = {
+                                    ...ficha,
                                     type: "place_not_found", 
                                     placeToSearch: placeNameSearch, 
                                     // MEJORA v5.2: Mensaje claro para evitar N/A
                                     description: `Disculpa, no se encontró un lugar llamado **${placeNameSearch}** ubicado en Nuevo Progreso en nuestra base de datos. Por favor, verifica el nombre.`,
                                     isStructured: true
                                 };
+                                // Si se había clasificado como salud, mantenemos el registro interno.
+                                if (isHealthPlace) enrichedFicha.wasHealthPlace = true;
                             }
                         } else if (ficha.type === 'category') {
                              // ENRIQUECIMIENTO PARA CATEGORÍA (Mapa)
