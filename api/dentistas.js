@@ -1,10 +1,28 @@
-// Archivo: api/dentistas.js
+// Archivo: api/dentistas.js (Versión 3.0 - Completa con Campos Recomendados)
 
-// La clave de la API de Places se carga automáticamente desde las variables de entorno de Vercel.
 const PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 
-// Array de Consultas Variadas para superar el límite de 5-20 resultados por llamada.
-// Esto obliga a la API a buscar en diferentes nichos y calles.
+// ⭐ CAMPOS RECOMENDADOS AÑADIDOS:
+// - icon: Para una representación visual rápida.
+// - rating: Para filtrar por calidad.
+// - geometry: Para las coordenadas exactas de ubicación (lat/lng).
+const DETAIL_FIELDS = [
+    'place_id',
+    'name',
+    'formatted_address',
+    'formatted_phone_number',
+    'website',
+    'opening_hours',
+    'price_level',
+    'editorial_summary',
+    'url',
+    'rating',
+    'user_ratings_total',
+    'icon',
+    'geometry' 
+];
+
+// Consultas Variadas (Sin Cambios)
 const searchQueries = [
     'dentistas Nuevo Progreso',
     'implantes dentales Nuevo Progreso',
@@ -23,60 +41,43 @@ const searchQueries = [
     'clínicas dentales económicas Nuevo Progreso'
 ];
 
-/**
- * Función principal de la Serverless Function.
- * Ejecuta múltiples búsquedas segmentadas y maneja la paginación para consolidar la lista.
- */
 export default async function handler(req, res) {
     if (!PLACES_API_KEY) {
         return res.status(500).json({ error: "GOOGLE_PLACES_API_KEY no está configurada en Vercel." });
     }
 
-    // Mapa para almacenar resultados únicos usando el place_id como clave
     const uniqueDentists = new Map();
 
     try {
-        // Bucle sobre todas las consultas definidas en el array
+        // =========================================================
+        // PASO 1: Obtener Place IDs únicos (Text Search)
+        // =========================================================
         for (const query of searchQueries) {
             let next_page_token = null;
             let page = 0;
 
-            // Bucle interno para manejar la paginación de la API de Places
             do {
-                const url = buildPlacesApiUrl(query, next_page_token);
+                const url = buildTextSearchUrl(query, next_page_token);
                 
-                // Pausa obligatoria: La API de Places requiere una pequeña espera (min. 2s) entre llamadas con pagetoken.
-                if (page > 0) {
-                    await new Promise(resolve => setTimeout(resolve, 2500));
-                }
+                if (page > 0) await new Promise(resolve => setTimeout(resolve, 2500));
                 
                 const response = await fetch(url);
                 if (!response.ok) {
-                    // Si falla la búsqueda, saltamos esta consulta pero continuamos con las demás
-                    console.error(`Error en la API de Places para la consulta '${query}'. Estado: ${response.status}`);
-                    break; 
+                    console.error(`Error de búsqueda para '${query}': ${response.status}`);
+                    break;
                 }
                 
                 const data = await response.json();
-
-                // Detener si no hay resultados o si el estado indica un problema (ej. OVER_QUERY_LIMIT)
                 if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-                     // Lanza error para terminar la ejecución si hay un problema grave con la clave o límites
-                    throw new Error(`Error en la API de Places: ${data.status} para la consulta '${query}'`);
+                    throw new Error(`Error en la API de Text Search: ${data.status}`);
                 }
                 
-                // Consolidación de Datos y Desduplicación
                 data.results.forEach(place => {
-                    // Solo si el lugar tiene un ID y no lo hemos visto antes
                     if (place.place_id && !uniqueDentists.has(place.place_id)) {
                         uniqueDentists.set(place.place_id, {
                             id: place.place_id,
                             name: place.name || 'Nombre Desconocido',
-                            address: place.vicinity || place.formatted_address || 'N/A',
-                            rating: place.rating || 'N/A',
-                            // NOTA: El teléfono y el sitio web requieren la API de Place Details (costo extra).
-                            // Se haría una llamada separada usando el ID si fuera necesario.
-                            phone_website: 'Requiere Place Details API (ID disponible)' 
+                            rating: place.rating || 'N/A'
                         });
                     }
                 });
@@ -84,16 +85,66 @@ export default async function handler(req, res) {
                 next_page_token = data.next_page_token;
                 page++;
 
-            } while (next_page_token && page < 5); // Límite de 5 páginas por consulta (para un máximo de ~100 resultados por consulta).
+            } while (next_page_token && page < 6); 
         }
 
-        // Convertir el mapa de valores únicos de vuelta a un array para la respuesta
-        const finalList = Array.from(uniqueDentists.values());
+        const idsToFetch = Array.from(uniqueDentists.keys());
+        const detailedList = [];
+
+        // =========================================================
+        // PASO 2: Obtener detalles completos (Place Details)
+        // =========================================================
+        for (const [index, placeId] of idsToFetch.entries()) {
+            await new Promise(resolve => setTimeout(resolve, 100)); 
+
+            const detailsUrl = buildPlaceDetailsUrl(placeId);
+            const response = await fetch(detailsUrl);
+            const data = await response.json();
+
+            if (data.status === 'OK') {
+                const details = data.result;
+                
+                const hours = details.opening_hours 
+                    ? details.opening_hours.weekday_text.join(' | ') 
+                    : 'Horario N/A';
+
+                const price = details.price_level
+                    ? '$'.repeat(details.price_level)
+                    : 'Rango de Precio N/A';
+                    
+                detailedList.push({
+                    id: details.place_id,
+                    name: details.name,
+                    address: details.formatted_address || 'Dirección N/A',
+                    phone: details.formatted_phone_number || 'Teléfono N/A',
+                    website: details.website || 'Sitio Web N/A',
+                    google_url: details.url || 'URL de Maps N/A',
+                    
+                    // ⭐ CAMPOS POTENTES AÑADIDOS
+                    rating: details.rating || 'N/A',
+                    total_ratings: details.user_ratings_total || 0,
+                    latitude: details.geometry?.location?.lat || 'N/A', // Coordenadas
+                    longitude: details.geometry?.location?.lng || 'N/A', // Coordenadas
+                    icon_url: details.icon || 'Icono N/A', // Icono para identificación
+                    
+                    // DESCRIPCIÓN Y HORARIO
+                    hours: hours,
+                    price_range: price,
+                    description_summary: details.editorial_summary 
+                        ? details.editorial_summary.overview 
+                        : 'Descripción N/A',
+                    
+                    photo_strategy: 'Usar Google Search (vía Gemini) para foto bajo demanda.'
+                });
+            } else {
+                console.warn(`Error al obtener detalles para ID ${placeId}: ${data.status}`);
+            }
+        }
         
         return res.status(200).json({
-            count: finalList.length,
-            message: `¡Extracción completada! Se encontraron ${finalList.length} clínicas únicas de ${searchQueries.length} búsquedas.`,
-            dentists: finalList,
+            count: detailedList.length,
+            message: `¡Extracción de detalles completada! Se procesaron ${idsToFetch.length} IDs. Lista lista para su JSON/DB.`,
+            dentists: detailedList,
         });
 
     } catch (error) {
@@ -102,24 +153,33 @@ export default async function handler(req, res) {
     }
 }
 
-/**
- * Función auxiliar para construir la URL de la API de Places para Text Search.
- * Maneja la lógica específica cuando se usa el pagetoken.
- */
-function buildPlacesApiUrl(query, pageToken) {
+// ----------------------------------------------------------------
+// Funciones Auxiliares (Sin Cambios)
+// ----------------------------------------------------------------
+
+function buildPlaceDetailsUrl(placeId) {
+    const baseUrl = "https://maps.googleapis.com/maps/api/place/details/json?";
+    const params = new URLSearchParams({
+        place_id: placeId,
+        key: PLACES_API_KEY,
+        language: 'es', 
+        fields: DETAIL_FIELDS.join(',') 
+    });
+    return baseUrl + params.toString();
+}
+
+function buildTextSearchUrl(query, pageToken) {
     const baseUrl = "https://maps.googleapis.com/maps/api/place/textsearch/json?";
     
-    // Si hay un pagetoken, solo se envían el token y la clave (los demás parámetros se ignoran)
     if (pageToken) {
         return `${baseUrl}key=${PLACES_API_KEY}&pagetoken=${pageToken}`;
     }
     
-    // Búsqueda inicial
     const params = new URLSearchParams({
         query: query,
         key: PLACES_API_KEY,
-        language: 'es', // Preferencia de lenguaje
-        type: 'dentist' // Filtro explícito de tipo
+        language: 'es', 
+        type: 'dentist' 
     });
 
     return baseUrl + params.toString();
