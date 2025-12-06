@@ -1317,7 +1317,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                     <div class="model-bubble-wrapper p-3 shadow-md">
                         ${imageHTML} 
                         <div class="model-bubble">
-                            ${m.text || m.description}
+                            ${m.text}
                         </div>
                     </div>
                 `;
@@ -1625,8 +1625,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         // Limpiar el estado de todos los chips de acción al iniciar el envío
         quickActionFullList.classList.add('hidden');
         dynamicChipsGroup.classList.add('hidden'); // Ocultar chips dinámicos
-        lastTotalCount = 0;
-        lastApiQuery = null;
+        // lastTotalCount = 0; // 🚫 MOVIDO AL FINAL para no interferir con la lógica de activación
+        // lastApiQuery = null; // 🚫 MOVIDO AL FINAL
 
         // Utilizamos showLoadingIndicator para el nuevo efecto de status/input
         showLoadingIndicator(); 
@@ -1707,6 +1707,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                 if (fichasParaMostrar.length > 0) {
                     // Si hay fichas, el primer mensaje es el texto conversacional (si existe)
                     if (conversationText.length > 0) {
+                        // 🟢 FIX 1.1: Empujar el texto conversacional antes de las fichas
                         chatHistory.push({ role: 'model', text: conversationText, timestamp: new Date(), isStructured: false });
                     }
                     
@@ -1751,13 +1752,13 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                         }
                     });
 
-                    // Como ya pusheamos todos los mensajes, salimos del resto de la función.
+                    // 🟢 FIX 1.2: El return debe estar aquí para el caso multi-ficha/ficha simple, si hubo conversacionText antes.
                     saveHistory(); 
                     if (typeof renderChat === 'function') renderChat();
                     return; // 🛑 FINALIZA la ejecución de handleSend
                 }
                 
-                // Si no hay fichas, el finalMessage ya tiene el texto plano.
+                // Si no hay fichas, el finalMessage ya tiene el texto plano (o la recomendación local).
 
             }
         } catch (e) {
@@ -1768,14 +1769,14 @@ padding-bottom:40px; /* Devolvemos la altura automática */
 
         // *** FIN DE LA LÓGICA DE PROCESAMIENTO DE RESPUESTA ***
 
-        chatHistory.push(finalMessage); // <- Esta es la línea que antes estaba duplicada y ahora está corregida.
+        chatHistory.push(finalMessage); // <- Añade el mensaje final de texto plano/recomendación
+
+        // 🟢 FIX 2.1: Limpiamos los estados de las variables globales ANTES de reasignar
+        lastTotalCount = 0;
+        lastApiQuery = null;
         
         // --- LÓGICA DE ACTIVACIÓN DE CHIPS Y ALERTA ---
         
-        // Limpiamos los estados de las variables globales antes de reasignar
-        lastTotalCount = 0;
-        lastApiQuery = null;
-
         if (dynamicChipsData && dynamicChipsData.length > 0) {
             // Caso de CHIPS DINÁMICOS O SUBCATEGORÍAS FORZADAS
             renderDynamicChips(dynamicChipsData);
@@ -1800,7 +1801,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         } else if (totalCount > MAX_CHAT_RESULTS && apiQuery) {
             // Caso de Recomendación Local Forzada (Texto Plano) con más de 4 resultados
             
-            // Guardar en las variables globales para el listener del botón
+            // 🟢 FIX 2.2: Guardar en las variables globales para el listener del botón
             lastTotalCount = totalCount;
             lastApiQuery = apiQuery;
             
@@ -1971,6 +1972,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         hideLoadingIndicator(); // Usamos la nueva función para asegurar el estado normal
     });
 </script>
+
 
 
 
