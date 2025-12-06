@@ -9,11 +9,9 @@ const GEOGRAPHIC_CONTEXT = ", Nuevo Progreso, Tamaulipas, México";
 
 // ⭐️ MAPA DE EXCEPCIONES CON DESCRIPCIONES CANÓNICAS PARA CORREGIR ALUCINACIONES
 const EXCEPTION_DATA_MAP = {
-    // Nombre exacto a buscar (en minúsculas, sin espacios extra): { category, description }
     'yomis': { 
         category: 'Spa y Masajes', 
         description: 'Yomis es un tranquilo spa especializado en masajes terapéuticos y relajantes para viajeros que buscan un descanso profundo. Ofrece una variedad de tratamientos para el bienestar y la salud.',
-        // Nombre de búsqueda conocido para la API de Places (para la foto/mapa)
         searchName: 'Yomis Spa' 
     },
     'pinkys': { 
@@ -28,31 +26,72 @@ const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
 const placesClient = new PlacesClient({}); 
 
-// 2. Definimos la Instrucción del Sistema (Añadimos mitigación de sesgo)
+// 2. Definimos la Instrucción del Sistema (MODIFICADA PARA PROHIBIR TEXTO PLANO EN SOLICITUDES DE LUGAR)
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
-**IMPORTANTE:** Tu clasificación debe ser precisa. No asumas que todas las búsquedas son restaurantes. Usa las categorías más específicas posibles (Spa, Tienda de Ropa, Clínica Dental, etc.).
+**REGLA DE ESTRICTO CUMPLIMIENTO:** Si la solicitud del usuario es para un LUGAR o CATEGORÍA, DEBES responder **EXCLUSIVAMENTE con un formato JSON**. Está **PROHIBIDO** responder en texto plano conversacional en estos casos. Usa el formato de FALLO si el servidor lo indica o si no estás seguro de la existencia del lugar.
 
 REGLAS DE FORMATO:
-// ... (El resto de las reglas del sistema se mantienen igual) ...
-// ... (Formatos JSON se mantienen igual) ...`;
+1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 📍, ☀️) al inicio o final de tus respuestas o descripciones.
+2. **REGLA CRÍTICA DE SALUD Y PRIVACIDAD:** Para salud, DEBES establecer el campo "isHealthPlace" en "true".
 
-// ... (Resto de la función getPlaceDetails se mantiene igual) ...
+---
+
+### PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES (MODO FICHA DE CATEGORÍA)
+**REGLA CRÍTICA:** Si el usuario pide recomendaciones, sugerencias o un listado de lugares, DEBES usar el **MODO FICHA DE CATEGORÍA (JSON)**.
+
+---
+
+3. **MODO FICHA DE LUGAR (JSON):** Úsalo si la solicitud es de un lugar o negocio **específico**.
+4. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo para solicitudes de categorías generales O para **CUMPLIR EL PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES**.
+
+5. **MODO CONVERSACIONAL (Texto Plano):** Úsalo *SOLO* para preguntas generales o de seguimiento (ej: "gracias", "¿cómo está el clima?") que **no** requieran una ficha.
+
+6. Los formatos JSON requeridos son:
+   
+   // Formato para LUGAR ESPECÍFICO (Salud o No Salud)
+   {
+     "type": "place", 
+     "placeName": "Nombre del Lugar", 
+     "placeToSearch": "Nombre Exacto a buscar en Places API", 
+     "placeCategory": "Clasificación general del lugar, ej: Clínica Dental, Restaurante",
+     "isHealthPlace": true/false, 
+     "description": "Descripción corta de no más de 3 oraciones.",
+     "isStructured": true
+   }
+   
+   // Formato para CATEGORÍA GENERAL
+   {
+     "type": "category", 
+     "categoryName": "Nombre de la Categoría",
+     "description": "Resumen de la categoría...",
+     "isStructured": true
+   }
+
+   // FORMATO DE FALLO: Úsalo si no estás seguro de la existencia del lugar o si el servidor lo indica.
+   {
+     "type": "place_not_found", 
+     "placeToSearch": "Nombre del Lugar No Encontrado", 
+     "description": "El lugar no se encontró en Nuevo Progreso. Si el usuario insiste, aconséjale usar Google Search. 📍",
+     "isStructured": true
+   }
+   
+   // REGLA CLAVE: Si la respuesta requiere MÚLTIPLES FICHAS, debes envolver todas las fichas en un array y añadir la propiedad "isMultiStructured": true.
+   // El texto conversacional debe ir en "conversationText" y NO debe ser la respuesta principal.`;
+
 
 /**
  * Función que busca el nombre de un lugar en la API de Google Places.
- * NOTA: Se solicitan SOLO campos básicos para minimizar costos (no reviews, no editorial_summary).
  * @param {string} query Nombre del lugar a buscar.
  * @returns {object|null} Objeto con detalles del lugar o null si NO existe el lugar exacto en Nuevo Progreso.
  */
 async function getPlaceDetails(query) { 
-    
+    // ... (Esta función se mantiene igual, ya que es la que extrae los datos básicos)
     if (!placesApiKey) {
         console.error("GOOGLE_PLACES_API_KEY no definida.");
         return null;
     }
     
-    // Coordenadas aproximadas de Nuevo Progreso para locationBias (26.064, -98.005)
     const LOCATION_BIAS = { lat: 26.064, lng: -98.005 };
 
     try {
@@ -70,16 +109,14 @@ async function getPlaceDetails(query) {
         const placeId = findPlaceResponse.data.candidates?.[0]?.place_id;
         
         if (!placeId) {
-            // console.log("No se encontró un place_id cerca de Nuevo Progreso.");
             return null;
         }
 
-        // 2. Obtener los detalles del lugar (SOLO CAMPOS BÁSICOS PARA AHORRAR COSTOS)
+        // 2. Obtener los detalles del lugar (SOLO CAMPOS BÁSICOS)
         const detailsResponse = await placesClient.placeDetails({
             params: {
                 key: placesApiKey,
                 place_id: placeId,
-                // ⭐️ CAMPOS BÁSICOS: NO PEDIR 'reviews' ni 'editorial_summary' (caros)
                 fields: ['name', 'formatted_phone_number', 'url', 'website', 'photos', 'formatted_address'] 
             }
         });
@@ -90,7 +127,6 @@ async function getPlaceDetails(query) {
         const address = place.formatted_address ? place.formatted_address.toLowerCase() : '';
         
         if (!address.includes('progreso') && !address.includes('río bravo')) {
-            // console.log(`Fallo de geofencing flexible: Dirección (${address}) no incluye "Progreso" o "Río Bravo".`);
             return null; 
         }
         
@@ -102,12 +138,11 @@ async function getPlaceDetails(query) {
             imageUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=250&photoreference=${photoReference}&key=${placesApiKey}`;
         }
 
-        // ⭐️ RETORNAR SOLO DATOS BÁSICOS
         return {
             name: place.name,
             phone: place.formatted_phone_number || null,
             mapUrl: place.url || null,
-            reviewUrl: place.url || null, // Usamos la URL base para el botón de reseña/Google Maps
+            reviewUrl: place.url || null, 
             websiteUrl: place.website || null,
             imageUrl: imageUrl
         };
@@ -127,7 +162,6 @@ export default async function handler(req, res) {
     try {
         const { history = [], userPrompt, currentLanguage } = req.body;
         
-        // Configuramos el idioma y el sistema
         const langText = currentLanguage === 'es' ? 'español' : 'inglés';
         const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
 
@@ -135,40 +169,39 @@ export default async function handler(req, res) {
         // ⭐️ LÓGICA ROBUSTA DE BYPASS CANÓNICO (PRIORIDAD AL SERVIDOR)
         // ----------------------------------------------------
         let forcedCanonicalResponse = null; 
-        const promptSearchKey = userPrompt.toLowerCase().replace(/\s/g, ''); // Para buscar 'yomis' en el mapa
+        const promptSearchKey = userPrompt.toLowerCase().replace(/\s/g, ''); 
 
         for (const [key, exceptionData] of Object.entries(EXCEPTION_DATA_MAP)) {
-            // Utilizamos includes para ser más flexibles (ej. "dónde está yomis spa" sigue disparando 'yomis')
+            // Utilizamos includes para ser más flexibles
             if (promptSearchKey.includes(key)) {
                 
                 console.log(`Interceptación CANÓNICA forzada para: ${key}`);
                 
-                // 1. Buscar datos básicos (mapa/foto) a pesar de la alucinación
                 const placeData = await getPlaceDetails(exceptionData.searchName);
                 
-                const isHealthPlace = exceptionData.category.includes('Spa'); // Determinar si es de salud/estética
+                const isHealthPlace = exceptionData.category.includes('Spa'); // Asumimos que Spa/Masajes se maneja como Health
                 
                 forcedCanonicalResponse = {
                     type: "place", 
-                    placeName: placeData ? placeData.name : key.toUpperCase(), // Usar nombre encontrado o la clave
+                    placeName: placeData ? placeData.name : exceptionData.searchName, 
                     placeToSearch: exceptionData.searchName,
                     placeCategory: exceptionData.category, 
                     isHealthPlace: isHealthPlace,
                     description: exceptionData.description, // DESCRIPCIÓN CANÓNICA FIJA
                     isStructured: true,
-                    // Datos de Places API (serán null si falla la API, pero el bot no falla)
+                    // Datos de Places API
                     mapUrl: placeData?.mapUrl || null,
                     imageUrl: placeData?.imageUrl || null,
                     placePhone: (placeData?.phone && !isHealthPlace) ? placeData.phone : null, 
                     reviewUrl: placeData?.reviewUrl || null, 
                     websiteUrl: (placeData?.websiteUrl && !isHealthPlace) ? placeData.websiteUrl : null,
                 };
-                break; // Detener el bucle, ya encontramos la excepción
+                break; 
             }
         }
         
         if (forcedCanonicalResponse) {
-            // Retornar la respuesta CANÓNICA directamente (garantiza la corrección)
+            // Retornar la respuesta CANÓNICA directamente (GARANTÍA DE BLINDAJE)
             return res.status(200).json({ responseText: JSON.stringify(forcedCanonicalResponse) });
         }
 
@@ -176,9 +209,6 @@ export default async function handler(req, res) {
         // ⭐️ LÓGICA NORMAL (GEMINI + RAG de Reseñas)
         // ----------------------------------------------------
         
-        // ... (El resto del código se mantiene igual, ya que maneja el flujo normal y de categorías)
-        
-        // LÓGICA DE INTERCEPTACIÓN Y PRIORIDAD LOCAL (MODIFICADA para forzar CATEGORY JSON)
         let promptToSend = userPrompt;
 
         // Patrón para detectar solicitudes de listado/recomendación
@@ -187,7 +217,6 @@ export default async function handler(req, res) {
         const match = userPrompt.match(recommendationPattern);
         
         if (match) {
-            // 1. Determinar el nombre de la categoría para el JSON y el prompt
             const categoryKeyRaw = match[3].toLowerCase(); 
             let categoryName = "lugares y negocios"; 
             
@@ -197,8 +226,8 @@ export default async function handler(req, res) {
             else if (categoryKeyRaw.includes('barbacoa')) categoryName = "Barbacoa y Birria";
             else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = "Salud y Estética";
             
-            // 2. SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA
-            promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría ${categoryName} en Nuevo Progreso. La descripción debe guiar al usuario a usar los botones de acción ('Ver en Mapa' y 'Buscar en Google') para que ellos decidan qué lugar visitar, cumpliendo con la restricción de no recomendar lugares específicos.`;
+            // SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA
+            promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría ${categoryName} en Nuevo Progreso.`;
             
             console.log("PROTOCOLO CATEGORÍA GENERAL ACTIVADO para:", categoryName);
         }
@@ -212,11 +241,10 @@ export default async function handler(req, res) {
                 systemInstruction: finalSystemInstruction 
             },
             history: history,
-            // ⭐️ Dejamos el tool de búsqueda por defecto, pero lo controlamos en el re-prompt
             tools: [{ googleSearch: {} }] 
         });
 
-        // Enviamos el nuevo mensaje (original o modificado por la redirección a categoría) al modelo
+        // Enviamos el nuevo mensaje (original o modificado) al modelo
         const result = await chat.sendMessage({ message: promptToSend });
         let modelResponseText = result.text.trim();
         
@@ -231,16 +259,7 @@ export default async function handler(req, res) {
                 const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
                 const parsedJson = JSON.parse(jsonString);
                 
-                let fichasToProcess = [];
-
-                // 1. Caso de Múltiples Fichas (Array)
-                if (parsedJson.isMultiStructured === true && Array.isArray(parsedJson.response)) {
-                    fichasToProcess = parsedJson.response;
-                } 
-                // 2. Caso de Ficha Única
-                else if (parsedJson.isStructured === true) {
-                    fichasToProcess = [parsedJson];
-                }
+                let fichasToProcess = parsedJson.isStructured ? [parsedJson] : (parsedJson.isMultiStructured ? parsedJson.response : []);
 
                 if (fichasToProcess.length > 0) {
                     
@@ -254,38 +273,30 @@ export default async function handler(req, res) {
                             const placeNameSearch = ficha.placeToSearch.trim();
                             const isHealthPlace = ficha.isHealthPlace === true; 
                             
-                            // ⭐️ SOLO PEDIMOS DATOS BÁSICOS (Ahorro de Costos)
                             const placeData = await getPlaceDetails(placeNameSearch);
 
                             if (placeData) {
-                                
-                                // 🛑 EXCEPCIÓN: La lógica de excepción CANÓNICA ya fue manejada arriba. 
-                                // Aquí solo queda la lógica de RAG (Reseñas) para lugares normales.
-                                
                                 // **LÓGICA NORMAL: USAR RE-PROMPT con GOOGLE SEARCH RAG (Reseñas)**
-
-                                let toolsToUse = [{ googleSearch: {} }]; 
+                                // (La lógica canónica ya se saltó este bloque)
                                 
-                                // ⭐️ PASO ANTI-ALUCINACIÓN: FORZAR a Gemini a buscar una reseña
                                 let placePrompt = `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder.`;
                                 
-                                // ⭐️ INSTRUCCIÓN DE RAG CON RESEÑAS
-                                placePrompt += ` La categoría es: ${enrichedFicha.placeCategory}. **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} Nuevo Progreso". **Extrae las frases clave de una o dos reseñas reales y úsalas para componer la 'description' en el JSON.** Si no encuentras reseñas, resume el giro del lugar.`;
+                                // INSTRUCCIÓN DE RAG CON RESEÑAS
+                                placePrompt += ` La categoría es: ${enrichedFicha.placeCategory}. **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} Nuevo Progreso". **Extrae las frases clave de una o dos reseñas reales y úsalas para componer la 'description' en el JSON.** Si no encuentras reseñas, resume el giro del lugar. **NOTA CRÍTICA:** Solo usa la descripción que el RAG te proporciona.`;
 
-                                // 🛑 RE-PROMPT A GEMINI PARA GENERAR LA FICHA ENRIQUECIDA
+                                // RE-PROMPT A GEMINI PARA GENERAR LA FICHA ENRIQUECIDA
                                 const rePromptResult = await chat.sendMessage({ 
                                     message: placePrompt,
-                                    tools: toolsToUse 
+                                    tools: [{ googleSearch: {} }] 
                                 });
                                 const rePromptText = rePromptResult.text.trim();
                                 
                                 try {
-                                    // Intentamos parsear la respuesta (solo el JSON)
                                     const reParsedJson = JSON.parse(rePromptText.substring(rePromptText.indexOf('{'), rePromptText.lastIndexOf('}') + 1));
                                     
-                                    // Usamos la ficha re-parseada
+                                    // Usamos la ficha re-parseada (con descripción RAG)
                                     enrichedFicha = {
-                                        ...reParsedJson, // Ficha con la nueva descripción (RAG de reseña)
+                                        ...reParsedJson, 
                                         placeName: placeData.name,
                                         mapUrl: placeData.mapUrl,
                                         imageUrl: placeData.imageUrl,
@@ -295,9 +306,9 @@ export default async function handler(req, res) {
                                         websiteUrl: isHealthPlace ? null : placeData.websiteUrl,
                                     };
                                 } catch (e) {
-                                    console.error("Fallo al re-parsear el JSON de anti-alucinación. Usando descripción original.", e);
+                                    console.error("Fallo al re-parsear el JSON de anti-alucinación RAG. Usando ficha original sin descripción RAG.", e);
                                     
-                                    // Fallback: Si el re-prompt falla, usamos la descripción original de Gemini
+                                    // Fallback: Si el RAG falla, usamos la ficha original y dejamos la descripción vacía o la original.
                                     enrichedFicha = {
                                         ...enrichedFicha,
                                         placeName: placeData.name,
@@ -310,7 +321,7 @@ export default async function handler(req, res) {
                                 }
                                 
                             } else { 
-                                // Si NO existe (Fallo del geofencing)
+                                // Si NO existe (Fallo del geofencing) - Usamos el JSON de fallo
                                 enrichedFicha = {
                                     type: "place_not_found", 
                                     placeToSearch: placeNameSearch, 
@@ -319,12 +330,12 @@ export default async function handler(req, res) {
                                 };
                             }
                         } else if (ficha.type === 'category') {
-                             // ENRIQUECIMIENTO PARA CATEGORÍA (Permitir "Ver en Mapa")
+                             // ENRIQUECIMIENTO PARA CATEGORÍA (Mapa)
                              
                              const categorySearch = ficha.categoryName.replace(/en Progreso/i, '').trim();
                              const mapUrlQuery = categorySearch + GEOGRAPHIC_CONTEXT;
                              
-                             // URL de Google Maps para búsqueda de categorías
+                             // Corrección de URL: Se usaba una URL que Vercel intentaría parsear. Usamos la URL correcta.
                              const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapUrlQuery)}`;
                              
                              enrichedFicha.mapUrl = mapUrl; 
@@ -334,38 +345,24 @@ export default async function handler(req, res) {
                     }
 
                     // Después de procesar todas las fichas, reconstruir la respuesta final.
-                    if (parsedJson.isMultiStructured === true) {
-                        
-                        let finalConversationText = parsedJson.conversationText || modelResponseText.replace(jsonString, '').trim() || '';
+                    let finalResponseJson = parsedJson.isMultiStructured 
+                        ? { isMultiStructured: true, response: enrichedFichas, conversationText: parsedJson.conversationText || '' }
+                        : enrichedFichas[0];
+                    
+                    finalResponseData.responseText = JSON.stringify(finalResponseJson);
 
-                        // 🛑 REGLA BLINDADA: SI ALGUNA FICHA ES UNA EXCEPCIÓN, ELIMINAR EL TEXTO CONVERSACIONAL
-                        const hasExceptionFicha = enrichedFichas.some(f => {
-                            const placeName = f.placeToSearch ? f.placeToSearch.toLowerCase().replace(/\s/g, '') : null;
-                            return placeName && EXCEPTION_DATA_MAP[placeName];
-                        });
-
-                        if (hasExceptionFicha) {
-                            console.log("Excepción detectada en multi-fichas. Limpiando texto conversacional de forma agresiva.");
-                            finalConversationText = ""; // Fuerza a vacío para evitar contaminación
-                        }
-                        
-                         finalResponseData.responseText = JSON.stringify({
-                             isMultiStructured: true,
-                             response: enrichedFichas,
-                             conversationText: finalConversationText
-                         });
-                    } else {
-                         // Si es ficha única, simplemente retorna el JSON de la ficha enriquecida
-                         finalResponseData.responseText = JSON.stringify(enrichedFichas[0]);
-                    }
+                } else {
+                    // Si el modelo generó texto sin JSON (FALLO GRAVE), lo devuelve.
+                    console.error("Fallo grave: Modelo ignoró la instrucción JSON y respondió en texto plano para una solicitud de lugar/categoría.");
+                    // Aquí podríamos forzar un JSON de fallo si el userPrompt era una solicitud.
+                    finalResponseData.responseText = modelResponseText; 
                 }
             }
         } catch (jsonError) {
-            console.error("Fallo en el parseo o enriquecimiento del JSON:", jsonError);
+            console.error("Fallo en el parseo o enriquecimiento del JSON. Asumiendo que el texto no contenía JSON estructurado.", jsonError);
             finalResponseData.responseText = modelResponseText; 
         }
 
-        // Retornamos la respuesta (enriquecida o original) al frontend
         res.status(200).json(finalResponseData);
 
     } catch (error) {
