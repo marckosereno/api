@@ -1,9 +1,8 @@
-// Archivo: api/dentistas.js (Versión 3.1 - FINAL: Búsqueda extendida y campos potentes)
+// Archivo: api/dentistas.js (Versión FINAL: Array de 15 consultas más exitosas)
 
 const PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 
-// CAMPOS SOLICITADOS (Place Details)
-// Se incluyen: Descripción (editorial_summary), Coordenadas (geometry), Icono, Rating, etc.
+// CAMPOS SOLICITADOS (Place Details): Incluye todos los datos potentes
 const DETAIL_FIELDS = [
     'place_id',
     'name',
@@ -20,35 +19,23 @@ const DETAIL_FIELDS = [
     'geometry' 
 ];
 
-// ARRAY DE CONSULTAS EXPANDIDO (20 TÉRMINOS)
+// 👉 ARRAY DE 15 CONSULTAS (El que te dio los 104 resultados)
 const searchQueries = [
-    // Búsquedas de alto tráfico
     'dentistas Nuevo Progreso',
-    'clínica dental cosmética Nuevo Progreso',
-    'dentistas Avenida Benito Juárez Nuevo Progreso',
-    'dentistas cerca de la Aduana Nuevo Progreso',
-    'dentistas Plaza Río Nuevo Progreso',
-    
-    // Búsquedas geográficas amplias (para capturar expansión a calles secundarias)
-    'dentistas Colonias Nuevo Progreso',
-    'dentistas calles secundarias Nuevo Progreso',
-    'dentistas zona comercial Nuevo Progreso',
-    'dentistas zona residencial Nuevo Progreso',
-    'dentistas sobre el río Nuevo Progreso',
-    
-    // Búsquedas de nicho/especialidad
     'implantes dentales Nuevo Progreso',
     'ortodoncia Nuevo Progreso',
-    'endodoncia Nuevo Progreso',
-    'periodoncista Nuevo Progreso',
+    'clínica dental cosmética Nuevo Progreso',
+    'dentistas Avenida Benito Juárez Nuevo Progreso',
+    'dentistas Plaza Río Nuevo Progreso',
+    'dentistas Calle Coahuila Nuevo Progreso',
     'odontología infantil Nuevo Progreso',
-    'cirugía maxilofacial Nuevo Progreso',
-    
-    // Búsquedas de servicio
-    'laboratorio dental Nuevo Progreso',
-    'clínicas dentales económicas Nuevo Progreso',
     'coronas dentales Nuevo Progreso',
-    'servicios dentales emergencia Nuevo Progreso'
+    'endodoncia Nuevo Progreso',
+    'blanqueamiento dental Nuevo Progreso',
+    'dentistas cerca de la Aduana Nuevo Progreso',
+    'periodoncista Nuevo Progreso',
+    'dentistas rating 5 Nuevo Progreso',
+    'clínicas dentales económicas Nuevo Progreso'
 ];
 
 export default async function handler(req, res) {
@@ -60,7 +47,7 @@ export default async function handler(req, res) {
 
     try {
         // =========================================================
-        // PASO 1: Obtener Place IDs únicos (Text Search con paginación extendida)
+        // PASO 1: Obtener Place IDs únicos (Text Search con 15 consultas)
         // =========================================================
         for (const query of searchQueries) {
             let next_page_token = null;
@@ -164,7 +151,7 @@ export default async function handler(req, res) {
 }
 
 // ----------------------------------------------------------------
-// Funciones Auxiliares 
+// Funciones Auxiliares (Sin Cambios)
 // ----------------------------------------------------------------
 
 function buildPlaceDetailsUrl(placeId) {
