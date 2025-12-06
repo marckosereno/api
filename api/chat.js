@@ -1,12 +1,13 @@
-// Archivo: chat.js (Versión Definitiva 4.0 - Búsqueda Tolerante y Enriquecimiento de Imagen)
+// Archivo: chat.js (Versión Definitiva 5.0 - Búsqueda Tolerante y Enriquecimiento de Imagen)
 
 import { GoogleGenAI } from '@google/genai';
 import { Client as PlacesClient } from '@googlemaps/google-maps-services-js'; 
 import { createRequire } from 'module'; 
 
+// 🟢 CRÍTICO: Inicializa la función 'require' localmente para entornos ESM.
 const require = createRequire(import.meta.url); 
 
-// 🛑 SOLUCIÓN CRÍTICA: Carga estática y síncrona del JSON usando el 'require' local.
+// 🛑 SOLUCIÓN CRÍTICA: Carga estática y síncrona del JSON.
 const DENTIST_CATALOG = require('./dentists_data.json'); 
 const CATALOG_LOADED = true; 
 console.log(`✅ Catálogo de Dentistas cargado estáticamente: ${DENTIST_CATALOG.length} entradas.`);
@@ -34,7 +35,7 @@ const EXCEPTION_DATA_MAP = {
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
-const placesClient = new PlacesClient({});
+const placesClient = new Client({});
 
 // 2. Definimos la Instrucción del Sistema 
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
@@ -315,10 +316,9 @@ export default async function handler(req, res) {
                  const localData = searchLocalCatalog(placeNameFromAI);
                  
                  if (localData) {
-                    console.log(`Interceptación LOCAL (Dentista) forzada para: ${localData.name} con búsqueda: ${placeNameFromAI}`);
+                    console.log(`✅ Interceptación LOCAL (Dentista): Encontrado '${localData.name}' con búsqueda: '${placeNameFromAI}'`);
                     
                     // 🟢 ENRIQUECIMIENTO: Llama a Places API SOLO para obtener la imagen
-                    // Nota: Usamos localData.name para la búsqueda de imagen, que es el nombre canónico del JSON.
                     const placeDataForImage = await getPlaceDetails(localData.name);
                     
                     forcedCanonicalResponse = {
@@ -333,7 +333,7 @@ export default async function handler(req, res) {
                         placePhone: localData.phone,
                         mapUrl: localData.mapUrl,
                         websiteUrl: localData.websiteUrl,
-                        // 🟢 AGREGADO: Imagen de Places API
+                        // Imagen de Places API (o null)
                         imageUrl: placeDataForImage?.imageUrl || null, 
                         latitude: localData.latitude, 
                         longitude: localData.longitude
@@ -353,20 +353,23 @@ export default async function handler(req, res) {
         let promptToSend = userPrompt;
 
         // Patrón para detectar solicitudes de listado/recomendación
-        const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra).*\\s+(\\d+|unos cuantos)?\\s*(taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias|clinica|farmacia|dental|optica)s?`, 'i');
+        const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra).*\\s+(\\d+|unos cuantos)?\\s*(taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias|clinica|farmacia|dental|optica|dental)s?`, 'i');
         
         const match = userPrompt.match(recommendationPattern);
         
-        if (match) {
-            const categoryKeyRaw = match[3].toLowerCase(); 
+        // 🟢 MEJORA: Forzamos CATEGORÍA si es una palabra clave general Y no se encontró localmente.
+        if (match || promptSearchKey.includes('dental') || promptSearchKey.includes('clinica')) {
+            const categoryKeyRaw = match ? match[3].toLowerCase() : promptSearchKey; // Si no hay match, usa la palabra clave
             let categoryName = "lugares y negocios"; 
             
             if (categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('tacos')) categoryName = "Taquerías y Tacos";
             else if (categoryKeyRaw.includes('restaurante') || categoryKeyRaw.includes('comer')) categoryName = "Restaurantes y Comida";
             else if (categoryKeyRaw.includes('artesanias') || categoryKeyRaw.includes('souvenirs')) categoryName = "Tiendas de Artesanías y Souvenirs";
             else if (categoryKeyRaw.includes('barbacoa')) categoryName = "Barbacoa y Birria";
-            else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = "Salud y Estética";
+            // CRÍTICO: Si solo dice "dental" o "clinica", lo forzamos a ser CATEGORÍA
+            else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = "Salud y Estética (Dentistas, Ópticas, Farmacias)";
             
+            // Forzar el re-prompt para generar la ficha de CATEGORÍA
             promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría ${categoryName} en Nuevo Progreso.`;
             
             console.log("PROTOCOLO CATEGORÍA GENERAL ACTIVADO para:", categoryName);
