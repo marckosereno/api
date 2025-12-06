@@ -1276,13 +1276,18 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             new google.maps.LatLng(26.08, -97.98)  // NE
         );
         
-        // 🛑 CORRECCIÓN CLAVE: El autocompletado debe ser re-creado/limpiado para evitar errores de vinculación.
+        // 🛑 CORRECCIÓN CLAVE: Si ya existe una instancia de autocompletado, la limpiamos.
+        // Google Maps API no tiene un método .destroy(), por lo que desvinculamos o la reemplazamos.
+        if (autocomplete && window.google.maps.event) {
+            // Desvincular listeners existentes del input
+            google.maps.event.clearInstanceListeners(inputElement);
+        }
         
         autocomplete = new google.maps.places.Autocomplete(inputElement, {
             bounds: progressoBounds,
             strictBounds: true, // Restringe la búsqueda a la zona de Progreso (CRÍTICO)
             
-            // 🛑 CAMBIO SOLICITADO: Priorizar 'establishment' (Puntos de Interés) sobre solo 'geocode' (Direcciones)
+            // 🛑 CORRECCIÓN CRÍTICA: Incluir 'establishment' para encontrar lugares de interés/negocios.
             types: ['establishment', 'geocode'], 
             
             componentRestrictions: { country: 'mx' } // Restringir a México
@@ -1299,9 +1304,13 @@ padding-bottom:40px; /* Devolvemos la altura automática */
      * Alterna entre el modo Chat (normal) y el modo Búsqueda (Places API).
      */
     function toggleSearchMode() {
-        // 🛑 CLAVE 6: El estado se invierte primero, pero la persistencia se guarda.
-        isSearchMode = !isSearchMode; 
-        saveSearchModeState(); // Guardar el nuevo estado
+        
+        // 🛑 LÓGICA DE PERSISTENCIA
+        const newState = !isSearchMode;
+        if (isSearchMode !== newState) {
+            isSearchMode = newState; 
+            saveSearchModeState(); // Guardar el nuevo estado
+        }
 
         if (isSearchMode) {
             // Activar Modo Búsqueda (SPS)
@@ -1327,6 +1336,13 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             
             inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
             
+            // 🛑 CRÍTICO: Eliminar el listener o la instancia de autocompletado.
+            if (autocomplete && window.google.maps.event) {
+                // Esto remueve el listener del input, evitando el autocompletado en modo normal
+                google.maps.event.clearInstanceListeners(inputElement); 
+                autocomplete = null; // Liberar la referencia
+            }
+            
             // Habilitar el botón de enviar solo si hay texto
             sendButton.disabled = inputElement.value.trim() === ''; 
         }
@@ -1347,7 +1363,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             // Esto puede pasar si el usuario presiona Enter sin seleccionar una sugerencia
             alertUser(currentLanguage === 'es' ? "Por favor, selecciona un lugar de la lista de sugerencias." : "Please select a place from the suggestions list.", 'i', 'news');
             inputElement.value = '';
-            // 🛑 CLAVE 7: Mantenemos el modo activo para que el usuario pueda volver a buscar.
+            // Mantenemos el modo activo para que el usuario pueda volver a buscar.
             return;
         }
 
@@ -1366,9 +1382,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         
         inputElement.value = '';
         
-        // 🛑 LÍNEA MODIFICADA (Antes: toggleSearchMode();)
-        // Mantenemos el modo SPS activo, el usuario deberá desactivarlo manualmente.
-        // **toggleSearchMode();** // LÍNEA DE DESACTIVACIÓN ELIMINADA/COMENTADA POR SOLICITUD
+        // 🛑 LÍNEA MODIFICADA (Mantenemos el modo SPS activo, el usuario deberá desactivarlo manualmente).
+        // **toggleSearchMode();** // LÍNEA DE DESACTIVACIÓN COMENTADA POR SOLICITUD
         
         // 2. Disparar el envío al backend con el PLACE ID
         handleSend(`Búsqueda geográfica directa del lugar ${query}`, placeId);
@@ -2052,11 +2067,13 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     
     // 🛑 Listener del Botón de Enviar (Solo modo Chat)
     if (sendButton) sendButton.addEventListener('click', () => {
+        // Solo enviar si NO está en modo búsqueda.
         if (!isSearchMode) handleSend();
     });
     
     // 🛑 Listener de la Tecla Enter (Solo modo Chat, el modo búsqueda tiene su propio onPlaceSelected)
     if (inputElement) inputElement.addEventListener('keypress', function(e) { 
+        // Solo enviar si NO está en modo búsqueda.
         if (e.key === 'Enter' && !isSearchMode) { 
             handleSend(); 
         } 
@@ -2217,9 +2234,10 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         
         // 5. Inicializar el modo de búsqueda según la persistencia
         const savedIsSearchMode = loadSearchModeState();
-        isSearchMode = !savedIsSearchMode; // Invertir para que la primera llamada a toggle lo ponga en el estado guardado
+        // El estado guardado es el estado FINAL. Lo inicializamos en el opuesto para que el toggle lo ponga bien.
+        isSearchMode = !savedIsSearchMode; 
         
-        toggleSearchMode(); // Llama a toggle (lo pone en el estado guardado)
+        toggleSearchMode(); // Llama a toggle (lo pone en el estado guardado y aplica listeners si está activo)
         
         hideLoadingIndicator(); // Ocultar el indicador de carga que se activó en toggle
 
