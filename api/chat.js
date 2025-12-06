@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import { Client as PlacesClient } from '@googlemaps/google-maps-services-js'; // Asegurado que PlacesClient esté importado
+import { Client as PlacesClient } from '@googlemaps/google-maps-services-js'; 
 
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
@@ -24,7 +24,7 @@ const EXCEPTION_DATA_MAP = {
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
-const placesClient = new PlacesClient({}); // CORRECCIÓN CRÍTICA: Usamos PlacesClient, el alias importado.
+const placesClient = new PlacesClient({}); // Corregida la inicialización
 
 // 2. Definimos la Instrucción del Sistema (MODIFICADA PARA FORZAR CONTEXTO FRESCO)
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
@@ -125,12 +125,7 @@ async function getPlaceDetails(query) {
 
         const place = detailsResponse.data.result;
         
-        // 🛑 VALIDACIÓN GEOFENCING FLEXIBLE: Debe contener 'Progreso' o 'Río Bravo'
-        const address = place.formatted_address ? place.formatted_address.toLowerCase() : '';
-        
-        if (!address.includes('progreso') && !address.includes('río bravo')) {
-            return null; 
-        }
+        // 🛑 VALIDACIÓN GEOFENCING ELIMINADA: Confiamos en locationBias y descartamos el filtro de texto estricto.
         
         // 3. Generar la URL de la foto
         const photoReference = place.photos?.[0]?.photo_reference || null;
@@ -283,7 +278,7 @@ export default async function handler(req, res) {
                             const placeNameSearch = ficha.placeToSearch.trim();
                             const isHealthPlace = ficha.isHealthPlace === true; 
                             
-                            // ⭐️ CORRECCIÓN CRÍTICA: Búsqueda flexible (solo el nombre)
+                            // Búsqueda flexible (solo el nombre)
                             const searchForPlaces = placeNameSearch; 
                             
                             const placeData = await getPlaceDetails(searchForPlaces);
@@ -299,7 +294,7 @@ export default async function handler(req, res) {
                             if (placeData && !isNameMiscorrelated) {
                                 // **LÓGICA NORMAL: USAR RE-PROMPT con GOOGLE SEARCH RAG (Reseñas)**
                                 
-                                // ⭐️ REFUERZO RAG: MÁS AGRESIVO EN LAS INSTRUCCIONES
+                                // REFUERZO RAG: MÁS AGRESIVO EN LAS INSTRUCCIONES
                                 let placePrompt = `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder.`;
                                 
                                 placePrompt += ` La categoría es: ${enrichedFicha.placeCategory}. **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **Extrae las frases clave de una o dos reseñas REALES y úsalas para componer la 'description' en el JSON. La descripción debe ser corta y basada SÓLO en reseñas.** Si no encuentras reseñas, resume el giro del lugar. **NOTA CRÍTICA:** Solo usa la descripción que el RAG te proporciona.`;
@@ -354,7 +349,6 @@ export default async function handler(req, res) {
                              const categorySearch = ficha.categoryName.replace(/en Progreso/i, '').trim();
                              const mapUrlQuery = categorySearch + GEOGRAPHIC_CONTEXT;
                              
-                             // Corregido para usar PlacesClient correctamente.
                              const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapUrlQuery)}`;
                              
                              enrichedFicha.mapUrl = mapUrl; 
