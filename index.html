@@ -153,12 +153,12 @@ font-family:Spline Sans Light;
         }
         
         /* 2. Asegura la eliminación del outline/ring en estados focus/active */
-        .action-chip, .category-chip, .language-chip, .go-button, .map-input, .dynamic-chip {
+        .action-chip, .category-chip, .language-chip, .go-button, .map-input, .dynamic-chip, #toggle-mode-button { /* 🛑 AÑADIDO: #toggle-mode-button */
             outline: none !important;
             box-shadow: none !important;
             --tw-ring-color: transparent !important;
         }
-        .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active, .go-button:focus, .go-button:active, .dynamic-chip:focus, .dynamic-chip:active {
+        .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active, .go-button:focus, .go-button:active, .dynamic-chip:focus, .dynamic-chip:active, #toggle-mode-button:focus, #toggle-mode-button:active { /* 🛑 AÑADIDO: #toggle-mode-button */
             outline: none !important;
             box-shadow: none !important;
             --tw-ring-color: transparent !important;
@@ -596,6 +596,40 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             0%, 80%, 100% { transform: scale(0); }
             40% { transform: scale(1); }
         }
+        
+        /* --- NUEVO ESTILO: MODO BÚSQUEDA (SEARCH MODE) --- */
+        #user-input.search-mode {
+            border-color: #dc3545; 
+            background-color: #fff0f0; /* Fondo sutilmente rojo para indicar el modo */
+            font-weight: bold;
+            color: #dc3545; /* Texto del input en rojo para indicar el modo */
+        }
+        #toggle-mode-button {
+            background-color: #2563eb; /* Azul por defecto (Modo CHAT) */
+            color: white;
+            border: none;
+            border-radius: 15px; /* Ajustamos para que coincida con el estilo de la barra */
+            padding: 0.75rem 0.75rem; 
+            cursor: pointer;
+            width: 44px; /* Aseguramos el tamaño */
+            height: 44px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            margin-left: 4px; /* Separación de la barra de búsqueda */
+            flex-shrink: 0;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        #toggle-mode-button:active {
+            transform: scale(0.95);
+        }
+        #toggle-mode-button.active {
+            background-color: #dc3545; /* Rojo cuando está en modo Búsqueda */
+            color: white;
+        }
+        /* FIN NUEVOS ESTILOS DE BÚSQUEDA */
 
     </style>
     <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
@@ -681,9 +715,13 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                 </div>
             </div>
             
-            <div class="p-4 flex-shrink-0 pt-2"> 
+            <div class="p-4 flex-shrink-0 pt-2 flex items-center space-x-2"> 
+                <button id="toggle-mode-button" title="Alternar Modo Búsqueda Geográfica">
+                    <i id="toggle-icon" class="fas fa-search"></i> 
+                </button>
+                
                 <div class="map-search-bar w-full">
-                    <input type="text" id="user-input" class="map-input focus:outline-none focus:ring-0" placeholder="Ask the map">
+                    <input type="text" id="user-input" class="map-input focus:outline-none focus:ring-0" placeholder="Pregúntale al mapa">
                     
                     <button id="go-button" class="go-button transition hover:opacity-90 disabled:opacity-50">
                         <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 122.88 122.88" class="h-5 w-5"><g><path class="st0" d="M62.43,122.88h-1.98c0-16.15-6.04-30.27-18.11-42.34C30.27,68.47,16.16,62.43,0,62.43v-1.98 c16.16,0,30.27-6.04,42.34-18.14C54.41,30.21,60.45,16.1,60.45,0h1.98c0,16.15,6.04,30.27,18.11,42.34 c12.07,12.07,26.18,18.11,42.34,18.11v1.98c-16.15,0-30.27,6.04-42.34,18.11C68.47,92.61,62.43,106.72,62.43,122.88L62.43,122.88z"/></g></svg>
@@ -745,7 +783,12 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             </div>
         </div>
     </div>
-        <script>
+        
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBGmgdkbqtCnIe7nWZYUKk9aAKWI6rKAFM&libraries=places&callback=initChatUI">
+    </script>
+
+    <script>
     // --- BLOQUE JAVASCRIPT: SETUP Y UTILIDADES ---
     
     // **NOTA: Debe coincidir con el endpoint de Vercel/backend**
@@ -758,6 +801,10 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     let languageMenuVisible = false; 
     let isBotTyping = false; // NUEVA variable de estado del bot
 
+    // 🛑 NUEVAS VARIABLES GLOBALES PARA LA FUNCIÓN DE BÚSQUEDA DIRECTA
+    let isSearchMode = false;
+    let autocomplete = null;
+    
     // VARIABLES GLOBALES PARA EL PROTOCOLO DE RECOMENDACIÓN LOCAL
     let lastTotalCount = 0; // Para guardar el conteo total de la última recomendación
     let lastApiQuery = null; // Para guardar el query de Places para el chip
@@ -767,7 +814,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     const inputElement = document.getElementById('user-input');
     const sendButton = document.getElementById('go-button'); 
     const messageContainer = document.getElementById('message-container');
-    // const loadingIndicator = document.getElementById('loading-indicator'); // ELIMINADO: Ya no se usa el lottie
     const appAlertContainer = document.getElementById('app-alert-container');
     const categoryChipsGroup = document.getElementById('category-chips-group');
     const languageChipsGroup = document.getElementById('language-chips-group');
@@ -798,6 +844,10 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     const userTypingBubble = document.getElementById('user-typing-bubble');
     const modelTypingBubble = document.getElementById('model-typing-bubble'); 
     
+    // 🛑 NUEVAS REFERENCIAS PARA EL MODO BÚSQUEDA DIRECTA
+    const toggleButton = document.getElementById('toggle-mode-button');
+    const toggleIcon = document.getElementById('toggle-icon');
+
     // 🛑 NUEVO: Objeto de mapeo de Subcategorías (Clave: Query del Chip de Categoría General)
     const SUBCATEGORIES_MAP = {
         // --- CATEGORÍA SALUD Y ESTÉTICA ---
@@ -835,6 +885,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         es: {
             header: "PROGRESO TOUR GUIDE",
             placeholder: "Pregúntale al mapa",
+            searchPlaceholder: "Búsqueda Exacta (Selecciona el lugar)...", // 🛑 NUEVO
             goButton: "Ir",
             loadingStatus: "Respondiendo tu petición...", // NUEVO: Estado de carga
             categories: "✨️ Categorías",
@@ -856,6 +907,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         en: {
             header: "PROGRESO TOUR GUIDE",
             placeholder: "Ask the map",
+            searchPlaceholder: "Exact Search (Select the place)...", // 🛑 NUEVO
             goButton: "Go",
             loadingStatus: "Processing your request...", // NUEVO: Estado de carga
             categories: "✨️ Categories",
@@ -915,8 +967,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                 }
             });
             
-            // 🛑 ELIMINACIÓN CRÍTICA: NO mover las burbujas al final del contenedor aquí.
-            
             // Asegurar que las burbujas estén OCULTAS y sin ocupar espacio
             hideUserTypingBubble();
             hideModelTypingBubble();
@@ -931,6 +981,11 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         dynamicChipsGroup.classList.add('hidden'); // Ocultar chips dinámicos
         lastTotalCount = 0;
         lastApiQuery = null;
+        
+        // 🛑 NUEVO: Si está en modo búsqueda, volver a modo chat
+        if (isSearchMode) toggleSearchMode();
+        // Aseguramos que el placeholder se restablezca
+        inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
     }
     
     function loadHistory() {
@@ -1000,12 +1055,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     function isScrolledToBottom() {
         if (!messageContainer) return true;
         // Permite un margen de 200px para considerarse "cerca del fondo"
-        // messageContainer.scrollHeight: Altura total del contenido
-        // messageContainer.scrollTop: Distancia del scroll desde la parte superior
-        // messageContainer.clientHeight: Altura visible del contenedor
         const scrollDifference = messageContainer.scrollHeight - messageContainer.scrollTop;
         const viewportHeight = messageContainer.clientHeight;
-        // Si la diferencia entre el final del contenido y el scroll está dentro de la altura visible + 200px
         const isNearBottom = scrollDifference <= viewportHeight + 200;
         return isNearBottom;
     }
@@ -1021,7 +1072,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
 
         // --- MODO DE LIMPIEZA INMEDIATA PARA EVITAR ACUMULACIÓN ---
         if (appAlertContainer) {
-            // Elimina inmediatamente cualquier alerta existente en el contenedor
             const existingAlert = appAlertContainer.querySelector('.notification-card');
             if (existingAlert) {
                 existingAlert.remove(); 
@@ -1029,12 +1079,10 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         }
         // --------------------------------------------------------
         
-        // Función auxiliar para esconder la alerta (con animación)
         const hideAlert = (alertElement) => {
             if (!alertElement || !alertElement.parentNode) return;
             alertElement.classList.remove('show');
             alertElement.style.opacity = '0';
-            // Espera a que termine la transición (400ms) antes de eliminar del DOM
             setTimeout(() => {
                 if (alertElement.parentNode) alertElement.remove();
             }, 400); 
@@ -1098,9 +1146,10 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         // Mostrar mensaje "Respondiendo tu petición..." en el input
         inputElement.placeholder = UI_STRINGS[currentLanguage].loadingStatus;
         
-        // Deshabilitar entrada y botón
+        // Deshabilitar entrada y botón (Y el botón de modo)
         inputElement.disabled = true;
         sendButton.disabled = true;
+        toggleButton.disabled = true;
         
         // El scroll debe activarse cuando el bot empieza a escribir para mostrar el indicador.
         scrollToBottom(); 
@@ -1111,12 +1160,18 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         // Ocultar indicador de typing del bot
         hideModelTypingBubble(); 
         
-        // Revertir el input a su estado normal
-        inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
-        inputElement.disabled = false;
+        // Revertir el input a su estado normal (según el modo actual)
+        if (isSearchMode) {
+            inputElement.placeholder = UI_STRINGS[currentLanguage].searchPlaceholder;
+        } else {
+            inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
+        }
         
-        // El botón de enviar solo se activa si hay texto
-        sendButton.disabled = inputElement.value.trim() === ''; 
+        inputElement.disabled = false;
+        toggleButton.disabled = false;
+        
+        // El botón de enviar solo se activa si hay texto Y NO está en modo búsqueda
+        sendButton.disabled = isSearchMode || inputElement.value.trim() === ''; 
     }
     
     function showUserTypingBubble() {
@@ -1125,7 +1180,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             userTypingBubble.classList.add('show');
             
             // 🛑 CAMBIO CRÍTICO: SCROLL CONDICIONAL
-            // Si el usuario ya está cerca del fondo, hacemos scroll para ver la burbuja.
             if (isScrolledToBottom()) {
                 scrollToBottom(); 
             }
@@ -1140,12 +1194,102 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         const inputValue = inputElement.value.trim();
         
         // Si el usuario empieza a escribir Y el bot no está respondiendo
-        if (inputValue.length > 0 && !isBotTyping) {
-            // 🛑 Usar la función que ahora tiene scroll condicional
+        if (inputValue.length > 0 && !isBotTyping && !isSearchMode) {
             showUserTypingBubble();
         } else {
             hideUserTypingBubble();
         }
+    }
+    
+    // --- NUEVAS FUNCIONES PARA EL MODO BÚSQUEDA DIRECTA ---
+    
+    /**
+     * Inicializa el autocompletado de Google Places.
+     */
+    function initAutocomplete() {
+        // Coordenadas de Nuevo Progreso (26.064, -98.005)
+        const progressoBounds = new google.maps.LatLngBounds(
+            new google.maps.LatLng(26.0, -98.1), // SW
+            new google.maps.LatLng(26.1, -97.9)  // NE
+        );
+
+        autocomplete = new google.maps.places.Autocomplete(inputElement, {
+            bounds: progressoBounds,
+            strictBounds: true, // Restringe la búsqueda a la zona de Progreso
+            types: ['establishment', 'geocode'], // Buscar negocios y direcciones
+            componentRestrictions: { country: 'mx' } // Restringir a México
+        });
+
+        // Evento que se dispara cuando el usuario selecciona un lugar de la lista
+        autocomplete.addListener('place_changed', onPlaceSelected);
+    }
+    
+    /**
+     * Alterna entre el modo Chat (normal) y el modo Búsqueda (Places API).
+     */
+    function toggleSearchMode() {
+        isSearchMode = !isSearchMode;
+
+        if (isSearchMode) {
+            // Activar Modo Búsqueda
+            inputElement.classList.add('search-mode');
+            toggleButton.classList.add('active');
+            toggleIcon.className = 'fas fa-times'; // Icono de cerrar (para salir)
+            inputElement.placeholder = UI_STRINGS[currentLanguage].searchPlaceholder;
+            sendButton.disabled = true; // Deshabilitar el botón de enviar texto (solo autocompletado)
+            
+            // Si Google Maps API está disponible, inicializa el autocompletado
+            if (window.google && window.google.maps) {
+                initAutocomplete(); 
+            }
+
+        } else {
+            // Activar Modo Chat
+            inputElement.classList.remove('search-mode');
+            toggleButton.classList.remove('active');
+            toggleIcon.className = 'fas fa-search'; // Icono de búsqueda/chat
+            inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
+            
+            // Habilitar el botón de enviar solo si hay texto
+            sendButton.disabled = inputElement.value.trim() === ''; 
+        }
+        inputElement.value = '';
+        inputElement.focus();
+    }
+    
+    /**
+     * CRÍTICO: Se dispara cuando se selecciona un lugar en el autocompletado.
+     */
+    function onPlaceSelected() {
+        if (!isSearchMode) return;
+        
+        const place = autocomplete.getPlace();
+
+        if (!place || !place.place_id) {
+            // Esto puede pasar si el usuario presiona Enter sin seleccionar una sugerencia
+            alertUser(currentLanguage === 'es' ? "Por favor, selecciona un lugar de la lista de sugerencias." : "Please select a place from the suggestions list.", 'i', 'news');
+            inputElement.value = '';
+            return;
+        }
+
+        const query = place.name || inputElement.value;
+        const placeId = place.place_id;
+
+        // 1. Mostrar la acción del usuario
+        chatHistory.push({ 
+            role: 'user', 
+            text: currentLanguage === 'es' 
+                ? `🔎 Búsqueda Directa del lugar: **${query}**`
+                : `🔎 Direct Search for place: **${query}**`, 
+            timestamp: new Date() 
+        });
+        if (typeof renderChat === 'function') renderChat();
+        
+        inputElement.value = '';
+        toggleSearchMode(); // Volver a Modo Chat después de la búsqueda
+
+        // 2. Disparar el envío al backend con el PLACE ID
+        handleSend(`Búsqueda directa del lugar ${query}`, placeId);
     }
 
     // --- Funciones de INTERACCIÓN (SIN CAMBIOS EN LÓGICA) ---
@@ -1190,7 +1334,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         hideChipGroup(languageChipsGroup, languageChips);
         languageMenuVisible = false;
 
-        inputElement.placeholder = strings.placeholder;
+        inputElement.placeholder = isSearchMode ? strings.searchPlaceholder : strings.placeholder; // 🛑 NUEVO: Ajustar al modo actual
         document.getElementById('go-text').textContent = strings.goButton; 
 
         document.getElementById('btn-categorias').textContent = strings.categories;
@@ -1269,7 +1413,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         const w = document.createElement('div');
         
         const timeStr = m.timestamp ? formatTime(m.timestamp) : '';
-        // 🛑 CAMBIO CLAVE: Usamos contenedores con clases específicas para el alineamiento del timestamp
         let timeSpan = '';
         
         if (m.role === 'user') { 
@@ -1288,13 +1431,12 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             
             let content = '';
             let actionsBar = '';
-            let imageHTML = ''; // <-- NUEVA VARIABLE PARA LA IMAGEN
+            let imageHTML = ''; 
             
             const strings = UI_STRINGS[currentLanguage];
 
             if (m.isStructured) { 
                 
-                // 🛑 SOLUCIÓN CRÍTICA: La imagen solo se renderiza si es PLACE o CATEGORY (NO fallo)
                 const isPlaceOrCategory = (m.type === 'place' || m.type === 'category');
                 
                 if (isPlaceOrCategory && m.imageUrl) {
@@ -1312,7 +1454,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                 }
                 
                 // 1. Contenido de la burbuja (COMBINANDO IMAGEN Y TEXTO)
-                // Ahora, la burbuja (wrapper) contiene la imagen Y el texto.
                 content = `
                     <div class="model-bubble-wrapper p-3 shadow-md">
                         ${imageHTML} 
@@ -1322,10 +1463,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                     </div>
                 `;
                 
-                // 🛑 SOLUCIÓN CRÍTICA: SOLO mostrar submenús o acciones si NO es un FALLO
                 if (m.type !== 'place_not_found') {
                     
-                    // 🛑 NUEVA LÓGICA: Comprobar si hay un sub-menú para esta ficha
                     const hasSubMenu = m.menuKey && SUBCATEGORIES_MAP[m.menuKey];
                     
                     if (hasSubMenu) {
@@ -1488,8 +1627,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         });
         
         // 🛑 NUEVA LÓGICA: Adjuntar listeners al contenedor <a> de la imagen.
-        // El listener ya se aplica al elemento <a> dentro de createMessageBubble
-        // con target="_blank", pero aquí aseguramos el efecto visual y el listener si fuera necesario
         const imageLinks = messageContainer.querySelectorAll('.image-link');
         imageLinks.forEach(link => {
             const img = link.querySelector('.stacked-photo');
@@ -1572,9 +1709,9 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     }
 
 
-    // --- CÓDIGO DE CONEXIÓN AL BACKEND (SIN CAMBIOS) ---
+    // --- CÓDIGO DE CONEXIÓN AL BACKEND (ACTUALIZADO PARA RECIBIR PLACE ID) ---
 
-    async function getGeminiResponse(userPrompt, chatHistoryForAPI) {
+    async function getGeminiResponse(userPrompt, chatHistoryForAPI, placeId = null) { // 🛑 NUEVO: placeId como argumento
         
         const historyForAPI = chatHistoryForAPI.map(m => {
             const textContent = m.isStructured && m.description ? m.description : m.text;
@@ -1592,7 +1729,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                 body: JSON.stringify({ 
                     history: historyForAPI, 
                     userPrompt: userPrompt, 
-                    currentLanguage: currentLanguage
+                    currentLanguage: currentLanguage,
+                    directSearchQuery: placeId // 🛑 NUEVO: Envío del Place ID si existe
                 }) 
             });
 
@@ -1613,9 +1751,14 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     }
 
     // --- Lógica Principal del Chatbot (handleSend) ---
-    async function handleSend(userPromptInput = null) {
+    async function handleSend(userPromptInput = null, placeId = null) { // 🛑 NUEVO: placeId como argumento
+        
+        // 🛑 Lógica para usar el Place ID: Si placeId es null, usa el input normal.
         const userPrompt = userPromptInput || inputElement.value.trim();
         if (!userPrompt) return;
+        
+        // 🛑 CRÍTICO: Si está en modo búsqueda y se dispara un Enter, lo ignoramos (debe usar onPlaceSelected)
+        if (isSearchMode && placeId === null) return;
         
         hideChipGroup(categoryChipsGroup, categoryChips);
         categoriesVisible = false;
@@ -1625,13 +1768,15 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         // Limpiar el estado de todos los chips de acción al iniciar el envío
         quickActionFullList.classList.add('hidden');
         dynamicChipsGroup.classList.add('hidden'); // Ocultar chips dinámicos
-        // lastTotalCount = 0; // 🚫 MOVIDO AL FINAL para no interferir con la lógica de activación
-        // lastApiQuery = null; // 🚫 MOVIDO AL FINAL
 
         // Utilizamos showLoadingIndicator para el nuevo efecto de status/input
         showLoadingIndicator(); 
         
-        chatHistory.push({ role: 'user', text: userPrompt, timestamp: new Date() }); // Añade el mensaje del usuario
+        // Si el mensaje del usuario no se ha añadido por onPlaceSelected, lo añadimos ahora
+        if (!placeId) {
+            chatHistory.push({ role: 'user', text: userPrompt, timestamp: new Date() }); 
+        }
+        
         if (typeof renderChat === 'function') renderChat();
         inputElement.value = '';
 
@@ -1640,7 +1785,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         const startIndex = Math.max(0, previousHistory.length - MAX_HISTORY_TO_SEND);
         const limitedHistory = previousHistory.slice(startIndex);
         
-        let modelResponseText = await getGeminiResponse(userPrompt, limitedHistory);
+        let modelResponseText = await getGeminiResponse(userPrompt, limitedHistory, placeId); // 🛑 NUEVO: Pasar placeId
         
         // **IMPORTANTE**: Ocultar el estado de carga tan pronto como recibimos la respuesta.
         hideLoadingIndicator(); 
@@ -1698,8 +1843,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                 
                 // 🛑 LÓGICA CLAVE: Control de Subcategorías. 
                 // Solo si el prompt ES UNA CATEGORÍA PRINCIPAL, inyectamos el menúKey.
-                // Si el prompt NO ES UNA CATEGORÍA PRINCIPAL (i.e. es "Mejores dentistas..."), 
-                // el menúKey NO se añade, lo que dispara los botones de acción en createMessageBubble.
                 
                 let shouldAddMenuKey = SUBCATEGORIES_MAP[userPrompt];
 
@@ -1784,7 +1927,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             
         } else if (finalMessage.isStructured) {
             // Caso de FICHA ESTRUCTURADA (SOLO SI LLEGÓ UNA AQUÍ, si no, ya salió antes)
-            // La lógica de los chips de submenú ocurre en createMessageBubble y no aquí.
             const isPlace = finalMessage.type === 'place';
             const entityName = isPlace 
                 ? (finalMessage.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
@@ -1824,16 +1966,34 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     }
     
     // --- Event Listeners e Inicio (ACTUALIZADO) ---
-    if (sendButton) sendButton.addEventListener('click', () => handleSend());
-    if (inputElement) inputElement.addEventListener('keypress', function(e) { if (e.key === 'Enter') { handleSend(); } });
     
+    // 🛑 Listener del Botón de Enviar (Solo modo Chat)
+    if (sendButton) sendButton.addEventListener('click', () => {
+        if (!isSearchMode) handleSend();
+    });
+    
+    // 🛑 Listener de la Tecla Enter (Solo modo Chat)
+    if (inputElement) inputElement.addEventListener('keypress', function(e) { 
+        if (e.key === 'Enter' && !isSearchMode) { 
+            handleSend(); 
+        } 
+    });
+    
+    // 🛑 Listener del Botón de Alternar Modo
+    if (toggleButton) toggleButton.addEventListener('click', toggleSearchMode);
+
+
     // NUEVO LISTENER: Para el efecto de escritura del usuario y habilitar/deshabilitar el botón
     if (inputElement) {
         inputElement.addEventListener('input', () => {
-            // Habilitar/Deshabilitar el botón de envío
-            sendButton.disabled = inputElement.value.trim() === '';
-            // Manejar la burbuja de escritura del usuario
-            handleTypingIndicator();
+            // Habilitar/Deshabilitar el botón de envío (solo si NO está en modo búsqueda)
+            sendButton.disabled = isSearchMode || inputElement.value.trim() === '';
+            // Manejar la burbuja de escritura del usuario (solo si NO está en modo búsqueda)
+            if (!isSearchMode) {
+                handleTypingIndicator();
+            } else {
+                hideUserTypingBubble();
+            }
         });
     }
 
@@ -1952,29 +2112,50 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         });
     }
 
-
-    document.addEventListener('DOMContentLoaded', () => {
+    /**
+     * Función de callback de la API de Maps.
+     * Se llama cuando la API de Google Maps/Places ha cargado.
+     */
+    window.initChatUI = function() {
+        console.log("Google Maps API (Places) cargada.");
         
-        // Asegurarse de que ambas estén ocultas al inicio
+        // 1. Asegurarse de que ambas burbujas estén ocultas al inicio
         hideUserTypingBubble();
         hideModelTypingBubble();
         
-        // Establece el idioma por defecto y actualiza la interfaz (sin disparar alerta)
+        // 2. Establecer el idioma por defecto y actualizar la interfaz (sin disparar alerta)
         setInterfaceLanguage(currentLanguage); 
         
-        // Carga el historial o asegura que chatHistory es []
+        // 3. Cargar el historial o asegura que chatHistory es []
         loadHistory(); 
         
-        // Cargar preferencias de notificación
+        // 4. Cargar preferencias de notificación
         loadNotificationPreferences(); 
         
-        // 4. ⚠️ CORRECCIÓN DE ERROR ADICIONAL: Desbloquear la entrada por si acaso
-        hideLoadingIndicator(); // Usamos la nueva función para asegurar el estado normal
+        // 5. Establecer el modo inicial (Chat) y ocultar el indicador de carga
+        // El toggleSearchMode inicializa correctamente el botón y el input
+        toggleSearchMode();
+        toggleSearchMode(); 
+        hideLoadingIndicator(); 
+
+        // 6. Mensaje de bienvenida inicial (solo si el historial está vacío)
+        if (chatHistory.length === 0) {
+             const welcomeMessage = currentLanguage === 'es'
+                ? "¡Hola! Soy tu **PROGRESO TOUR GUIDE**. Estoy listo para ayudarte. Usa el icono azul <i class='fas fa-search'></i> para activar la **Búsqueda Geográfica Directa** 📍."
+                : "Hello! I'm your **PROGRESO TOUR GUIDE**. I'm ready to help. Use the blue icon <i class='fas fa-search'></i> to activate **Direct Geographic Search** 📍.";
+             
+             chatHistory.push({ role: 'model', text: welcomeMessage, timestamp: new Date(), isStructured: false });
+             renderChat();
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Fallback si Google Maps no carga (para desarrollo local sin clave)
+        if (typeof window.google === 'undefined' || typeof window.google.maps === 'undefined') {
+            console.warn("Advertencia: Google Maps API no cargada. Inicializando UI en modo básico.");
+            window.initChatUI();
+        }
     });
-</script>
-
-
-
-
+    </script>
 </body>
 </html>
