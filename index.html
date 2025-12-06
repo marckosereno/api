@@ -8,8 +8,12 @@
         body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
         .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         h1 { color: #007bff; }
-        button { padding: 10px 20px; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        button:disabled { background-color: #6c757d; }
+        /* Estilos de botones */
+        button { padding: 10px 20px; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px; }
+        #extractBtn { background-color: #28a745; }
+        #downloadBtn { background-color: #007bff; display: none; } /* Oculto por defecto */
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+
         #results { margin-top: 20px; }
         .list-item { border-bottom: 1px solid #eee; padding: 10px 0; }
         .name { font-weight: bold; color: #333; }
@@ -18,26 +22,47 @@
 <body>
     <div class="container">
         <h1>🏥 Extractor de Clínicas Dentales</h1>
-        <p>Herramienta para superar el límite de la API de Places usando múltiples consultas y paginación en Nuevo Progreso.</p>
+        <p>Herramienta para crear el Catálogo de la Verdad de Nuevo Progreso (usando Vercel y Places API).</p>
         
-        <button id="extractBtn">Comenzar Extracción</button>
+        <div>
+            <button id="extractBtn">Comenzar Extracción</button>
+            <button id="downloadBtn">⬇️ Descargar Lista Completa (JSON)</button>
+        </div>
         
-        <p id="statusMsg" style="margin-top: 15px; color: #007bff;">Presiona el botón para iniciar la búsqueda...</p>
+        <p id="statusMsg" style="margin-top: 15px; color: #007bff;">Presiona el botón para iniciar la búsqueda y obtener el JSON.</p>
 
         <div id="results">
             </div>
     </div>
 
     <script>
-        document.getElementById('extractBtn').addEventListener('click', async () => {
-            const btn = document.getElementById('extractBtn');
-            const statusMsg = document.getElementById('statusMsg');
-            const resultsDiv = document.getElementById('results');
+        const extractBtn = document.getElementById('extractBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const statusMsg = document.getElementById('statusMsg');
+        const resultsDiv = document.getElementById('results');
 
-            btn.disabled = true;
-            statusMsg.textContent = 'Buscando en múltiples páginas y consultas... ¡Esto puede tardar unos segundos!';
+        // Función para descargar el JSON
+        function downloadJSON(data, filename) {
+            const jsonStr = JSON.stringify(data, null, 2); // Convierte a JSON con indentación
+            const blob = new Blob([jsonStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        extractBtn.addEventListener('click', async () => {
+            
+            extractBtn.disabled = true;
+            downloadBtn.style.display = 'none'; // Ocultar descarga si hay una nueva búsqueda
+            statusMsg.textContent = 'Buscando exhaustivamente en múltiples páginas y obteniendo detalles completos... ¡Esto puede tardar un poco!';
             resultsDiv.innerHTML = '';
-
+            
             try {
                 // Llama a la Serverless Function de Vercel
                 const response = await fetch('/api/dentistas'); 
@@ -52,23 +77,29 @@
                 statusMsg.textContent = data.message;
                 statusMsg.style.color = '#28a745';
 
-                data.dentists.forEach((dentist, index) => {
+                // Mostrar los primeros 10 resultados para revisión rápida
+                data.dentists.slice(0, 10).forEach((dentist, index) => {
                     const div = document.createElement('div');
                     div.className = 'list-item';
                     div.innerHTML = `
                         <div class="name">${index + 1}. ${dentist.name}</div>
                         <div>Dirección: ${dentist.address}</div>
-                        <div>Rating: ${dentist.rating}</div>
-                        <div>ID: ${dentist.id}</div>
+                        <div>Teléfono: ${dentist.phone}</div>
                     `;
                     resultsDiv.appendChild(div);
                 });
 
+                // 📌 Habilitar la descarga y adjuntar los datos completos
+                downloadBtn.style.display = 'inline-block';
+                downloadBtn.onclick = () => {
+                    downloadJSON(data.dentists, 'catalogo_dentistas_nuevoprogreso.json');
+                };
+
             } catch (error) {
-                statusMsg.textContent = `Error de conexión: ${error.message}`;
+                statusMsg.textContent = `Error de conexión con el backend: ${error.message}`;
                 statusMsg.style.color = 'red';
             } finally {
-                btn.disabled = false;
+                extractBtn.disabled = false;
             }
         });
     </script>
