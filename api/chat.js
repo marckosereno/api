@@ -104,6 +104,7 @@ REGLAS DE FORMATO:
 
 /**
  * Función que busca el nombre de un lugar en la API de Google Places.
+ * NOTA: Se solicitan SOLO campos básicos para minimizar costos. La descripción se extraerá de Google Search RAG.
  * @param {string} query Nombre del lugar a buscar.
  * @returns {object|null} Objeto con detalles del lugar o null si NO existe el lugar exacto en Nuevo Progreso.
  */
@@ -136,12 +137,13 @@ async function getPlaceDetails(query) {
             return null;
         }
 
-        // 2. Obtener los detalles del lugar
+        // 2. Obtener los detalles del lugar (SOLO CAMPOS BÁSICOS PARA AHORRAR COSTOS)
         const detailsResponse = await placesClient.placeDetails({
             params: {
                 key: placesApiKey,
                 place_id: placeId,
-                fields: ['name', 'formatted_phone_number', 'url', 'reviews', 'website', 'photos', 'formatted_address', 'editorial_summary'] 
+                // ⭐️ CAMPOS BÁSICOS: NO PEDIR 'reviews' ni 'editorial_summary' (caros)
+                fields: ['name', 'formatted_phone_number', 'url', 'website', 'photos', 'formatted_address'] 
             }
         });
 
@@ -155,7 +157,7 @@ async function getPlaceDetails(query) {
             return null; 
         }
         
-        // 3. Generar la URL de la foto y obtener el resumen editorial
+        // 3. Generar la URL de la foto
         const photoReference = place.photos?.[0]?.photo_reference || null;
         let imageUrl = null;
 
@@ -163,16 +165,14 @@ async function getPlaceDetails(query) {
             imageUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=250&photoreference=${photoReference}&key=${placesApiKey}`;
         }
 
-        let editorialSummary = place.editorial_summary?.overview || null;
-        
+        // ⭐️ RETORNAR SOLO DATOS BÁSICOS
         return {
             name: place.name,
             phone: place.formatted_phone_number || null,
             mapUrl: place.url || null,
             reviewUrl: place.url || null,
             websiteUrl: place.websiteUrl || null,
-            imageUrl: imageUrl,
-            editorialSummary: editorialSummary 
+            imageUrl: imageUrl
         };
 
     } catch (e) {
@@ -210,7 +210,7 @@ export default async function handler(req, res) {
             if (categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('tacos')) categoryName = "Taquerías y Tacos";
             else if (categoryKeyRaw.includes('restaurante') || categoryKeyRaw.includes('comer')) categoryName = "Restaurantes y Comida";
             else if (categoryKeyRaw.includes('artesanias') || categoryKeyRaw.includes('souvenirs')) categoryName = "Tiendas de Artesanías y Souvenirs";
-            else if (categoryKeyRaw.includes('barbacoa')) categoryName = "Barbacoa y Birria";
+            else if (categoryKeyRaw.includes('barbacoa')) categoryKeyRaw.includes('barbacoa')) categoryName = "Barbacoa y Birria";
             else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = "Salud y Estética";
             
             // 2. SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA
@@ -270,6 +270,7 @@ export default async function handler(req, res) {
                             const placeNameSearch = ficha.placeToSearch.trim();
                             const isHealthPlace = ficha.isHealthPlace === true; 
                             
+                            // ⭐️ SOLO PEDIMOS DATOS BÁSICOS (Ahorro de Costos)
                             const placeData = await getPlaceDetails(placeNameSearch);
 
                             if (placeData) {
@@ -308,20 +309,15 @@ export default async function handler(req, res) {
                                     };
 
                                 } else { 
-                                    // **LÓGICA NORMAL: USAR RE-PROMPT PARA LUGARES NO EXCEPCIÓN**
+                                    // **LÓGICA NORMAL: USAR RE-PROMPT con GOOGLE SEARCH RAG (Reseñas)**
 
                                     let toolsToUse = [{ googleSearch: {} }]; 
                                     
-                                    // ⭐️ PASO ANTI-ALUCINACIÓN: FORZAR A GEMINI A USAR LA DESCRIPCIÓN CORRECTA
+                                    // ⭐️ PASO ANTI-ALUCINACIÓN: FORZAR a Gemini a buscar una reseña
                                     let placePrompt = `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder.`;
                                     
-                                    if (placeData.editorialSummary) {
-                                        // Usa la descripción real de Places API
-                                        placePrompt += ` La categoría es: ${enrichedFicha.placeCategory}. La información de giro y descripción obtenida es: "${placeData.editorialSummary}". DEBES usar esta información para crear la 'description' en el JSON.`;
-                                    } else {
-                                        // Fallback: Force Google Search
-                                        placePrompt += ` No tenemos una descripción editorial. La categoría es: ${enrichedFicha.placeCategory}. Usa **tu herramienta de Google Search** para buscar el **giro y descripción** de "${placeNameSearch} Nuevo Progreso" y luego usa esa información para crear la 'description' del JSON.`;
-                                    }
+                                    // ⭐️ NUEVA INSTRUCCIÓN DE RAG CON RESEÑAS
+                                    placePrompt += ` La categoría es: ${enrichedFicha.placeCategory}. **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} Nuevo Progreso". **Extrae las frases clave de una o dos reseñas reales y úsalas para componer la 'description' en el JSON.** Si no encuentras reseñas, resume el giro del lugar.`;
 
                                     // 🛑 RE-PROMPT A GEMINI PARA GENERAR LA FICHA ENRIQUECIDA
                                     const rePromptResult = await chat.sendMessage({ 
@@ -336,13 +332,13 @@ export default async function handler(req, res) {
                                         
                                         // Usamos la ficha re-parseada
                                         enrichedFicha = {
-                                            ...reParsedJson, // Ficha con la nueva descripción (anti-alucinación)
+                                            ...reParsedJson, // Ficha con la nueva descripción (RAG de reseña)
                                             placeName: placeData.name,
                                             mapUrl: placeData.mapUrl,
                                             imageUrl: placeData.imageUrl,
                                             // Restricciones de salud
                                             placePhone: isHealthPlace ? null : placeData.phone, 
-                                            reviewUrl: isHealthPlace ? null : placeData.reviewUrl, 
+                                            reviewUrl: placeData.reviewUrl, // Usamos la URL base para el botón de reseña/Google Maps
                                             websiteUrl: isHealthPlace ? null : placeData.websiteUrl,
                                         };
                                     } catch (e) {
@@ -355,7 +351,7 @@ export default async function handler(req, res) {
                                             mapUrl: placeData.mapUrl,
                                             imageUrl: placeData.imageUrl,
                                             placePhone: isHealthPlace ? null : placeData.phone,
-                                            reviewUrl: isHealthPlace ? null : placeData.reviewUrl, 
+                                            reviewUrl: placeData.reviewUrl, 
                                             websiteUrl: isHealthPlace ? null : placeData.websiteUrl,
                                         };
                                     }
@@ -374,7 +370,7 @@ export default async function handler(req, res) {
                         } else if (ficha.type === 'category') {
                              // ENRIQUECIMIENTO PARA CATEGORÍA (Permitir "Ver en Mapa")
                              
-                             const categorySearch = ficha.categoryName.replace(/en Progreso/i, '').trim();
+                             const categorySearch = ficha.categoryName.replace(/en Progreso/i, '',).trim();
                              const mapUrlQuery = categorySearch + GEOGRAPHIC_CONTEXT;
                              
                              // URL de Google Maps para búsqueda de categorías
