@@ -1,8 +1,7 @@
 // ====================================================================
-// Archivo: chat.js (Versión 8.6 - Tono Basado en Reseñas/Servicios)
-// NOTA: Usa un re-prompt ligero de Gemini en MODO BÚSQUEDA DIRECTA para una descripción creativa
-//       cuyo tono simule un RESUMEN DE RESEÑAS o un enfoque en SERVICIO/UBICACIÓN,
-//       evitando la 'opinión personal' del bot/guía.
+// Archivo: chat.js (Versión 8.7 - Descripción Ultra-Dinámica y Multifocal)
+// NOTA: Implementa la aleatoriedad temática (Experiencia, Servicio, Ubicación, Atención)
+//       en MODO BÚSQUEDA DIRECTA para eliminar la repetición y la obviedad en el lenguaje.
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -116,45 +115,49 @@ REGLAS DE FORMATO:
 
 
 /**
- * 🟢 MODIFICADA: Genera una descripción atractiva y creativa usando Gemini, con un tono de resumen de reseñas/servicios.
+ * 🟢 MEJORADA: Genera una descripción dinámica y multifocal usando Gemini, con un tono de resumen de reseñas/servicios.
  * @param {string} placeName Nombre del lugar.
  * @param {string} category Categoría principal.
  * @param {boolean} isHealthPlace Indica si es un lugar de salud.
  * @returns {string} Descripción atractiva y conversacional generada por Gemini.
  */
-async function generateFichaDescription(placeName, category, isHealthPlace) {
+async function generateDynamicDescription(placeName, category, isHealthPlace) {
+    // 1. Definir y seleccionar un punto focal al azar
+    const focusPoints = [
+        'Experiencia General del Cliente (lo que más se comenta en las reseñas)',
+        'Servicios y Oferta Principal (énfasis en qué se hace, qué se vende o cuál es el plato estrella)',
+        'Ubicación, Acceso y Conveniencia (énfasis en lo fácil que es llegar y si está en la zona turística)',
+        'Atención al Cliente, Ambiente y Horarios'
+    ];
+    const selectedFocus = focusPoints[Math.floor(Math.random() * focusPoints.length)];
+
     const chat = ai.chats.create({
         model: MODEL_NAME, 
         config: {
-            // Instrucción estricta para el tono deseado
-            systemInstruction: `Eres un redactor turístico que resume opiniones de clientes y destaca información práctica (servicios, ubicación, horario) sobre negocios en Nuevo Progreso. Tu única tarea es generar una descripción de no más de 3 oraciones para un lugar. La descripción debe:
-            1.  Sonido de "resumen de lo que dicen los demás" (ej: "Los visitantes destacan...", "Se comenta que...").
-            2.  Evitar la opinión personal directa ("Creo que", "Me gusta").
-            3.  Enfatizar la información clave del servicio o ubicación.
-            4.  Evitar el verbo "recomendar".`
+            // Instrucción estricta para el tono deseado y la variación
+            systemInstruction: `Eres un redactor turístico profesional. Tu única tarea es generar una descripción de no más de 3 oraciones sobre un negocio. La descripción debe ser:
+            1. Totalmente única y con un tono conversacional natural (no robótico).
+            2. Tener un tono de reporte o resumen de opiniones de terceros, NO tu opinión personal.
+            3. **CRÍTICO:** Evitar las frases iniciales obvias y repetitivas como "Se comenta que..." o "Los clientes destacan...". **¡Sé creativo con la estructura de la oración para no repetir el patrón!**
+            4. Enfocarse en el punto central de la descripción que se te pide.
+            5. Nunca usar la palabra 'recomendar'.`
         }
     });
 
-    let descriptionPrompt = `Genera una descripción única y conversacional para el lugar: **${placeName}** (Categoría: ${category}).`;
+    let descriptionPrompt = `Genera una descripción única para el lugar: **${placeName}** (Categoría: ${category}). El enfoque principal de la descripción debe ser: **${selectedFocus}**.`;
     
-    // Forzar el enfoque según la categoría para variar las respuestas.
+    // Reforzar el tono de confianza para salud
     if (isHealthPlace) {
-        descriptionPrompt += ` Enfócate en la confianza del equipo, la precisión de los procedimientos y la facilidad de la ubicación para el visitante que cruza la frontera.`;
-    } else if (category.toLowerCase().includes('restaurant') || category.toLowerCase().includes('food')) {
-        descriptionPrompt += ` Enfócate en el plato estrella (imagina uno popular), el ambiente y la conveniencia de su horario de atención.`;
-    } else if (category.toLowerCase().includes('store') || category.toLowerCase().includes('shopping')) {
-        descriptionPrompt += ` Enfócate en la variedad de productos, los precios (asumiendo que son buenos para el turista) y la conveniencia de su ubicación cerca de la frontera.`;
-    } else {
-        descriptionPrompt += ` Enfócate en el servicio general y la conveniencia de su ubicación en el área comercial.`;
+        descriptionPrompt += ` Asegúrate de que, incluso con el enfoque temático, se transmita un sentido de confianza, profesionalismo y buen trato al paciente.`;
     }
 
     try {
         const result = await chat.sendMessage({ message: descriptionPrompt });
         return result.text.trim().replace(/"/g, ''); // Limpiar el texto de comillas si Gemini las añade
     } catch (e) {
-        console.error("Fallo al generar descripción de ficha:", e.message);
+        console.error("Fallo al generar descripción dinámica:", e.message);
         // Fallback genérico en caso de fallo de la API
-        return `**${placeName}** se distingue por estar ubicado estratégicamente en la zona comercial de Nuevo Progreso. Los clientes suelen comentar la facilidad de acceso y la calidad del servicio que se encuentra en el lugar.`;
+        return `**${placeName}** se distingue por estar ubicado estratégicamente en la zona comercial de Nuevo Progreso. Los visitantes suelen comentar la facilidad de acceso y la calidad del servicio que se ofrece.`;
     }
 }
 
@@ -346,7 +349,7 @@ export default async function handler(req, res) {
                 
                 // 🛑 CRÍTICO: Generar reseña humana/opinión (DINÁMICA y 100% GEMINI)
                 // Usamos la nueva función con el prompt modificado para simular un resumen de reseñas
-                const fichaDescription = await generateFichaDescription(
+                const fichaDescription = await generateDynamicDescription(
                     placeData.name,
                     placeData.placeCategory,
                     placeData.isHealthPlace
@@ -359,7 +362,7 @@ export default async function handler(req, res) {
                     placeToSearch: placeData.name,
                     placeCategory: placeData.placeCategory,
                     isHealthPlace: placeData.isHealthPlace, 
-                    description: fichaDescription, // <---- DESCRIPCIÓN 100% GEMINI Y DINÁMICA (Resumen de Reseñas/Servicio)
+                    description: fichaDescription, // <---- DESCRIPCIÓN 100% GEMINI Y DINÁMICA (con enfoque aleatorio)
                     isStructured: true,
                     // Datos enriquecidos 
                     placePhone: placeData.phone, 
@@ -514,7 +517,8 @@ export default async function handler(req, res) {
                                 // REFUERZO RAG: MÁS AGRESIVO EN LAS INSTRUCCIONES
                                 let placePrompt = `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder.`;
                                 
-                                placePrompt += ` La categoría es: ${enrichedFicha.placeCategory}. **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **Extrae las frases clave de una o dos reseñas REALES y úsalas para componer la 'description' en el JSON. La descripción debe ser corta, estar basada en las reseñas encontradas, y enfocada en lo que dicen los clientes y los servicios.** Si no encuentras reseñas, resume el giro del lugar con un tono conversacional. **NOTA CRÍTICA:** Solo usa la descripción que el RAG te proporciona.`;
+                                // Modificada la instrucción para el RAG para mejorar el tono
+                                placePrompt += ` La categoría es: ${enrichedFicha.placeCategory}. **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **Extrae las frases clave de una o dos reseñas REALES y úsalas para componer la 'description' en el JSON.** La descripción debe ser corta, estar basada en las reseñas encontradas, y enfocada en lo que dicen los clientes y los servicios. **CRÍTICO: Evita las frases de inicio repetitivas como 'Se comenta que' o 'Según las reseñas'. Sé creativo con el tono de voz.** Si no encuentras reseñas, resume el giro del lugar con un tono conversacional. **NOTA CRÍTICA:** Solo usa la descripción que el RAG te proporciona.`;
 
                                 // Usar un nuevo chat para no contaminar el historial principal
                                 const ragChat = ai.chats.create({
