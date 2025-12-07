@@ -1,6 +1,6 @@
 // ====================================================================
-// Archivo: chat.js (Versión 8.3 - Rango 15km y Descripción Dinámica/Atractiva)
-// NOTA: Base en chat-6.1. Rango 15km. Descripción conversacional ampliada, creativa y dinámica (sin métricas).
+// Archivo: chat.js (Versión 8.4 - Rango 15km y Descripción Hiper-Personalizada)
+// NOTA: Base en chat-6.1. Rango 15km. Descripción conversacional ampliada, creativa y dinámica (sin métricas ni 'recomendar').
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -113,45 +113,56 @@ REGLAS DE FORMATO:
    // El texto conversacional debe ir en "conversationText" y NO debe ser la respuesta principal.`;
 
 /**
- * 🟢 MODIFICADA: Genera una descripción atractiva y creativa basada en el nombre y categoría.
+ * 🟢 MODIFICADA: Genera una descripción atractiva, creativa, conversacional y sin el verbo "recomendar".
  * @param {string} placeName Nombre del lugar.
  * @param {string} category Categoría principal.
  * @returns {string} Descripción atractiva y conversacional.
  */
 function generateSimulatedReview(placeName, category) {
-    const nameLower = placeName.toLowerCase();
+    const categoryLower = category.toLowerCase();
     
-    // Mapeo de frases genéricas por categoría (Fallback)
+    // Mapeo de frases por categoría (más opinión y menos promoción)
     const categoryMap = {
-        'restaurant': 'Si buscas una experiencia culinaria auténtica, este es tu lugar. Los clientes frecuentes siempre destacan la sazón inigualable y la excelente atención. Ideal para una comida memorable.',
-        'dentist': 'Clientes que buscan profesionalismo y confianza eligen este centro. La atención detallada y el trato amable del personal son su sello distintivo en el área de salud dental.',
-        'pharmacy': 'Un punto de referencia confiable para todas sus necesidades de bienestar. Famoso por su amplio inventario y personal capacitado, siempre listo para ofrecerte el mejor servicio.',
-        'clothing_store': 'Perfecto para quienes aman encontrar las mejores ofertas y las últimas modas. Muchos visitantes dicen que es el lugar ideal para renovar tu guardarropa con estilo.',
-        'bar': 'Prepárate para un excelente ambiente y bebidas espectaculares. Es el sitio perfecto para relajarse y disfrutar de una noche inolvidable en Progreso.',
-        'cafe': 'El rincón favorito de Progreso para tomar un café de calidad. Es un lugar tranquilo, con un servicio impecable, ideal para hacer una pausa y recargar energías.',
-        'default': 'Los clientes dicen que es un lugar muy recomendado para visitar en Nuevo Progreso. Ofrece una gran calidad en sus servicios y es una parada que definitivamente vale la pena.'
+        'restaurant': `Es un sitio que resuena entre los clientes habituales por su sazón que se siente casera y un ambiente relajado, perfecto para disfrutar sin prisa. Los visitantes destacan constantemente la calidez del servicio y cómo cada platillo refleja la autenticidad de la cocina local.`,
+        
+        // Estructura basada en el ejemplo del usuario (Profesional y Cercano)
+        'dentist': `Si estás explorando opciones para cuidar tu salud dental, **${placeName}** es un lugar que suele destacarse entre quienes valoran un enfoque profesional y cercano. Muchos clientes que han pasado por sus instalaciones resaltan la confianza que inspira el equipo, así como la dedicación que ponen en cada detalle durante las consultas.`, 
+        
+        'pharmacy': `Esta farmacia es conocida en la comunidad por su fiabilidad y por tener un equipo que realmente se toma el tiempo de asistir a los clientes. Muchos la eligen por su amplio surtido y por ser un punto de referencia para encontrar productos de bienestar de manera rápida y eficiente.`,
+        
+        'clothing_store': `Es un destino ideal para quienes buscan renovar su estilo con las últimas tendencias sin gastar de más. Los clientes frecuentes disfrutan de la variedad de accesorios y la facilidad con la que se pueden encontrar prendas únicas y de moda para todas las ocasiones.`,
+        
+        'bar': `Para una noche agradable y relajada, este lugar es una excelente elección. Se ha ganado fama por su atmósfera vibrante y por las bebidas creativas que preparan. Un sitio perfecto para desconectar después de un largo día en Progreso.`,
+        
+        'cafe': `Muchos consideran este café como el rincón más tranquilo para hacer una pausa. Es ideal para disfrutar de una bebida de especialidad y un momento de calma. El servicio siempre es elogiado por su amabilidad y eficiencia, haciendo que te sientas bienvenido.`,
+        
+        'default': `Cuando los visitantes buscan un lugar con buen ambiente y servicio de alta calidad, **${placeName}** aparece frecuentemente. Es un negocio que se distingue por su enfoque en la satisfacción del cliente y por ser una parada confiable.`
     };
     
-    const categoryKey = Object.keys(categoryMap).find(key => category.toLowerCase().includes(key)) || 'default';
-    const genericReview = categoryMap[categoryKey];
+    // Encuentra la clave de categoría más cercana
+    const categoryKey = Object.keys(categoryMap).find(key => categoryLower.includes(key)) || 'default';
     
-    let personalizedStart = '';
-
-    // Lógica para personalizar el inicio basado en el nombre (Creatividad)
-    if (nameLower.includes('el ') || nameLower.includes('la ')) {
-         personalizedStart = `¡El famoso ${placeName} te espera! `;
-    } else if (nameLower.includes('dr.') || nameLower.includes('dra.') || nameLower.includes('clínica')) {
-        personalizedStart = `En ${placeName}, la salud es lo primero. `;
-    } else if (nameLower.includes('plaza') || nameLower.includes('mercado')) {
-        personalizedStart = `Si buscas variedad, ${placeName} es el centro de actividad. `;
-    } else if (nameLower.includes('shop') || nameLower.includes('store') || nameLower.includes('tienda')) {
-         personalizedStart = `¡Descubre las novedades en ${placeName}! `;
-    } else {
-        personalizedStart = `Te recomendamos visitar **${placeName}**. `;
+    let review = categoryMap[categoryKey];
+    
+    // Si la categoría no es 'dentist' (que ya está personalizada) o 'default' (que se personaliza abajo), 
+    // añade un inicio conversacional dinámico.
+    if (categoryKey !== 'default' && categoryKey !== 'dentist') {
+         const openingPhrases = [
+             `Al preguntar por ${placeName}, los comentarios giran en torno a que... `,
+             `Quienes visitan ${placeName} a menudo mencionan que... `,
+             `La experiencia en ${placeName} se describe como... `
+         ];
+         // Añade la frase de apertura y asegura que el resto de la frase empiece en minúsculas
+         const openingPhrase = openingPhrases[Math.floor(Math.random() * openingPhrases.length)];
+         
+         // Capitaliza la primera palabra de la frase de apertura
+         review = openingPhrase.charAt(0).toUpperCase() + openingPhrase.slice(1) + review.toLowerCase().charAt(0) + review.slice(1);
     }
 
-    // Concatenar el inicio creativo con la descripción conversacional
-    return `${personalizedStart.trim()} ${genericReview}`;
+    // El caso 'default' ya incluye el nombre del lugar.
+    // El caso 'dentist' ya incluye el nombre del lugar y usa el tono deseado.
+
+    return review.trim();
 }
 
 
