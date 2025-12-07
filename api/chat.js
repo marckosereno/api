@@ -1,5 +1,5 @@
 // ====================================================================
-// Archivo: chat.js (Versión 7.3 - Descripción Humana en Ficha)
+// Archivo: chat.js (Versión 7.3 - Revisión de Sintaxis)
 // NOTA: Búsqueda extendida a 10km (locationRestriction) y descripción humana en MODO DIRECTO.
 // ====================================================================
 
@@ -169,11 +169,7 @@ function searchLocalCatalog(query) {
 }
 
 /**
- * 🟢 NUEVA FUNCIÓN: Genera una opinión/reseña simulada basada en la categoría.
- * @param {string} category Tipo de lugar (ej: 'dentist', 'restaurant')
- * @param {number} rating Puntuación del lugar.
- * @param {number} totalRatings Número total de reseñas.
- * @returns {string} Reseña generada.
+ * Genera una opinión/reseña simulada basada en la categoría.
  */
 function generateSimulatedReview(category, rating, totalRatings) {
     const defaultReview = "¡Este lugar es muy recomendado! La experiencia general es excelente para visitantes.";
@@ -205,7 +201,6 @@ function generateSimulatedReview(category, rating, totalRatings) {
 
 /**
  * 🟢 MODIFICADA: Obtiene detalles completos de un lugar usando Places API.
- * Ahora incluye rating y total de reseñas.
  */
 async function getFullPlaceDetails(queryOrPlaceId) { 
     if (!placesApiKey) return null;
@@ -217,13 +212,13 @@ async function getFullPlaceDetails(queryOrPlaceId) {
         try {
             console.log(`Buscando Place ID (Rango 10km) para: ${queryOrPlaceId}`);
             
-            // 🛑 IMPLEMENTACIÓN CRÍTICA: RANGO EXTENDIDO 10KM (locationRestriction)
             const findPlaceResponse = await placesClient.findPlaceFromText({
                 params: {
                     key: placesApiKey,
                     input: queryOrPlaceId, 
                     inputtype: PlaceInputType.textquery, 
                     fields: ['place_id'], 
+                    // 🛑 Uso de locationRestriction para el rango de 10km
                     locationRestriction: { 
                         northeast: EXTENDED_NE_BOUND, 
                         southwest: EXTENDED_SW_BOUND 
@@ -245,7 +240,6 @@ async function getFullPlaceDetails(queryOrPlaceId) {
 
     // B) Obtenemos los detalles completos del lugar
     try {
-        // 🛑 AÑADIDOS rating y user_ratings_total
         const fields = ['name', 'formatted_phone_number', 'url', 'website', 'photos', 'formatted_address', 'geometry', 'types', 'rating', 'user_ratings_total'];
         
         const detailsResponse = await placesClient.placeDetails({
@@ -266,23 +260,22 @@ async function getFullPlaceDetails(queryOrPlaceId) {
             ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=350&photoreference=${photoReference}&key=${placesApiKey}`
             : null;
 
-        // 🛑 Lógica de Confidencialidad: Clasificación de salud
         const isHealth = place.types.some(t => IS_HEALTH_PLACE_TYPES.includes(t));
         
         return {
             name: place.name,
-            phone: isHealth ? null : (place.formatted_phone_number || null), // Ocultar si es salud
+            phone: isHealth ? null : (place.formatted_phone_number || null), 
             mapUrl: place.url || null,
             reviewUrl: place.url || null, 
-            websiteUrl: isHealth ? null : (place.website || null), // Ocultar si es salud
+            websiteUrl: isHealth ? null : (place.website || null), 
             imageUrl: imageUrl,
             formatted_address: place.formatted_address,
             latitude: place.geometry.location.lat,
             longitude: place.geometry.location.lng,
             placeCategory: place.types?.[0] || 'Lugar de Interés',
-            isHealthPlace: isHealth, // Enviamos la bandera para el frontend
-            rating: place.rating || null, // Nuevo: Rating
-            user_ratings_total: place.user_ratings_total || 0 // Nuevo: Total de Ratings
+            isHealthPlace: isHealth, 
+            rating: place.rating || null, 
+            user_ratings_total: place.user_ratings_total || 0 
         };
 
     } catch (e) {
@@ -293,7 +286,6 @@ async function getFullPlaceDetails(queryOrPlaceId) {
 
 /**
  * Función auxiliar (más sencilla) para el modo Gemini (solo necesita ID/Imagen)
- * 🛑 AHORA USA LOCATION RESTRICTION (10KM) y ELIMINA STRICT BOUNDS.
  */
 async function getPlaceDetails(query) { 
     if (!placesApiKey) return null;
@@ -308,6 +300,7 @@ async function getPlaceDetails(query) {
                 input: query, 
                 inputtype: PlaceInputType.textquery,
                 fields: ['place_id'], 
+                // 🛑 Uso de locationRestriction para el rango de 10km
                 locationRestriction: { 
                     northeast: EXTENDED_NE_BOUND, 
                     southwest: EXTENDED_SW_BOUND 
@@ -356,7 +349,7 @@ async function getPlaceDetails(query) {
     }
 }
 
-// Función auxiliar para pedir el nombre a Gemini (Se mantiene igual)
+// Función auxiliar para pedir el nombre a Gemini 
 async function getPlaceNameFromAI(userPrompt, history) {
     const chat = ai.chats.create({
         model: MODEL_NAME, 
@@ -371,15 +364,14 @@ async function getPlaceNameFromAI(userPrompt, history) {
 }
 
 
-// Función de utilidad para verificar similitud de nombres (Anti-Correlación) (Se mantiene igual)
+// Función de utilidad para verificar similitud de nombres (Anti-Correlación)
 function areNamesSimilar(searchName, returnedName) {
     const s1 = searchName.toLowerCase().replace(/[^a-z0-9]/g, '');
     const s2 = returnedName.toLowerCase().replace(/[^a-z0-9]/g, '');
-    // Verifica si uno es substring del otro o son idénticos después de limpieza
     return s2.includes(s1) || s1.includes(s2) || s1 === s2;
 }
 
-// Función de utilidad para parsear el JSON de la respuesta del modelo (Se mantiene igual)
+// Función de utilidad para parsear el JSON de la respuesta del modelo
 function parseModelResponse(responseText) {
     const jsonStart = responseText.indexOf('{');
     const jsonEnd = responseText.lastIndexOf('}');
@@ -418,7 +410,7 @@ export default async function handler(req, res) {
             
             if (placeData) {
                 
-                // 🛑 CRÍTICO: Generar reseña humana basada en datos
+                // 🛑 CRÍTICO: Generar reseña humana basada en datos (SOLICITADO POR EL USUARIO)
                 const simulatedReview = generateSimulatedReview(
                     placeData.placeCategory, 
                     placeData.rating, 
@@ -432,7 +424,7 @@ export default async function handler(req, res) {
                     placeToSearch: placeData.name,
                     placeCategory: placeData.placeCategory,
                     isHealthPlace: placeData.isHealthPlace, 
-                    description: simulatedReview, // <---- DESCRIPCIÓN HUMANA
+                    description: simulatedReview, // <---- DESCRIPCIÓN HUMANA Y AMIGABLE
                     isStructured: true,
                     // Datos enriquecidos 
                     placePhone: placeData.phone, 
@@ -556,8 +548,7 @@ export default async function handler(req, res) {
             if (categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('tacos')) categoryName = "Taquerías y Tacos";
             else if (categoryKeyRaw.includes('restaurante') || categoryKeyRaw.includes('comer')) categoryName = "Restaurantes y Comida";
             else if (categoryKeyRaw.includes('artesanias') || categoryKeyRaw.includes('souvenirs')) categoryName = "Tiendas de Artesanías y Souvenirs";
-            else if (categoryKeyRaw.in
-            cludes('barbacoa')) categoryName = "Barbacoa y Birria";
+            else if (categoryKeyRaw.includes('barbacoa')) categoryName = "Barbacoa y Birria";
             else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = "Salud y Estética";
             
             // SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA
@@ -599,6 +590,7 @@ export default async function handler(req, res) {
                         const placeNameSearch = ficha.placeToSearch.trim();
                         const isHealthPlace = ficha.isHealthPlace === true; 
                         
+                        // Esta llamada usa el rango de 10km
                         const placeData = await getPlaceDetails(placeNameSearch);
 
                         // 🛑 BLINDAJE ANTI-CORRELACIÓN:
