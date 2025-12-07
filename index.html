@@ -20,7 +20,7 @@
             background: linear-gradient(179deg, rgb(224 235 251 / 4%) 0%, #eff6ff 100% 60%);
         }
         .chat-window { 
-            height: 100dvh; 
+            height: 100%; 
             width: 100vw; 
             display: flex; 
             flex-direction: column; 
@@ -1209,7 +1209,27 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         if (sendButton) sendButton.disabled = d;
     }
 
-    // --- FUNCIONES CORE MODIFICADAS PARA EL EFECTO TYPING/STATUS ---
+    // --- Funciones de INTERFAZ CORE MODIFICADAS PARA EL PROBLEMA DEL TECLADO ---
+
+    // 🛑 NUEVA FUNCIÓN: Maneja el enfoque del input para forzar el scroll
+    function handleInputFocus() {
+        if (!inputElement) return;
+
+        // CRÍTICO: Usamos setTimeout para asegurar que el teclado haya aparecido
+        // y el viewport se haya ajustado ANTES de calcular el scroll.
+        setTimeout(() => {
+             // 'block: end' asegura que el final del elemento (el input) esté visible.
+             inputElement.scrollIntoView({ 
+                 behavior: 'smooth', 
+                 block: 'end' 
+             });
+        }, 300); // Pequeña espera (300ms) para que el navegador reaccione al teclado.
+        
+        // También aseguramos que el contenedor de mensajes baje para ver la última burbuja
+        if (messageContainer) {
+            scrollToBottom();
+        }
+    }
     
     function hideModelTypingBubble() {
         modelTypingBubble.classList.remove('show');
@@ -2144,6 +2164,10 @@ padding-bottom:40px; /* Devolvemos la altura automática */
 
     // NUEVO LISTENER: Para el efecto de escritura del usuario y habilitar/deshabilitar el botón
     if (inputElement) {
+        
+        // 🛑 CRÍTICO: ADICIÓN DEL LISTENER PARA EL FOCO DEL INPUT (SOLUCIÓN AL PROBLEMA DE SCROLL)
+        inputElement.addEventListener('focus', handleInputFocus);
+
         inputElement.addEventListener('input', () => {
             // Habilitar/Deshabilitar el botón de envío (solo si NO está en modo SPS)
             sendButton.disabled = isSPSMode || inputElement.value.trim() === ''; // 🛑 CAMBIO DE VARIABLE
