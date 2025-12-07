@@ -2107,9 +2107,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         } else if (finalMessage.isStructured) {
             // Caso de FICHA ESTRUCTURADA (SOLO SI LLEGÓ UNA AQUÍ, si no, ya salió antes)
             const isPlace = finalMessage.type === 'place';
-            const entityName = isPlace 
-                ? (finalMessage.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
-                : (finalMessage.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
+            const entityName = finalMessage.placeName || finalMessage.categoryName;
 
             const alertText = isPlace 
                 ? UI_STRINGS[currentLanguage].alertStructured(entityName)
