@@ -98,10 +98,14 @@ font-family:Spline Sans Light;
         
         /* Estilo de la barra de chat NUEVO (GLASSMOPRHISM) */
         .map-search-bar {
-            background-color: #ffffffb8; /* Fondo blanco con 72% de opacidad (Glassmorphism) */
+            /* 🌟 MODIFICADO: APLICACIÓN DEL BLUR GLASSMORPHISM A LA BARRA COMPLETA */
+            background: rgba(255, 255, 255, 0.4); 
+            backdrop-filter: blur(12px); 
+            -webkit-backdrop-filter: blur(12px); 
+            /* ------------------------------------------ */
             border-radius: 20px;
-            box-shadow: 1px 2px 2px 2px #000, 0 2px 4px -2px rgba(0, 0, 0, 0.06); /* Sombra personalizada */
-            border: 1px solid #e5e7eb; /* Mantenemos el borde para definición */
+            box-shadow: 1px 2px 2px 2px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.06); 
+            border: 1px solid rgba(255, 255, 255, 0.6); 
             display: flex;
             align-items: center;
             padding: 4px; 
@@ -604,6 +608,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             font-weight: bold;
             color: #d97706; /* Texto del input en naranja oscuro */
         }
+        /* 🛑 CAMBIO CRÍTICO: Estilo para el botón de modo DENTRO de la barra (reubicado) */
         #toggle-mode-button {
             background-color: #3b82f6; /* Azul por defecto (Modo CHAT/Normal) */
             color: white;
@@ -617,7 +622,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             justify-content: center;
             align-items: center;
             font-size: 1.2rem;
-            margin-left: 4px; /* Separación de la barra de búsqueda */
+            margin-left: 0; /* 🛑 CLAVE: Eliminamos el margen izquierdo */
+            margin-right: 4px; /* 🛑 CLAVE: Añadimos un margen derecho para separarlo del input */
             flex-shrink: 0;
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
             transition: background-color 0.2s, transform 0.1s;
@@ -717,10 +723,11 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             </div>
             
             <div class="p-4 flex-shrink-0 pt-2 flex items-center space-x-2"> 
-                <button id="toggle-mode-button" title="Alternar Modo Búsqueda Geográfica">
-                    <span id="toggle-icon" class="text-xl">💬</span> </button>
-                
                 <div class="map-search-bar w-full">
+                    <button id="toggle-mode-button" title="Alternar Modo Búsqueda Geográfica">
+                        <span id="toggle-icon" class="text-xl">💬</span> 
+                    </button>
+                    
                     <input type="text" id="user-input" class="map-input focus:outline-none focus:ring-0" placeholder="Pregúntale al mapa">
                     
                     <button id="go-button" class="go-button transition hover:opacity-90 disabled:opacity-50">
@@ -1296,10 +1303,14 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         if (typeof renderChat === 'function') renderChat();
         
         inputElement.value = '';
-        toggleSPSMode(); // Volver a Modo Chat después de la búsqueda
-
+        // 🛑 MANTENEMOS EL MODO SPS ACTIVO SEGÚN LO SOLICITADO
+        
         // 2. Disparar el envío al backend con el PLACE ID
         handleSend(`Búsqueda directa del lugar ${query}`, placeId);
+        
+        // 3. 🚨 MANTENEMOS EL ESTADO VISUAL DE SPS
+        toggleButton.disabled = true; // Desactivar el toggle mientras se carga la respuesta
+        showLoadingIndicator(); // La función showLoadingIndicator ya lo hace
     }
 
     // --- Funciones de INTERACCIÓN (SIN CAMBIOS EN LÓGICA) ---
@@ -1344,7 +1355,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         hideChipGroup(languageChipsGroup, languageChips);
         languageMenuVisible = false;
 
-        inputElement.placeholder = isSPSMode ? strings.searchPlaceholder : strings.placeholder; // 🛑 CAMBIO DE VARIABLE
+        inputElement.placeholder = isSPSMode ? strings.searchPlaceholder : strings.placeholder;
         document.getElementById('go-text').textContent = strings.goButton; 
 
         document.getElementById('btn-categorias').textContent = strings.categories;
