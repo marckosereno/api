@@ -1,11 +1,30 @@
+// ====================================================================
+// Archivo: chat.js (Versión 6.1 - Rango Extendido 10km)
+// NOTA: Base en chat-6.js, sustituye locationBias por locationRestriction (10km de rango).
+// ====================================================================
+
 import { GoogleGenAI } from '@google/genai';
 import { Client as PlacesClient } from '@googlemaps/google-maps-services-js'; 
 
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
 
-// CONTEXTO GEOGRÁFICO FIJO PARA EL FILTRADO ESTRICTO
+// CONTEXTO GEOGRÁFICO FIJO PARA EL FILTRADO
 const GEOGRAPHIC_CONTEXT = ", Nuevo Progreso, Tamaulipas, México";
+
+// 🛑 PARÁMETROS DE BÚSQUEDA EXTENDIDA (10 km de radio)
+// Coordenadas de Referencia Central de Nuevo Progreso
+const CENTER_LAT = 26.064; 
+const CENTER_LNG = -98.005;
+
+// Aproximadamente 10km en latitud y longitud a esta latitud (para crear un cuadrado de 20x20km)
+const LAT_OFFSET = 0.09; // ~10km
+const LNG_OFFSET = 0.10; // ~10km
+
+// 🛑 RANGO EXTENDIDO (20x20km centrado en Progreso - Sustituye a los bounds estrictos/bias simple)
+const EXTENDED_NE_BOUND = { lat: CENTER_LAT + LAT_OFFSET, lng: CENTER_LNG + LNG_OFFSET }; 
+const EXTENDED_SW_BOUND = { lat: CENTER_LAT - LAT_OFFSET, lng: CENTER_LNG - LNG_OFFSET }; 
+
 
 // ⭐️ MAPA DE EXCEPCIONES CON DESCRIPCIONES CANÓNICAS PARA CORREGIR ALUCINACIONES
 const EXCEPTION_DATA_MAP = {
@@ -24,9 +43,9 @@ const EXCEPTION_DATA_MAP = {
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
-const placesClient = new PlacesClient({}); // Corregida la inicialización
+const placesClient = new PlacesClient({}); 
 
-// 2. Definimos la Instrucción del Sistema (MODIFICADA PARA FORZAR CONTEXTO FRESCO)
+// 2. Definimos la Instrucción del Sistema
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 **REGLA DE ESTRICTO CUMPLIMIENTO:** Si la solicitud del usuario es para un LUGAR o CATEGORÍA, DEBES responder **EXCLUSIVAMENTE con un formato JSON**. Está **PROHIBIDO** responder en texto plano conversacional en estos casos. Usa el formato de FALLO si el servidor lo indica o si no estás seguro de la existencia del lugar.
@@ -83,8 +102,9 @@ REGLAS DE FORMATO:
 
 /**
  * Función que busca el nombre de un lugar en la API de Google Places.
+ * Ahora usa un rango de 10km (locationRestriction).
  * @param {string} query Nombre del lugar a buscar.
- * @returns {object|null} Objeto con detalles del lugar o null si NO existe el lugar exacto en Nuevo Progreso.
+ * @returns {object|null} Objeto con detalles del lugar o null si NO existe el lugar exacto en el rango.
  */
 async function getPlaceDetails(query) { 
     
@@ -93,8 +113,7 @@ async function getPlaceDetails(query) {
         return null;
     }
     
-    // Coordenadas aproximadas de Nuevo Progreso para locationBias (26.064, -98.005)
-    const LOCATION_BIAS = { lat: 26.064, lng: -98.005 };
+    // Coordenadas aproximadas de Nuevo Progreso (ya no se usa como locationBias)
 
     try {
         // 1. Buscar el place_id
@@ -104,7 +123,11 @@ async function getPlaceDetails(query) {
                 input: query, 
                 inputtype: 'textquery',
                 fields: ['place_id'], 
-                locationBias: `point:${LOCATION_BIAS.lat},${LOCATION_BIAS.lng}` 
+                // 🛑 IMPLEMENTACIÓN CRÍTICA: RANGO EXTENDIDO 10KM (locationRestriction)
+                locationRestriction: { 
+                    northeast: EXTENDED_NE_BOUND, 
+                    southwest: EXTENDED_SW_BOUND 
+                },
             }
         });
 
@@ -125,7 +148,7 @@ async function getPlaceDetails(query) {
 
         const place = detailsResponse.data.result;
         
-        // 🛑 VALIDACIÓN GEOFENCING ELIMINADA: Confiamos en locationBias y descartamos el filtro de texto estricto.
+        // 🛑 VALIDACIÓN GEOFENCING ELIMINADA: Confiamos en locationRestriction para el rango de 10km.
         
         // 3. Generar la URL de la foto
         const photoReference = place.photos?.[0]?.photo_reference || null;
