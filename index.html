@@ -157,12 +157,12 @@ font-family:Spline Sans Light;
         }
         
         /* 2. Asegura la eliminación del outline/ring en estados focus/active */
-        .action-chip, .category-chip, .language-chip, .go-button, .map-input, .dynamic-chip, #toggle-mode-button { /* 🛑 AÑADIDO: #toggle-mode-button */
+        .action-chip, .category-chip, .language-chip, .go-button, .map-input, .dynamic-chip, #toggle-mode-button, .autocomplete-chip, .attribution-chip { /* 🛑 AÑADIDO: .autocomplete-chip, .attribution-chip */
             outline: none !important;
             box-shadow: none !important;
             --tw-ring-color: transparent !important;
         }
-        .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active, .go-button:focus, .go-button:active, .dynamic-chip:focus, .dynamic-chip:active, #toggle-mode-button:focus, #toggle-mode-button:active { /* 🛑 AÑADIDO: #toggle-mode-button */
+        .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active, .go-button:focus, .go-button:active, .dynamic-chip:focus, .dynamic-chip:active, #toggle-mode-button:focus, #toggle-mode-button:active, .autocomplete-chip:focus, .autocomplete-chip:active, .attribution-chip:focus, .attribution-chip:active { /* 🛑 AÑADIDO: .autocomplete-chip, .attribution-chip */
             outline: none !important;
             box-shadow: none !important;
             --tw-ring-color: transparent !important;
@@ -638,6 +638,69 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         }
         /* FIN NUEVOS ESTILOS DE BÚSQUEDA */
 
+        /* --- ESTILOS PARA CHIPS DE AUTOCOMPLETADO Y ATRIBUCIÓN (NUEVO) --- */
+        
+        /* 🛑 CRÍTICO: Oculta el desplegable predeterminado de Google Autocomplete (pac-container) */
+        .pac-container {
+            display: none !important;
+            visibility: hidden !important;
+        }
+
+        .autocomplete-chips-group-container {
+            /* Adaptado para funcionar con la clase del contenedor de chips existente */
+            width: 100%; 
+            overflow-x: auto; 
+            -webkit-overflow-scrolling: touch; 
+            padding: 0.5rem 1rem; /* p-4 flex-wrap de tu ejemplo anterior */
+            display: flex;
+            flex-wrap: nowrap; /* Asegura que se desborde horizontalmente */
+            align-items: center;
+        }
+
+        .autocomplete-chip {
+            /* Estilo Glass-Chip básico */
+            background: rgba(255, 255, 255, 0.7); 
+            border: 1px solid rgba(0, 123, 255, 0.5); 
+            color: #007bff; 
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(5px); 
+            -webkit-backdrop-filter: blur(5px);
+            
+            padding: 6px 12px;
+            margin-right: 8px;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap; /* Crucial para el scroll horizontal */
+            flex-shrink: 0;
+        }
+
+        .autocomplete-chip:hover {
+            background: rgba(0, 123, 255, 0.1);
+        }
+
+        .attribution-chip {
+            /* El chip de atribución, diseñado para ir al final */
+            background-color: #f0f0f0;
+            color: #666;
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 15px;
+            display: inline-flex;
+            align-items: center;
+            margin-right: 8px;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .attribution-chip a {
+            color: #007bff;
+            text-decoration: none;
+            margin-left: 3px;
+        }
+        /* --- FIN ESTILOS PARA CHIPS DE AUTOCOMPLETADO Y ATRIBUCIÓN --- */
+
     </style>
     <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
 </head>
@@ -683,6 +746,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
 
         <div class="bottom-action-area flex-shrink-0 flex flex-col space-y-2">
             
+            <div id="autocomplete-chips-group-container" class="autocomplete-chips-group-container hidden">
+                </div>
             <div id="quick-action-full-list" class="px-4 pt-0 pb-2 hidden">
                 <div id="btn-view-all-places" class="action-chip flex items-center p-3 rounded-xl text-lg font-bold cursor-pointer transition glass-chip justify-center">
                     ➡️ Ver todos los lugares
@@ -810,7 +875,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
 
     // 🛑 NUEVAS VARIABLES GLOBALES PARA LA FUNCIÓN DE BÚSQUEDA DIRECTA (SPS)
     let isSPSMode = false; // 🛑 CAMBIO DE NOMBRE DE VARIABLE
-    let autocomplete = null;
+    let autocompleteService; // 🛑 CRÍTICO: Usaremos AutocompleteService en lugar de Autocomplete
     
     // VARIABLES GLOBALES PARA EL PROTOCOLO DE RECOMENDACIÓN LOCAL
     let lastTotalCount = 0; // Para guardar el conteo total de la última recomendación
@@ -846,6 +911,9 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     // NUEVAS REFERENCIAS PARA CHIPS DINÁMICOS
     const dynamicChipsGroup = document.getElementById('dynamic-chips-group');
     const dynamicChipsList = document.getElementById('dynamic-chips-list');
+    
+    // 🛑 NUEVAS REFERENCIAS PARA CHIPS DE AUTOCOMPLETADO
+    const autocompleteChipsGroupContainer = document.getElementById('autocomplete-chips-group-container');
 
     // NUEVA REFERENCIA PARA LA BURBUJA DE ESCRITURA DEL USUARIO Y MODELO
     const userTypingBubble = document.getElementById('user-typing-bubble');
@@ -892,7 +960,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         es: {
             header: "PROGRESO TOUR GUIDE",
             placeholder: "Pregúntale al mapa",
-            searchPlaceholder: "Búsqueda Exacta con Autocompletado (Selecciona el lugar)...", // 🛑 CAMBIO DE TEXTO
+            searchPlaceholder: "Escribe dirección o negocio (Selecciona el chip)...", // 🛑 CAMBIO DE TEXTO
             goButton: "Ir",
             loadingStatus: "Respondiendo tu petición...", 
             categories: "✨️ Categorías",
@@ -914,7 +982,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         en: {
             header: "PROGRESO TOUR GUIDE",
             placeholder: "Ask the map",
-            searchPlaceholder: "Exact Search with Autocomplete (Select the place)...", // 🛑 CAMBIO DE TEXTO
+            searchPlaceholder: "Enter address or business (Select the chip)...", // 🛑 CAMBIO DE TEXTO
             goButton: "Go",
             loadingStatus: "Processing your request...", 
             categories: "✨️ Categories",
@@ -986,6 +1054,11 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         // OCULTAR BOTONES DE ACCIÓN RÁPIDA
         quickActionFullList.classList.add('hidden');
         dynamicChipsGroup.classList.add('hidden'); // Ocultar chips dinámicos
+        // 🛑 NUEVO: Ocultar chips de autocompletado
+        autocompleteChipsGroupContainer.classList.add('hidden');
+        autocompleteChipsGroupContainer.innerHTML = '';
+
+
         lastTotalCount = 0;
         lastApiQuery = null;
         
@@ -1211,35 +1284,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     // --- NUEVAS FUNCIONES PARA EL MODO BÚSQUEDA DIRECTA (SPS MODE) ---
     
     /**
-     * Inicializa el autocompletado de Google Places.
-     * CRÍTICO: Configurado para buscar lugares ('establishment') y direcciones ('geocode').
-     */
-    function initAutocomplete() {
-        // Solo si el autocompletado no ha sido inicializado antes
-        if (autocomplete) {
-             // Si ya existe, nos aseguramos de que esté conectado al input actual.
-             // Como el input es el mismo, solo necesitamos asegurarnos de que el listener esté activo.
-             return;
-        }
-        
-        // Coordenadas de Nuevo Progreso (26.064, -98.005)
-        const progressoBounds = new google.maps.LatLngBounds(
-            new google.maps.LatLng(26.0, -98.1), // SW
-            new google.maps.LatLng(26.1, -97.9)  // NE
-        );
-
-        autocomplete = new google.maps.places.Autocomplete(inputElement, {
-            bounds: progressoBounds,
-            strictBounds: true, // Restringe la búsqueda a la zona de Progreso
-            types: ['establishment', 'geocode'], // ¡ESTO ES LO QUE BUSCA LUGARES Y DIRECCIONES!
-            componentRestrictions: { country: 'mx' } // Restringir a México
-        });
-
-        // Evento que se dispara cuando el usuario selecciona un lugar de la lista
-        autocomplete.addListener('place_changed', onPlaceSelected);
-    }
-    
-    /**
      * Alterna entre el modo Chat (normal) y el modo Búsqueda SPS (Places API).
      */
     function toggleSPSMode() { // 🛑 CAMBIO DE NOMBRE DE FUNCIÓN
@@ -1255,10 +1299,12 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             // 🛑 CRÍTICO: El botón de enviar debe estar SIEMPRE DESHABILITADO en Modo SPS.
             sendButton.disabled = true; 
             
-            // 🛑 CRÍTICO: Inicializar el autocompletado solo al entrar en modo SPS
-            if (window.google && window.google.maps) {
-                initAutocomplete(); 
+            // 🛑 CRÍTICO: Añadir el listener de input para el AutocompleteService
+            if (inputElement && !inputElement.hasAutocompleteListener) {
+                 inputElement.addEventListener('input', handleAutocompleteInput);
+                 inputElement.hasAutocompleteListener = true;
             }
+
 
         } else {
             // Activar Modo Chat (Normal)
@@ -1269,48 +1315,127 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             
             // Habilitar el botón de enviar solo si hay texto
             sendButton.disabled = inputElement.value.trim() === ''; 
+            
+            // Ocultar chips de autocompletado
+            autocompleteChipsGroupContainer.classList.add('hidden');
+            autocompleteChipsGroupContainer.innerHTML = '';
         }
         inputElement.value = '';
         inputElement.focus();
     }
     
-    /**
-     * CRÍTICO: Se dispara cuando se selecciona un lugar en el autocompletado.
-     */
-    function onPlaceSelected() {
-        if (!isSPSMode) return; // 🛑 CAMBIO DE VARIABLE
+    // 🛑 NUEVA FUNCIÓN: Se dispara cuando el usuario teclea en modo SPS.
+    function handleAutocompleteInput(e) {
+        const input = e.target.value.trim();
         
-        const place = autocomplete.getPlace();
-
-        if (!place || !place.place_id) {
-            // Esto puede pasar si el usuario presiona Enter sin seleccionar una sugerencia
-            alertUser(currentLanguage === 'es' ? "Por favor, selecciona un lugar de la lista de sugerencias." : "Please select a place from the suggestions list.", 'i', 'news');
-            inputElement.value = '';
+        if (!isSPSMode || !autocompleteService) {
+            autocompleteChipsGroupContainer.classList.add('hidden');
             return;
         }
 
-        const query = place.name || inputElement.value;
-        const placeId = place.place_id;
+        if (input.length > 2) {
+            // Definir la zona de búsqueda (Progreso)
+            const progressoBounds = new google.maps.LatLngBounds(
+                new google.maps.LatLng(26.0, -98.1), // SW
+                new google.maps.LatLng(26.1, -97.9)  // NE
+            );
 
+            autocompleteService.getPlacePredictions({ 
+                input: input,
+                bounds: progressoBounds,
+                strictBounds: true,
+                types: ['establishment', 'geocode'],
+                componentRestrictions: { country: 'mx' } 
+            }, renderAutocompleteChips);
+            
+        } else {
+            // Limpiar si el modo no es 'search' o el input es muy corto
+            autocompleteChipsGroupContainer.classList.add('hidden');
+            autocompleteChipsGroupContainer.innerHTML = '';
+        }
+    }
+    
+    // 🛑 NUEVA FUNCIÓN: Renderiza los chips de autocompletado y el chip de atribución
+    function renderAutocompleteChips(predictions, status) {
+        autocompleteChipsGroupContainer.innerHTML = '';
+        
+        if (!isSPSMode || status !== google.maps.places.PlacesServiceStatus.OK || !predictions || predictions.length === 0) {
+            autocompleteChipsGroupContainer.classList.add('hidden');
+            return;
+        }
+
+        autocompleteChipsGroupContainer.classList.remove('hidden');
+
+        // 1. Renderizar chips de resultados
+        predictions.forEach(prediction => {
+            const chip = document.createElement('button');
+            chip.className = 'autocomplete-chip';
+            
+            // CRÍTICO: Usamos el .main_text o el .description para el texto del chip
+            let chipText = prediction.structured_formatting ? prediction.structured_formatting.main_text : prediction.description;
+            // Opcionalmente, podemos acortar el texto secundario
+            if (prediction.structured_formatting && prediction.structured_formatting.secondary_text) {
+                 chipText += ` (${prediction.structured_formatting.secondary_text.split(',')[0].trim()})`;
+            }
+
+            chip.textContent = chipText;
+            chip.dataset.placeId = prediction.place_id;
+            chip.dataset.description = prediction.description; // Guardamos la descripción completa
+            chip.onclick = () => onPlaceSelected({ 
+                name: chipText, // Usamos el texto visible del chip
+                place_id: prediction.place_id,
+                description: prediction.description // El texto original completo para el historial
+            });
+            autocompleteChipsGroupContainer.appendChild(chip);
+        });
+        
+        // 2. Renderizar el Chip de Atribución (Obligatorio)
+        const attributionChip = document.createElement('div');
+        attributionChip.className = 'attribution-chip';
+        // Nota: El link de los ToS de Google Maps Platform es obligatorio.
+        attributionChip.innerHTML = `
+            Powered by Google 
+            <a href="https://cloud.google.com/maps-platform/terms" target="_blank" rel="noopener noreferrer" 
+               style="color: #007bff; margin-left: 5px;">
+                Términos
+            </a>
+        `;
+        autocompleteChipsGroupContainer.appendChild(attributionChip);
+
+        // Aseguramos que el contenedor de chips se muestre
+        autocompleteChipsGroupContainer.scrollLeft = 0;
+    }
+    
+    /**
+     * CRÍTICO: Se dispara cuando se selecciona un chip de lugar.
+     */
+    function onPlaceSelected(prediction) {
+        if (!isSPSMode) return; // 🛑 CAMBIO DE VARIABLE
+        
+        const query = prediction.name;
+        const placeId = prediction.place_id;
+        
         // 1. Mostrar la acción del usuario
         chatHistory.push({ 
             role: 'user', 
             text: currentLanguage === 'es' 
-                ? `⚡️ Búsqueda SPS del lugar: **${query}**` // 🛑 CAMBIO DE TEXTO
-                : `⚡️ SPS Search for place: **${query}**`, // 🛑 CAMBIO DE TEXTO
+                ? `⚡️ Búsqueda SPS del lugar: **${prediction.description}**`
+                : `⚡️ SPS Search for place: **${prediction.description}**`,
             timestamp: new Date() 
         });
         if (typeof renderChat === 'function') renderChat();
         
+        // 2. Limpiar la interfaz de búsqueda
         inputElement.value = '';
-        // 🛑 MANTENEMOS EL MODO SPS ACTIVO SEGÚN LO SOLICITADO
+        autocompleteChipsGroupContainer.classList.add('hidden');
+        autocompleteChipsGroupContainer.innerHTML = '';
         
-        // 2. Disparar el envío al backend con el PLACE ID
+        // 3. Disparar el envío al backend con el PLACE ID
         handleSend(`Búsqueda directa del lugar ${query}`, placeId);
         
-        // 3. 🚨 MANTENEMOS EL ESTADO VISUAL DE SPS
-        toggleButton.disabled = true; // Desactivar el toggle mientras se carga la respuesta
-        showLoadingIndicator(); // La función showLoadingIndicator ya lo hace
+        // 4. Mantenemos el estado visual de SPS
+        toggleButton.disabled = true; 
+        showLoadingIndicator(); 
     }
 
     // --- Funciones de INTERACCIÓN (SIN CAMBIOS EN LÓGICA) ---
@@ -1383,6 +1508,12 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         // Siempre ocultar los botones de acción rápida
         quickActionFullList.classList.add('hidden');
         dynamicChipsGroup.classList.add('hidden'); // Ocultar chips dinámicos
+        // 🛑 NUEVO: Ocultar chips de autocompletado si no estamos en modo SPS
+        if (!isSPSMode) {
+             autocompleteChipsGroupContainer.classList.add('hidden');
+             autocompleteChipsGroupContainer.innerHTML = '';
+        }
+       
         lastTotalCount = 0;
         lastApiQuery = null;
 
@@ -1690,6 +1821,10 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         categoriesVisible = false;
         hideChipGroup(languageChipsGroup, languageChips);
         languageMenuVisible = false;
+        // 🛑 NUEVO: Ocultar chips de autocompletado
+        autocompleteChipsGroupContainer.classList.add('hidden');
+        autocompleteChipsGroupContainer.innerHTML = '';
+
 
         dynamicChipsGroup.classList.remove('hidden');
 
@@ -1789,6 +1924,9 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         // Limpiar el estado de todos los chips de acción al iniciar el envío
         quickActionFullList.classList.add('hidden');
         dynamicChipsGroup.classList.add('hidden'); // Ocultar chips dinámicos
+        // 🛑 NUEVO: Ocultar chips de autocompletado
+        autocompleteChipsGroupContainer.classList.add('hidden');
+        autocompleteChipsGroupContainer.innerHTML = '';
 
         // Utilizamos showLoadingIndicator para el nuevo efecto de status/input
         showLoadingIndicator(); 
@@ -2014,6 +2152,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                 handleTypingIndicator();
             } else {
                 hideUserTypingBubble();
+                // En modo SPS, el listener específico handleAutocompleteInput se encarga de la lógica de búsqueda.
             }
         });
     }
@@ -2139,6 +2278,14 @@ padding-bottom:40px; /* Devolvemos la altura automática */
      */
     window.initChatUI = function() {
         console.log("Google Maps API (Places) cargada.");
+        
+        // 🛑 CRÍTICO: Inicializar AutocompleteService aquí
+        if (window.google && window.google.maps && google.maps.places) {
+            autocompleteService = new google.maps.places.AutocompleteService();
+            console.log("Google Maps AutocompleteService inicializado.");
+        } else {
+            console.error("No se pudo inicializar Google Maps AutocompleteService.");
+        }
         
         // 1. Asegurarse de que ambas burbujas estén ocultas al inicio
         hideUserTypingBubble();
