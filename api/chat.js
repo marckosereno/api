@@ -1,5 +1,5 @@
 // ====================================================================
-// Archivo: chat.js (Versión 7.2 - MODO BÚSQUEDA DIRECTA con SPS Estricto y Opinión Simulado)
+// Archivo: chat.js (Versión 7.3 - MODO BÚSQUEDA DIRECTA con SPS Estricto y Subcategorías)
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -47,6 +47,34 @@ const EXCEPTION_DATA_MAP = {
         searchName: 'Pinkys Fashion',
         isHealthPlace: false
     }, 
+};
+
+// 🌟 CRÍTICO: MAPA DE SUBCATEGORÍAS PARA CHIPS (Glassmorphism)
+const SUBCATEGORIES_MAP = {
+    'salud y estetica': [
+        'Dentistas 🦷',
+        'Ópticas 👓',
+        'Farmacias 💊',
+        'Clínicas y Doctores 👨‍⚕️',
+        'Cirugía Estética ✨',
+        'Laboratorios 🧪',
+        'Veterinarios 🐶',
+        'Todos de Salud 🧭'
+    ],
+    'compras y tiendas': [
+        'Ropa y Moda 👕',
+        'Artesanías 🎁',
+        'Vinos y Licores 🍾',
+        'Joyería y Regalos 💍',
+        'Todos de Compras 🛍️'
+    ],
+    'entretenimiento': [
+        'Atracciones 🎡',
+        'Bares y Cantinas 🍺',
+        'Hoteles y Hospedaje 🏨',
+        'Eventos y Fiestas 🎉'
+    ]
+    // Asegúrese de que las claves estén en minúsculas y sin acentos.
 };
 
 // 1. Inicializamos los clientes
@@ -100,8 +128,6 @@ REGLA CLAVE: Si la respuesta requiere MÚLTIPLES FICHAS, debes envolver todas la
 
 /**
  * Función que busca en el Catálogo de Dentistas con tolerancia. (Se mantiene igual)
- * @param {string} query Nombre del lugar a buscar.
- * @returns {object|null} Detalles del catálogo local o null.
  */
 function searchLocalCatalog(query) {
     if (!CATALOG_LOADED) return null;
@@ -136,10 +162,6 @@ function searchLocalCatalog(query) {
 
 /**
  * 🟢 MODIFICADA: Obtiene detalles completos de un lugar usando Places API.
- * Se usa para el MODO BÚSQUEDA DIRECTA.
- * 🛑 Aplica Georreferenciación Estricta y Lógica de Confidencialidad.
- * @param {string} queryOrPlaceId Nombre del lugar o Place ID.
- * @returns {object|null} Objeto con detalles del lugar o null.
  */
 async function getFullPlaceDetails(queryOrPlaceId) { 
     if (!placesApiKey) return null;
@@ -155,8 +177,8 @@ async function getFullPlaceDetails(queryOrPlaceId) {
             const findPlaceResponse = await placesClient.findPlaceFromText({
                 params: {
                     key: placesApiKey,
-                    input: queryOrPlaceId, // Eliminamos GEOGRAPHIC_CONTEXT aquí
-                    inputtype: PlaceInputType.textquery, // Usamos la constante importada
+                    input: queryOrPlaceId, 
+                    inputtype: PlaceInputType.textquery, 
                     fields: ['place_id'], 
                     // locationBias con formato 'rectangle:swLat,swLng|neLat,neLng'
                     locationBias: `rectangle:${SW_BOUND.lat},${SW_BOUND.lng}|${NE_BOUND.lat},${NE_BOUND.lng}`, 
@@ -178,7 +200,6 @@ async function getFullPlaceDetails(queryOrPlaceId) {
 
     // B) Obtenemos los detalles completos del lugar
     try {
-        // Incluimos rating y user_ratings_total para usarlos si están disponibles
         const fields = ['name', 'formatted_phone_number', 'url', 'website', 'photos', 'formatted_address', 'geometry', 'types', 'rating', 'user_ratings_total'];
         
         const detailsResponse = await placesClient.placeDetails({
@@ -229,6 +250,7 @@ async function getPlaceDetails(query) {
     // [Se recomienda actualizar esta función también con locationBias y strictBounds si Gemini la usa.]
     if (!placesApiKey) return null;
     
+    // ... [Resto de la función getPlaceDetails, tal como la tiene] ...
     const LOCATION_BIAS = { lat: 26.064, lng: -98.005 };
     let placeId = query;
 
@@ -275,11 +297,7 @@ function parseModelResponse(responseText) {
 }
 
 /**
- * NUEVA FUNCIÓN: Genera una opinión/reseña simulada basada en la categoría.
- * @param {string} category Categoría del lugar.
- * @param {number|null} rating Rating de Google Places.
- * @param {number} totalRatings Número total de ratings.
- * @returns {string} Opinión o reseña simulada.
+ * NUEVA FUNCIÓN: Genera una opinión/reseña simulada basada en la categoría. (Se mantiene igual)
  */
 function generateSimulatedReview(category, rating, totalRatings) {
     const defaultReview = "¡Este lugar es muy recomendado! La experiencia general es excelente para visitantes.";
@@ -323,18 +341,15 @@ export default async function handler(req, res) {
         if (directSearchQuery) {
             console.log(`⭐ Activado MODO BÚSQUEDA DIRECTA para: ${directSearchQuery}`);
             
-            // 🛑 Esta función ahora contiene el SPS Estricto y Confidencialidad
             const placeData = await getFullPlaceDetails(directSearchQuery); 
             
             if (placeData) {
                 
-                // --- MODIFICACIÓN CLAVE APLICADA AQUÍ ---
                 const simulatedReview = generateSimulatedReview(
                     placeData.placeCategory, 
                     placeData.rating, 
                     placeData.user_ratings_total
                 );
-                // ----------------------------------------
                 
                 // Generar un JSON de Ficha de Lugar con todos los detalles
                 const finalFicha = {
@@ -343,10 +358,8 @@ export default async function handler(req, res) {
                     placeToSearch: placeData.name,
                     placeCategory: placeData.placeCategory,
                     isHealthPlace: placeData.isHealthPlace, 
-                    // CAMBIO: Se usa la reseña simulada en lugar de la descripción simple de ubicación.
                     description: simulatedReview, 
                     isStructured: true,
-                    // Datos enriquecidos (Teléfono y Web ya vienen filtrados por confidencialidad)
                     placePhone: placeData.phone, 
                     mapUrl: placeData.mapUrl,
                     imageUrl: placeData.imageUrl,
@@ -361,7 +374,6 @@ export default async function handler(req, res) {
                 const failedFicha = {
                     type: "place_not_found", 
                     placeToSearch: directSearchQuery, 
-                    // CAMBIO: Se elimina la mención de "en Nuevo Progreso"
                     description: `No se pudo encontrar o recuperar detalles completos para el lugar: **${directSearchQuery}**. Por favor, verifica el nombre o intenta con el modo chat. 📍`,
                     isStructured: true
                 };
@@ -374,24 +386,77 @@ export default async function handler(req, res) {
         // ⭐️ LÓGICA DE CHAT NORMAL (GEMINI/RAG/CANÓNICO)
         // ----------------------------------------------------
         
-        // [El resto de la lógica de la Versión 6.0 continúa aquí, sin cambios]
-        
         let forcedCanonicalResponse = null; 
-        const promptSearchKey = userPrompt.toLowerCase().replace(/\s/g, ''); 
+        const promptSearchKey = userPrompt.toLowerCase().replace(/\s/g, '').replace(/[áéíóú]/g, (match) => {
+            return { 'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u' }[match];
+        });
         const placeNameFromAI = await getPlaceNameFromAI(userPrompt, history);
         
         // A. Verificar excepciones fijas (Yomis, Pinkys)
-        // ...
-        
+        // ... (Se asume que esta lógica está aquí, se omite por brevedad)
+        for (const key in EXCEPTION_DATA_MAP) {
+            if (promptSearchKey.includes(key)) {
+                // Genera la ficha canónica para excepciones
+                forcedCanonicalResponse = {
+                    type: "place",
+                    placeName: EXCEPTION_DATA_MAP[key].searchName,
+                    placeToSearch: EXCEPTION_DATA_MAP[key].searchName,
+                    placeCategory: EXCEPTION_DATA_MAP[key].category,
+                    isHealthPlace: EXCEPTION_DATA_MAP[key].isHealthPlace,
+                    description: EXCEPTION_DATA_MAP[key].description,
+                    isStructured: true
+                };
+                break;
+            }
+        }
+
         // B. Verificar en el Catálogo de Dentistas (usando el nombre identificado por AI)
-        // ...
+        if (!forcedCanonicalResponse && placeNameFromAI) {
+            const catalogEntry = searchLocalCatalog(placeNameFromAI);
+            if (catalogEntry) {
+                 // Genera la ficha canónica para catálogo de dentistas
+                forcedCanonicalResponse = {
+                    type: "place",
+                    placeName: catalogEntry.name,
+                    placeToSearch: catalogEntry.name,
+                    placeCategory: 'Dentista', 
+                    isHealthPlace: true,
+                    description: catalogEntry.description,
+                    isStructured: true,
+                    // Se pueden añadir más campos de catálogo aquí si son necesarios
+                    placePhone: catalogEntry.phone, 
+                    mapUrl: catalogEntry.mapUrl
+                };
+            }
+        }
 
         if (forcedCanonicalResponse) {
             return res.status(200).json({ responseText: JSON.stringify(forcedCanonicalResponse) });
         }
         
         // C. Lógica de Categorías (Forzar JSON)
-        // ...
+        // 🌟 NUEVO: Lógica de interceptación para activar los Chips de Subcategorías
+        let categoryMatch = null;
+        for (const categoryKey in SUBCATEGORIES_MAP) {
+            // Busca coincidencias en la pregunta del usuario con las categorías principales
+            if (promptSearchKey.includes(categoryKey.replace(/\s/g, ''))) {
+                categoryMatch = categoryKey;
+                break;
+            }
+        }
+
+        if (categoryMatch) {
+            const subcategories = SUBCATEGORIES_MAP[categoryMatch];
+            // Generamos el JSON especial que el frontend espera para renderizar los chips
+            const chipResponse = {
+                type: "subcategories",
+                category: categoryMatch,
+                title: `Subcategorías de ${categoryMatch.charAt(0).toUpperCase() + categoryMatch.slice(1)}`,
+                chips: subcategories,
+                isStructured: true
+            };
+            return res.status(200).json({ responseText: JSON.stringify(chipResponse) });
+        }
         
         // D. Llamada a Gemini y Enriquecimiento
         let promptToSend = userPrompt; 
@@ -408,7 +473,8 @@ export default async function handler(req, res) {
         let modelResponseText = result.text.trim();
         
         // ... [Lógica de Parseo y Reconstrucción del JSON (usando getPlaceDetails)] ...
-        
+        // ... (Se asume que esta lógica está aquí, se omite por brevedad)
+
         let finalResponseData = { responseText: modelResponseText };
 
         // ... [Fin de la lógica de Chat Normal] ...
