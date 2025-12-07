@@ -597,15 +597,15 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             40% { transform: scale(1); }
         }
         
-        /* --- NUEVO ESTILO: MODO BÚSQUEDA (SEARCH MODE) --- */
-        #user-input.search-mode {
-            border-color: #dc3545; 
-            background-color: #fff0f0; /* Fondo sutilmente rojo para indicar el modo */
+        /* --- NUEVO ESTILO: MODO BÚSQUEDA (SPS MODE) --- */
+        #user-input.sps-mode { /* CAMBIO DE CLASE: search-mode -> sps-mode */
+            border-color: #f59e0b; /* Amarillo/Ámbar (Similar al rayo) */
+            background-color: #fffef2; /* Fondo sutilmente amarillo para indicar el modo */
             font-weight: bold;
-            color: #dc3545; /* Texto del input en rojo para indicar el modo */
+            color: #d97706; /* Texto del input en naranja oscuro */
         }
         #toggle-mode-button {
-            background-color: #2563eb; /* Azul por defecto (Modo CHAT) */
+            background-color: #3b82f6; /* Azul por defecto (Modo CHAT/Normal) */
             color: white;
             border: none;
             border-radius: 15px; /* Ajustamos para que coincida con el estilo de la barra */
@@ -625,9 +625,10 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         #toggle-mode-button:active {
             transform: scale(0.95);
         }
+        /* 🛑 CRÍTICO: Estilo para el modo ACTIVO (SPS) */
         #toggle-mode-button.active {
-            background-color: #dc3545; /* Rojo cuando está en modo Búsqueda */
-            color: white;
+            background-color: #f59e0b; /* Amarillo/Ámbar cuando está en modo SPS */
+            color: #1f2937; /* Texto oscuro para el rayo */
         }
         /* FIN NUEVOS ESTILOS DE BÚSQUEDA */
 
@@ -717,8 +718,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             
             <div class="p-4 flex-shrink-0 pt-2 flex items-center space-x-2"> 
                 <button id="toggle-mode-button" title="Alternar Modo Búsqueda Geográfica">
-                    <i id="toggle-icon" class="fas fa-search"></i> 
-                </button>
+                    <span id="toggle-icon" class="text-xl">💬</span> </button>
                 
                 <div class="map-search-bar w-full">
                     <input type="text" id="user-input" class="map-input focus:outline-none focus:ring-0" placeholder="Pregúntale al mapa">
@@ -801,8 +801,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     let languageMenuVisible = false; 
     let isBotTyping = false; // NUEVA variable de estado del bot
 
-    // 🛑 NUEVAS VARIABLES GLOBALES PARA LA FUNCIÓN DE BÚSQUEDA DIRECTA
-    let isSearchMode = false;
+    // 🛑 NUEVAS VARIABLES GLOBALES PARA LA FUNCIÓN DE BÚSQUEDA DIRECTA (SPS)
+    let isSPSMode = false; // 🛑 CAMBIO DE NOMBRE DE VARIABLE
     let autocomplete = null;
     
     // VARIABLES GLOBALES PARA EL PROTOCOLO DE RECOMENDACIÓN LOCAL
@@ -844,7 +844,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     const userTypingBubble = document.getElementById('user-typing-bubble');
     const modelTypingBubble = document.getElementById('model-typing-bubble'); 
     
-    // 🛑 NUEVAS REFERENCIAS PARA EL MODO BÚSQUEDA DIRECTA
+    // 🛑 NUEVAS REFERENCIAS PARA EL MODO BÚSQUEDA DIRECTA (SPS)
     const toggleButton = document.getElementById('toggle-mode-button');
     const toggleIcon = document.getElementById('toggle-icon');
 
@@ -880,14 +880,14 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     };
 
 
-    // Objeto de Traducción y textos de chips (SIN CAMBIOS)
+    // Objeto de Traducción y textos de chips (ACTUALIZADO PARA SPS)
     const UI_STRINGS = {
         es: {
             header: "PROGRESO TOUR GUIDE",
             placeholder: "Pregúntale al mapa",
-            searchPlaceholder: "Búsqueda Exacta (Selecciona el lugar)...", // 🛑 NUEVO
+            searchPlaceholder: "Búsqueda Exacta con Autocompletado (Selecciona el lugar)...", // 🛑 CAMBIO DE TEXTO
             goButton: "Ir",
-            loadingStatus: "Respondiendo tu petición...", // NUEVO: Estado de carga
+            loadingStatus: "Respondiendo tu petición...", 
             categories: "✨️ Categorías",
             language: "🧢 Idioma",
             getThere: "🚀 Cómo Llegar",
@@ -899,17 +899,17 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             chipEntertainment: "🎺 Entretenimiento",
             chipDental: "🦷 Top 10 Dental",
             btnMap: "Ver en el Mapa 🧭",
-            btnSearch: "Resultados en Google 🔍", // 🛑 CAMBIO SOLICITADO
+            btnSearch: "Resultados en Google 🔍", 
             btnPhone: "Llamar Ahora 📞",
             btnReview: "Reseñas ⭐",
-            btnWebsite: "Sitio Web/Redes 🌐", // 🛑 NUEVO
+            btnWebsite: "Sitio Web/Redes 🌐", 
         },
         en: {
             header: "PROGRESO TOUR GUIDE",
             placeholder: "Ask the map",
-            searchPlaceholder: "Exact Search (Select the place)...", // 🛑 NUEVO
+            searchPlaceholder: "Exact Search with Autocomplete (Select the place)...", // 🛑 CAMBIO DE TEXTO
             goButton: "Go",
-            loadingStatus: "Processing your request...", // NUEVO: Estado de carga
+            loadingStatus: "Processing your request...", 
             categories: "✨️ Categories",
             language: "🧢 Language",
             getThere: "🚀 How to get there",
@@ -921,10 +921,10 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             chipEntertainment: "🎺 Entertainment",
             chipDental: "🦷 Top 10 Dental",
             btnMap: "View on Map 🧭",
-            btnSearch: "Search Results on Google 🔍", // 🛑 CAMBIO SOLICITADO
+            btnSearch: "Search Results on Google 🔍", 
             btnPhone: "Call Now 📞",
             btnReview: "Reviews ⭐",
-            btnWebsite: "Website/Social 🌐", // 🛑 NUEVO
+            btnWebsite: "Website/Social 🌐", 
         }
     };
 
@@ -982,8 +982,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         lastTotalCount = 0;
         lastApiQuery = null;
         
-        // 🛑 NUEVO: Si está en modo búsqueda, volver a modo chat
-        if (isSearchMode) toggleSearchMode();
+        // 🛑 NUEVO: Si está en modo SPS, volver a modo chat
+        if (isSPSMode) toggleSPSMode();
         // Aseguramos que el placeholder se restablezca
         inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
     }
@@ -1161,7 +1161,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         hideModelTypingBubble(); 
         
         // Revertir el input a su estado normal (según el modo actual)
-        if (isSearchMode) {
+        if (isSPSMode) { // 🛑 CAMBIO DE VARIABLE
             inputElement.placeholder = UI_STRINGS[currentLanguage].searchPlaceholder;
         } else {
             inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
@@ -1170,8 +1170,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         inputElement.disabled = false;
         toggleButton.disabled = false;
         
-        // El botón de enviar solo se activa si hay texto Y NO está en modo búsqueda
-        sendButton.disabled = isSearchMode || inputElement.value.trim() === ''; 
+        // El botón de enviar solo se activa si hay texto Y NO está en modo SPS
+        sendButton.disabled = isSPSMode || inputElement.value.trim() === ''; // 🛑 CAMBIO DE VARIABLE
     }
     
     function showUserTypingBubble() {
@@ -1193,21 +1193,28 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     function handleTypingIndicator() {
         const inputValue = inputElement.value.trim();
         
-        // Si el usuario empieza a escribir Y el bot no está respondiendo
-        if (inputValue.length > 0 && !isBotTyping && !isSearchMode) {
+        // Si el usuario empieza a escribir Y el bot no está respondiendo Y NO está en modo SPS
+        if (inputValue.length > 0 && !isBotTyping && !isSPSMode) { // 🛑 CAMBIO DE VARIABLE
             showUserTypingBubble();
         } else {
             hideUserTypingBubble();
         }
     }
     
-    // --- NUEVAS FUNCIONES PARA EL MODO BÚSQUEDA DIRECTA ---
+    // --- NUEVAS FUNCIONES PARA EL MODO BÚSQUEDA DIRECTA (SPS MODE) ---
     
     /**
      * Inicializa el autocompletado de Google Places.
      * CRÍTICO: Configurado para buscar lugares ('establishment') y direcciones ('geocode').
      */
     function initAutocomplete() {
+        // Solo si el autocompletado no ha sido inicializado antes
+        if (autocomplete) {
+             // Si ya existe, nos aseguramos de que esté conectado al input actual.
+             // Como el input es el mismo, solo necesitamos asegurarnos de que el listener esté activo.
+             return;
+        }
+        
         // Coordenadas de Nuevo Progreso (26.064, -98.005)
         const progressoBounds = new google.maps.LatLngBounds(
             new google.maps.LatLng(26.0, -98.1), // SW
@@ -1226,29 +1233,31 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     }
     
     /**
-     * Alterna entre el modo Chat (normal) y el modo Búsqueda (Places API).
+     * Alterna entre el modo Chat (normal) y el modo Búsqueda SPS (Places API).
      */
-    function toggleSearchMode() {
-        isSearchMode = !isSearchMode;
+    function toggleSPSMode() { // 🛑 CAMBIO DE NOMBRE DE FUNCIÓN
+        isSPSMode = !isSPSMode;
 
-        if (isSearchMode) {
-            // Activar Modo Búsqueda
-            inputElement.classList.add('search-mode');
+        if (isSPSMode) {
+            // Activar Modo SPS (Búsqueda)
+            inputElement.classList.add('sps-mode'); // 🛑 CAMBIO DE CLASE
             toggleButton.classList.add('active');
-            toggleIcon.className = 'fas fa-times'; // Icono de cerrar (para salir)
+            toggleIcon.innerHTML = '⚡️'; // 🛑 CRÍTICO: Ícono de rayo
             inputElement.placeholder = UI_STRINGS[currentLanguage].searchPlaceholder;
-            sendButton.disabled = true; // Deshabilitar el botón de enviar texto (solo autocompletado)
             
-            // 🛑 CRÍTICO: Inicializar el autocompletado solo al entrar en modo búsqueda
+            // 🛑 CRÍTICO: El botón de enviar debe estar SIEMPRE DESHABILITADO en Modo SPS.
+            sendButton.disabled = true; 
+            
+            // 🛑 CRÍTICO: Inicializar el autocompletado solo al entrar en modo SPS
             if (window.google && window.google.maps) {
                 initAutocomplete(); 
             }
 
         } else {
-            // Activar Modo Chat
-            inputElement.classList.remove('search-mode');
+            // Activar Modo Chat (Normal)
+            inputElement.classList.remove('sps-mode'); // 🛑 CAMBIO DE CLASE
             toggleButton.classList.remove('active');
-            toggleIcon.className = 'fas fa-search'; // Icono de búsqueda/chat
+            toggleIcon.innerHTML = '💬'; // 🛑 Ícono de chat
             inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
             
             // Habilitar el botón de enviar solo si hay texto
@@ -1262,7 +1271,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
      * CRÍTICO: Se dispara cuando se selecciona un lugar en el autocompletado.
      */
     function onPlaceSelected() {
-        if (!isSearchMode) return;
+        if (!isSPSMode) return; // 🛑 CAMBIO DE VARIABLE
         
         const place = autocomplete.getPlace();
 
@@ -1280,14 +1289,14 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         chatHistory.push({ 
             role: 'user', 
             text: currentLanguage === 'es' 
-                ? `🔎 Búsqueda Directa del lugar: **${query}**`
-                : `🔎 Direct Search for place: **${query}**`, 
+                ? `⚡️ Búsqueda SPS del lugar: **${query}**` // 🛑 CAMBIO DE TEXTO
+                : `⚡️ SPS Search for place: **${query}**`, // 🛑 CAMBIO DE TEXTO
             timestamp: new Date() 
         });
         if (typeof renderChat === 'function') renderChat();
         
         inputElement.value = '';
-        toggleSearchMode(); // Volver a Modo Chat después de la búsqueda
+        toggleSPSMode(); // Volver a Modo Chat después de la búsqueda
 
         // 2. Disparar el envío al backend con el PLACE ID
         handleSend(`Búsqueda directa del lugar ${query}`, placeId);
@@ -1335,7 +1344,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         hideChipGroup(languageChipsGroup, languageChips);
         languageMenuVisible = false;
 
-        inputElement.placeholder = isSearchMode ? strings.searchPlaceholder : strings.placeholder; // 🛑 NUEVO: Ajustar al modo actual
+        inputElement.placeholder = isSPSMode ? strings.searchPlaceholder : strings.placeholder; // 🛑 CAMBIO DE VARIABLE
         document.getElementById('go-text').textContent = strings.goButton; 
 
         document.getElementById('btn-categorias').textContent = strings.categories;
@@ -1758,8 +1767,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         const userPrompt = userPromptInput || inputElement.value.trim();
         if (!userPrompt) return;
         
-        // 🛑 CRÍTICO: Si está en modo búsqueda y se dispara un Enter, lo ignoramos (debe usar onPlaceSelected)
-        if (isSearchMode && placeId === null) return;
+        // 🛑 CRÍTICO: Si está en modo SPS y se dispara un Enter, lo ignoramos (debe usar onPlaceSelected)
+        if (isSPSMode && placeId === null) return; // 🛑 CAMBIO DE VARIABLE
         
         hideChipGroup(categoryChipsGroup, categoryChips);
         categoriesVisible = false;
@@ -1970,27 +1979,27 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     
     // 🛑 Listener del Botón de Enviar (Solo modo Chat)
     if (sendButton) sendButton.addEventListener('click', () => {
-        if (!isSearchMode) handleSend();
+        if (!isSPSMode) handleSend(); // 🛑 CAMBIO DE VARIABLE
     });
     
     // 🛑 Listener de la Tecla Enter (Solo modo Chat)
     if (inputElement) inputElement.addEventListener('keypress', function(e) { 
-        if (e.key === 'Enter' && !isSearchMode) { 
+        if (e.key === 'Enter' && !isSPSMode) { // 🛑 CAMBIO DE VARIABLE
             handleSend(); 
         } 
     });
     
-    // 🛑 Listener del Botón de Alternar Modo
-    if (toggleButton) toggleButton.addEventListener('click', toggleSearchMode);
+    // 🛑 Listener del Botón de Alternar Modo (SPS)
+    if (toggleButton) toggleButton.addEventListener('click', toggleSPSMode);
 
 
     // NUEVO LISTENER: Para el efecto de escritura del usuario y habilitar/deshabilitar el botón
     if (inputElement) {
         inputElement.addEventListener('input', () => {
-            // Habilitar/Deshabilitar el botón de envío (solo si NO está en modo búsqueda)
-            sendButton.disabled = isSearchMode || inputElement.value.trim() === '';
-            // Manejar la burbuja de escritura del usuario (solo si NO está en modo búsqueda)
-            if (!isSearchMode) {
+            // Habilitar/Deshabilitar el botón de envío (solo si NO está en modo SPS)
+            sendButton.disabled = isSPSMode || inputElement.value.trim() === ''; // 🛑 CAMBIO DE VARIABLE
+            // Manejar la burbuja de escritura del usuario (solo si NO está en modo SPS)
+            if (!isSPSMode) { // 🛑 CAMBIO DE VARIABLE
                 handleTypingIndicator();
             } else {
                 hideUserTypingBubble();
@@ -2133,17 +2142,16 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         // 4. Cargar preferencias de notificación
         loadNotificationPreferences(); 
         
-        // 5. Establecer el modo inicial (Chat) y ocultar el indicador de carga
-        // El toggleSearchMode inicializa correctamente el botón y el input
-        toggleSearchMode();
-        toggleSearchMode(); 
+        // 5. Inicializar el modo en Chat (Normal)
+        isSPSMode = true; // Forzar a que la función lo ponga en FALSE
+        toggleSPSMode(); // Se inicializa en modo normal (chat)
         hideLoadingIndicator(); 
 
         // 6. Mensaje de bienvenida inicial (solo si el historial está vacío)
         if (chatHistory.length === 0) {
              const welcomeMessage = currentLanguage === 'es'
-                ? "¡Hola! Soy tu **PROGRESO TOUR GUIDE**. Estoy listo para ayudarte. Usa el icono azul <i class='fas fa-search'></i> para activar la **Búsqueda Geográfica Directa** 📍."
-                : "Hello! I'm your **PROGRESO TOUR GUIDE**. I'm ready to help. Use the blue icon <i class='fas fa-search'></i> to activate **Direct Geographic Search** 📍.";
+                ? "¡Hola! Soy tu **PROGRESO TOUR GUIDE**. Estoy listo para ayudarte. Usa el icono **💬** para el modo de chat normal o **tócalo de nuevo** para activar la **Búsqueda Geográfica Directa (SPS)** ⚡️."
+                : "Hello! I'm your **PROGRESO TOUR GUIDE**. I'm ready to help. Use the **💬** icon for normal chat mode or **tap it again** to activate **Direct Geographic Search (SPS)** ⚡️.";
              
              chatHistory.push({ role: 'model', text: welcomeMessage, timestamp: new Date(), isStructured: false });
              renderChat();
