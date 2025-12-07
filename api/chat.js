@@ -1,7 +1,8 @@
 // ====================================================================
-// Archivo: chat.js (Versión 8.8 - Límite 44-50 palabras y 4 Tonos Dinámicos)
-// NOTA: Implementa la aleatoriedad de TONO (Profesional, Informal, Curioso, Gracioso)
+// Archivo: chat.js (Versión 8.9 - Límite 44-50 palabras y 3 Tonos Dinámicos)
+// NOTA: Implementa la aleatoriedad de TONO (Profesional, Informal, Curioso)
 //       junto con la aleatoriedad temática y el límite de palabras.
+// 🛑 DESCARTE: Se elimina el Tono 'Gracioso' y el enfoque en 'Ubicación'
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -123,20 +124,20 @@ REGLAS DE FORMATO:
  */
 async function generateDynamicDescription(placeName, category, isHealthPlace) {
     // 1. Definir y seleccionar un punto focal al azar
+    // 🛑 AJUSTE: Se elimina el enfoque en "Ubicación, Acceso y Conveniencia"
     const focusPoints = [
         'Experiencia General del Cliente (lo que más se comenta en las reseñas)',
         'Servicios y Oferta Principal (énfasis en qué se hace, qué se vende o cuál es el plato estrella)',
-        'Ubicación, Acceso y Conveniencia (énfasis en lo fácil que es llegar y si está en la zona turística)',
         'Atención al Cliente, Ambiente y Horarios'
     ];
     const selectedFocus = focusPoints[Math.floor(Math.random() * focusPoints.length)];
 
     // 2. Definir y seleccionar un tono al azar
+    // 🛑 AJUSTE: Se elimina el tono 'gracioso'
     const tones = [
         'informal (como un amigo que da un dato clave)',
         'profesional (énfasis en la calidad y eficiencia del negocio)',
-        'curioso (tono intrigante, haciendo preguntas o invitando a descubrir)',
-        'gracioso (humor ligero, sin ser ofensivo o exagerado)'
+        'curioso (tono intrigante, haciendo preguntas o invitando a descubrir)'
     ];
     const selectedTone = tones[Math.floor(Math.random() * tones.length)];
 
