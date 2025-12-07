@@ -1,6 +1,6 @@
 // ====================================================================
-// Archivo: chat.js (Versión 8.1 - Rango Extendido 15km y Descripción Humana)
-// NOTA: Base en chat-6.1. Rango extendido a 15km. Añadida Búsqueda Directa con Descripción Humana.
+// Archivo: chat.js (Versión 8.2 - Rango 15km y Descripción Conversacional)
+// NOTA: Base en chat-6.1. Rango extendido a 15km. Descripción conversacional ampliada y sin métricas.
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -18,7 +18,6 @@ const CENTER_LAT = 26.064;
 const CENTER_LNG = -98.005;
 
 // Aproximadamente 15km en latitud y longitud a esta latitud (para crear un cuadrado de 30x30km)
-// MODIFICADO DE 10KM A 15KM
 const LAT_OFFSET = 0.135; // ~15km
 const LNG_OFFSET = 0.150; // ~15km
 
@@ -55,7 +54,6 @@ const EXCEPTION_DATA_MAP = {
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
-// NOTA: Se añadió PlaceInputType a la importación en la línea 5 para la Búsqueda Directa
 const placesClient = new PlacesClient({}); 
 
 
@@ -115,40 +113,33 @@ REGLAS DE FORMATO:
    // El texto conversacional debe ir en "conversationText" y NO debe ser la respuesta principal.`;
 
 /**
- * 🟢 NUEVA FUNCIÓN: Genera una opinión/reseña simulada basada en la categoría.
- * Esto sustituye a la descripción técnica por algo más humano.
+ * 🟢 MODIFICADA: Genera una opinión/reseña simulada, conversacional y ampliada.
+ * NO incluye estrellas ni número de reseñas.
  */
-function generateSimulatedReview(category, rating, totalRatings) {
-    const defaultReview = "¡Este lugar es muy recomendado! La experiencia general es excelente para visitantes.";
+function generateSimulatedReview(category) {
+    const defaultReview = "Este es un lugar altamente recomendado por la comunidad local. Perfecto para una visita rápida o para encontrar ese artículo especial.";
     
-    let ratingText = '';
-    if (rating && totalRatings > 5) {
-        ratingText = `Cuenta con una valoración de **${rating} estrellas** con base en ${totalRatings} reseñas. `;
-    } else if (totalRatings > 0) {
-        ratingText = `Ha recibido ${totalRatings} valoraciones de la comunidad. `;
-    }
-
-    // Mapeo de tipos de lugares comunes (de la API) a comentarios humanos
+    // Mapeo de tipos de lugares comunes (de la API) a OPINIONES/SUGERENCIAS humanas
     const categoryMap = {
-        'restaurant': 'Los visitantes destacan la deliciosa comida y el ambiente acogedor. ¡Una parada obligatoria para el buen sabor! ',
-        'dentist': 'Clientes anteriores elogian el servicio profesional y la atención amable del personal. Es una opción de alta confianza. ',
-        'pharmacy': 'Conocida por su amplio surtido y personal atento, ideal para sus necesidades de salud. ',
-        'clothing_store': 'Perfecto para encontrar las últimas tendencias en moda y accesorios. ¡Los compradores lo adoran! ',
-        'bar': 'Un lugar popular para relajarse con buenas bebidas y excelente ambiente nocturno. ',
-        'cafe': 'Ideal para tomar un café y disfrutar de un momento tranquilo con un servicio rápido y amigable. '
+        'restaurant': '¡Definitivamente tienes que visitarlo! Los clientes frecuentes mencionan que es el lugar ideal para ir en familia o con amigos. Su menú tiene un sabor auténtico que lo convierte en una parada obligatoria para el buen comer en Progreso. El ambiente es muy acogedor y el servicio, excepcional.',
+        'dentist': 'Si buscas servicios dentales de alta calidad, esta es una excelente opción. Los visitantes suelen destacar el profesionalismo del personal y la tecnología moderna que utilizan. Ofrecen una atención muy amable y detallada, lo que genera mucha confianza.',
+        'pharmacy': 'Conocida por tener un amplio surtido de medicinas y productos de bienestar. Los clientes dicen que el personal es muy atento y siempre está dispuesto a ayudarte a encontrar exactamente lo que necesitas. Es una opción confiable para tus necesidades de salud.',
+        'clothing_store': 'Perfecta para los amantes de la moda. Aquí puedes encontrar las últimas tendencias en ropa y accesorios a muy buenos precios. Los compradores suelen comentar que siempre encuentran algo único y de temporada. ¡Ideal para llevar un recuerdo de Progreso!',
+        'bar': 'Un excelente ambiente para relajarse y disfrutar al final del día. Es muy popular por sus bebidas bien preparadas y la buena música. Los locales lo recomiendan como el mejor lugar para pasar una noche divertida.',
+        'cafe': 'Un rincón tranquilo para hacer una pausa. Los clientes lo consideran ideal para tomar un café por la tarde o disfrutar de un desayuno ligero. El servicio es rápido, amigable y te hará sentir como en casa.',
+        'general': defaultReview
     };
 
     // Intentar encontrar una coincidencia basada en el tipo de lugar (category)
-    const categoryKey = Object.keys(categoryMap).find(key => category.includes(key)) || 'default';
+    const categoryKey = Object.keys(categoryMap).find(key => category.toLowerCase().includes(key)) || 'general';
 
-    const specificReview = categoryMap[categoryKey] || defaultReview;
-    return specificReview.trim() + (ratingText ? ` ${ratingText.trim()}` : '');
+    return categoryMap[categoryKey];
 }
 
 
 /**
  * 🟢 NUEVA FUNCIÓN: Obtiene detalles completos de un lugar usando Places API (Modo Búsqueda Directa).
- * Ahora incluye rating, total de reseñas, y usa el rango de 15km.
+ * Usa el rango de 15km.
  */
 async function getFullPlaceDetails(queryOrPlaceId) { 
     if (!placesApiKey) return null;
@@ -188,7 +179,7 @@ async function getFullPlaceDetails(queryOrPlaceId) {
 
     // B) Obtenemos los detalles completos del lugar
     try {
-        // Se añaden rating y user_ratings_total
+        // Se incluyen rating y user_ratings_total aunque no se usen en el texto final, son necesarios para getFullPlaceDetails
         const fields = ['name', 'formatted_phone_number', 'url', 'website', 'photos', 'formatted_address', 'geometry', 'types', 'rating', 'user_ratings_total'];
         
         const detailsResponse = await placesClient.placeDetails({
@@ -213,7 +204,6 @@ async function getFullPlaceDetails(queryOrPlaceId) {
         
         return {
             name: place.name,
-            // Aplicar restricción de privacidad a números de teléfono y websites
             phone: isHealth ? null : (place.formatted_phone_number || null), 
             mapUrl: place.url || null,
             reviewUrl: place.url || null, 
@@ -224,7 +214,7 @@ async function getFullPlaceDetails(queryOrPlaceId) {
             longitude: place.geometry.location.lng,
             placeCategory: place.types?.[0] || 'Lugar de Interés',
             isHealthPlace: isHealth, 
-            rating: place.rating || null, 
+            rating: place.rating || null, // Se mantienen los campos para la función de reseña, aunque no se usen.
             user_ratings_total: place.user_ratings_total || 0 
         };
 
@@ -271,7 +261,6 @@ async function getPlaceDetails(query) {
         }
 
         // 2. Obtener los detalles del lugar (SOLO CAMPOS BÁSICOS)
-        // Se añade 'types' para la lógica de Salud
         const detailsResponse = await placesClient.placeDetails({
             params: {
                 key: placesApiKey,
@@ -293,13 +282,12 @@ async function getPlaceDetails(query) {
 
         return {
             name: place.name,
-            // Aplicar restricción de privacidad a números de teléfono y websites
             phone: isHealth ? null : (place.formatted_phone_number || null),
             mapUrl: place.url || null,
             reviewUrl: place.url || null, 
             websiteUrl: isHealth ? null : (place.website || null),
             imageUrl: imageUrl,
-            isHealthPlace: isHealth // Nuevo campo
+            isHealthPlace: isHealth
         };
 
     } catch (e) {
@@ -312,7 +300,6 @@ async function getPlaceDetails(query) {
 function areNamesSimilar(searchName, returnedName) {
     const s1 = searchName.toLowerCase().replace(/[^a-z0-9]/g, '');
     const s2 = returnedName.toLowerCase().replace(/[^a-z0-9]/g, '');
-    // Verifica si uno es substring del otro o son idénticos después de limpieza
     return s2.includes(s1) || s1.includes(s2) || s1 === s2;
 }
 
@@ -323,7 +310,8 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { history = [], userPrompt, currentLanguage, directSearchQuery } = req.body; // Se añade directSearchQuery
+        // Se añade directSearchQuery
+        const { history = [], userPrompt, currentLanguage, directSearchQuery } = req.body; 
         
         const langText = currentLanguage === 'es' ? 'español' : 'inglés';
         const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
@@ -334,16 +322,15 @@ export default async function handler(req, res) {
         if (directSearchQuery) {
             console.log(`⭐ Activado MODO BÚSQUEDA DIRECTA (15km) para: ${directSearchQuery}`);
             
-            // Usamos la nueva función con rango de 15km y datos completos
+            // Usamos la función con rango de 15km y datos completos
             const placeData = await getFullPlaceDetails(directSearchQuery); 
             
             if (placeData) {
                 
-                // 🛑 CRÍTICO: Generar reseña humana/opinión (SOLICITADO POR EL USUARIO)
+                // 🛑 CRÍTICO: Generar reseña humana/opinión (CONVERSACIONAL)
                 const simulatedReview = generateSimulatedReview(
-                    placeData.placeCategory, 
-                    placeData.rating, 
-                    placeData.user_ratings_total
+                    placeData.placeCategory
+                    // Ya no pasamos rating/totalRatings
                 );
 
                 // Generar un JSON de Ficha de Lugar con todos los detalles
@@ -353,7 +340,7 @@ export default async function handler(req, res) {
                     placeToSearch: placeData.name,
                     placeCategory: placeData.placeCategory,
                     isHealthPlace: placeData.isHealthPlace, 
-                    description: simulatedReview, // <---- DESCRIPCIÓN HUMANA Y AMIGABLE
+                    description: simulatedReview, // <---- DESCRIPCIÓN HUMANA Y CONVERSACIONAL
                     isStructured: true,
                     // Datos enriquecidos 
                     placePhone: placeData.phone, 
@@ -550,7 +537,7 @@ export default async function handler(req, res) {
                                 enrichedFicha = {
                                     type: "place_not_found", 
                                     placeToSearch: placeNameSearch, 
-                                    description: `Disculpa, no se encontró un lugar llamado **${placeNameSearch}** ubicado en Nuevo Progreso (Rango 15km).`, // Mensaje actualizado
+                                    description: `Disculpa, no se encontró un lugar llamado **${placeNameSearch}** ubicado en Nuevo Progreso (Rango 15km).`,
                                     isStructured: true
                                 };
                             }
