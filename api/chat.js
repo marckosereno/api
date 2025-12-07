@@ -423,4 +423,3 @@ export default async function handler(req, res) {
         });
     }
 }
-...puedes darmelo todo completo y listo para pegar incluyendo las subcategorias de los chips Glassmorphism.
