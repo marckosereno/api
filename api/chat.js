@@ -1,6 +1,6 @@
 // ====================================================================
-// Archivo: chat.js (Versión 8.2 - Rango 15km y Descripción Conversacional)
-// NOTA: Base en chat-6.1. Rango extendido a 15km. Descripción conversacional ampliada y sin métricas.
+// Archivo: chat.js (Versión 8.3 - Rango 15km y Descripción Dinámica/Atractiva)
+// NOTA: Base en chat-6.1. Rango 15km. Descripción conversacional ampliada, creativa y dinámica (sin métricas).
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -12,7 +12,7 @@ const MODEL_NAME = "gemini-2.5-flash";
 // CONTEXTO GEOGRÁFICO FIJO PARA EL FILTRADO
 const GEOGRAPHIC_CONTEXT = ", Nuevo Progreso, Tamaulipas, México";
 
-// 🛑 PARÁMETROS DE BÚSQUEDA EXTENDIDA (15 km de radio - MODIFICADO)
+// 🛑 PARÁMETROS DE BÚSQUEDA EXTENDIDA (15 km de radio)
 // Coordenadas de Referencia Central de Nuevo Progreso
 const CENTER_LAT = 26.064; 
 const CENTER_LNG = -98.005;
@@ -113,32 +113,50 @@ REGLAS DE FORMATO:
    // El texto conversacional debe ir en "conversationText" y NO debe ser la respuesta principal.`;
 
 /**
- * 🟢 MODIFICADA: Genera una opinión/reseña simulada, conversacional y ampliada.
- * NO incluye estrellas ni número de reseñas.
+ * 🟢 MODIFICADA: Genera una descripción atractiva y creativa basada en el nombre y categoría.
+ * @param {string} placeName Nombre del lugar.
+ * @param {string} category Categoría principal.
+ * @returns {string} Descripción atractiva y conversacional.
  */
-function generateSimulatedReview(category) {
-    const defaultReview = "Este es un lugar altamente recomendado por la comunidad local. Perfecto para una visita rápida o para encontrar ese artículo especial.";
+function generateSimulatedReview(placeName, category) {
+    const nameLower = placeName.toLowerCase();
     
-    // Mapeo de tipos de lugares comunes (de la API) a OPINIONES/SUGERENCIAS humanas
+    // Mapeo de frases genéricas por categoría (Fallback)
     const categoryMap = {
-        'restaurant': '¡Definitivamente tienes que visitarlo! Los clientes frecuentes mencionan que es el lugar ideal para ir en familia o con amigos. Su menú tiene un sabor auténtico que lo convierte en una parada obligatoria para el buen comer en Progreso. El ambiente es muy acogedor y el servicio, excepcional.',
-        'dentist': 'Si buscas servicios dentales de alta calidad, esta es una excelente opción. Los visitantes suelen destacar el profesionalismo del personal y la tecnología moderna que utilizan. Ofrecen una atención muy amable y detallada, lo que genera mucha confianza.',
-        'pharmacy': 'Conocida por tener un amplio surtido de medicinas y productos de bienestar. Los clientes dicen que el personal es muy atento y siempre está dispuesto a ayudarte a encontrar exactamente lo que necesitas. Es una opción confiable para tus necesidades de salud.',
-        'clothing_store': 'Perfecta para los amantes de la moda. Aquí puedes encontrar las últimas tendencias en ropa y accesorios a muy buenos precios. Los compradores suelen comentar que siempre encuentran algo único y de temporada. ¡Ideal para llevar un recuerdo de Progreso!',
-        'bar': 'Un excelente ambiente para relajarse y disfrutar al final del día. Es muy popular por sus bebidas bien preparadas y la buena música. Los locales lo recomiendan como el mejor lugar para pasar una noche divertida.',
-        'cafe': 'Un rincón tranquilo para hacer una pausa. Los clientes lo consideran ideal para tomar un café por la tarde o disfrutar de un desayuno ligero. El servicio es rápido, amigable y te hará sentir como en casa.',
-        'general': defaultReview
+        'restaurant': 'Si buscas una experiencia culinaria auténtica, este es tu lugar. Los clientes frecuentes siempre destacan la sazón inigualable y la excelente atención. Ideal para una comida memorable.',
+        'dentist': 'Clientes que buscan profesionalismo y confianza eligen este centro. La atención detallada y el trato amable del personal son su sello distintivo en el área de salud dental.',
+        'pharmacy': 'Un punto de referencia confiable para todas sus necesidades de bienestar. Famoso por su amplio inventario y personal capacitado, siempre listo para ofrecerte el mejor servicio.',
+        'clothing_store': 'Perfecto para quienes aman encontrar las mejores ofertas y las últimas modas. Muchos visitantes dicen que es el lugar ideal para renovar tu guardarropa con estilo.',
+        'bar': 'Prepárate para un excelente ambiente y bebidas espectaculares. Es el sitio perfecto para relajarse y disfrutar de una noche inolvidable en Progreso.',
+        'cafe': 'El rincón favorito de Progreso para tomar un café de calidad. Es un lugar tranquilo, con un servicio impecable, ideal para hacer una pausa y recargar energías.',
+        'default': 'Los clientes dicen que es un lugar muy recomendado para visitar en Nuevo Progreso. Ofrece una gran calidad en sus servicios y es una parada que definitivamente vale la pena.'
     };
+    
+    const categoryKey = Object.keys(categoryMap).find(key => category.toLowerCase().includes(key)) || 'default';
+    const genericReview = categoryMap[categoryKey];
+    
+    let personalizedStart = '';
 
-    // Intentar encontrar una coincidencia basada en el tipo de lugar (category)
-    const categoryKey = Object.keys(categoryMap).find(key => category.toLowerCase().includes(key)) || 'general';
+    // Lógica para personalizar el inicio basado en el nombre (Creatividad)
+    if (nameLower.includes('el ') || nameLower.includes('la ')) {
+         personalizedStart = `¡El famoso ${placeName} te espera! `;
+    } else if (nameLower.includes('dr.') || nameLower.includes('dra.') || nameLower.includes('clínica')) {
+        personalizedStart = `En ${placeName}, la salud es lo primero. `;
+    } else if (nameLower.includes('plaza') || nameLower.includes('mercado')) {
+        personalizedStart = `Si buscas variedad, ${placeName} es el centro de actividad. `;
+    } else if (nameLower.includes('shop') || nameLower.includes('store') || nameLower.includes('tienda')) {
+         personalizedStart = `¡Descubre las novedades en ${placeName}! `;
+    } else {
+        personalizedStart = `Te recomendamos visitar **${placeName}**. `;
+    }
 
-    return categoryMap[categoryKey];
+    // Concatenar el inicio creativo con la descripción conversacional
+    return `${personalizedStart.trim()} ${genericReview}`;
 }
 
 
 /**
- * 🟢 NUEVA FUNCIÓN: Obtiene detalles completos de un lugar usando Places API (Modo Búsqueda Directa).
+ * Obtiene detalles completos de un lugar usando Places API (Modo Búsqueda Directa).
  * Usa el rango de 15km.
  */
 async function getFullPlaceDetails(queryOrPlaceId) { 
@@ -179,7 +197,6 @@ async function getFullPlaceDetails(queryOrPlaceId) {
 
     // B) Obtenemos los detalles completos del lugar
     try {
-        // Se incluyen rating y user_ratings_total aunque no se usen en el texto final, son necesarios para getFullPlaceDetails
         const fields = ['name', 'formatted_phone_number', 'url', 'website', 'photos', 'formatted_address', 'geometry', 'types', 'rating', 'user_ratings_total'];
         
         const detailsResponse = await placesClient.placeDetails({
@@ -214,7 +231,7 @@ async function getFullPlaceDetails(queryOrPlaceId) {
             longitude: place.geometry.location.lng,
             placeCategory: place.types?.[0] || 'Lugar de Interés',
             isHealthPlace: isHealth, 
-            rating: place.rating || null, // Se mantienen los campos para la función de reseña, aunque no se usen.
+            rating: place.rating || null, 
             user_ratings_total: place.user_ratings_total || 0 
         };
 
@@ -228,8 +245,6 @@ async function getFullPlaceDetails(queryOrPlaceId) {
 /**
  * Función que busca el nombre de un lugar en la API de Google Places.
  * Ahora usa un rango de 15km (locationRestriction).
- * @param {string} query Nombre del lugar a buscar.
- * @returns {object|null} Objeto con detalles del lugar o null si NO existe el lugar exacto en el rango.
  */
 async function getPlaceDetails(query) { 
     
@@ -310,7 +325,6 @@ export default async function handler(req, res) {
     }
 
     try {
-        // Se añade directSearchQuery
         const { history = [], userPrompt, currentLanguage, directSearchQuery } = req.body; 
         
         const langText = currentLanguage === 'es' ? 'español' : 'inglés';
@@ -322,15 +336,14 @@ export default async function handler(req, res) {
         if (directSearchQuery) {
             console.log(`⭐ Activado MODO BÚSQUEDA DIRECTA (15km) para: ${directSearchQuery}`);
             
-            // Usamos la función con rango de 15km y datos completos
             const placeData = await getFullPlaceDetails(directSearchQuery); 
             
             if (placeData) {
                 
-                // 🛑 CRÍTICO: Generar reseña humana/opinión (CONVERSACIONAL)
+                // 🛑 CRÍTICO: Generar reseña humana/opinión (DINÁMICA Y ATRACTIVA)
                 const simulatedReview = generateSimulatedReview(
+                    placeData.name,
                     placeData.placeCategory
-                    // Ya no pasamos rating/totalRatings
                 );
 
                 // Generar un JSON de Ficha de Lugar con todos los detalles
@@ -340,7 +353,7 @@ export default async function handler(req, res) {
                     placeToSearch: placeData.name,
                     placeCategory: placeData.placeCategory,
                     isHealthPlace: placeData.isHealthPlace, 
-                    description: simulatedReview, // <---- DESCRIPCIÓN HUMANA Y CONVERSACIONAL
+                    description: simulatedReview, // <---- DESCRIPCIÓN DINÁMICA Y ATRACTIVA
                     isStructured: true,
                     // Datos enriquecidos 
                     placePhone: placeData.phone, 
