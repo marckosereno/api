@@ -1,10 +1,10 @@
 // ====================================================================
-// Archivo: chat.js (Versión 6.1 - Rango Extendido 10km)
-// NOTA: Base en chat-6.js, sustituye locationBias por locationRestriction (10km de rango).
+// Archivo: chat.js (Versión 8.1 - Rango Extendido 15km y Descripción Humana)
+// NOTA: Base en chat-6.1. Rango extendido a 15km. Añadida Búsqueda Directa con Descripción Humana.
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
-import { Client as PlacesClient } from '@googlemaps/google-maps-services-js'; 
+import { Client as PlacesClient, PlaceInputType } from '@googlemaps/google-maps-services-js'; 
 
 // Usamos el modelo más rápido y económico para chat
 const MODEL_NAME = "gemini-2.5-flash"; 
@@ -12,19 +12,31 @@ const MODEL_NAME = "gemini-2.5-flash";
 // CONTEXTO GEOGRÁFICO FIJO PARA EL FILTRADO
 const GEOGRAPHIC_CONTEXT = ", Nuevo Progreso, Tamaulipas, México";
 
-// 🛑 PARÁMETROS DE BÚSQUEDA EXTENDIDA (10 km de radio)
+// 🛑 PARÁMETROS DE BÚSQUEDA EXTENDIDA (15 km de radio - MODIFICADO)
 // Coordenadas de Referencia Central de Nuevo Progreso
 const CENTER_LAT = 26.064; 
 const CENTER_LNG = -98.005;
 
-// Aproximadamente 10km en latitud y longitud a esta latitud (para crear un cuadrado de 20x20km)
-const LAT_OFFSET = 0.09; // ~10km
-const LNG_OFFSET = 0.10; // ~10km
+// Aproximadamente 15km en latitud y longitud a esta latitud (para crear un cuadrado de 30x30km)
+// MODIFICADO DE 10KM A 15KM
+const LAT_OFFSET = 0.135; // ~15km
+const LNG_OFFSET = 0.150; // ~15km
 
-// 🛑 RANGO EXTENDIDO (20x20km centrado en Progreso - Sustituye a los bounds estrictos/bias simple)
+// 🛑 RANGO EXTENDIDO (30x30km centrado en Progreso - Sustituye a los bounds estrictos/bias simple)
 const EXTENDED_NE_BOUND = { lat: CENTER_LAT + LAT_OFFSET, lng: CENTER_LNG + LNG_OFFSET }; 
 const EXTENDED_SW_BOUND = { lat: CENTER_LAT - LAT_OFFSET, lng: CENTER_LNG - LNG_OFFSET }; 
 
+
+// 🛑 TIPOS DE SALUD (Para Confidencialidad)
+const IS_HEALTH_PLACE_TYPES = [
+    'dentist', 
+    'doctor', 
+    'hospital', 
+    'pharmacy', 
+    'health', 
+    'physiotherapist',
+    'veterinary_care'
+];
 
 // ⭐️ MAPA DE EXCEPCIONES CON DESCRIPCIONES CANÓNICAS PARA CORREGIR ALUCINACIONES
 const EXCEPTION_DATA_MAP = {
@@ -43,7 +55,9 @@ const EXCEPTION_DATA_MAP = {
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
+// NOTA: Se añadió PlaceInputType a la importación en la línea 5 para la Búsqueda Directa
 const placesClient = new PlacesClient({}); 
+
 
 // 2. Definimos la Instrucción del Sistema
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
@@ -101,8 +115,129 @@ REGLAS DE FORMATO:
    // El texto conversacional debe ir en "conversationText" y NO debe ser la respuesta principal.`;
 
 /**
+ * 🟢 NUEVA FUNCIÓN: Genera una opinión/reseña simulada basada en la categoría.
+ * Esto sustituye a la descripción técnica por algo más humano.
+ */
+function generateSimulatedReview(category, rating, totalRatings) {
+    const defaultReview = "¡Este lugar es muy recomendado! La experiencia general es excelente para visitantes.";
+    
+    let ratingText = '';
+    if (rating && totalRatings > 5) {
+        ratingText = `Cuenta con una valoración de **${rating} estrellas** con base en ${totalRatings} reseñas. `;
+    } else if (totalRatings > 0) {
+        ratingText = `Ha recibido ${totalRatings} valoraciones de la comunidad. `;
+    }
+
+    // Mapeo de tipos de lugares comunes (de la API) a comentarios humanos
+    const categoryMap = {
+        'restaurant': 'Los visitantes destacan la deliciosa comida y el ambiente acogedor. ¡Una parada obligatoria para el buen sabor! ',
+        'dentist': 'Clientes anteriores elogian el servicio profesional y la atención amable del personal. Es una opción de alta confianza. ',
+        'pharmacy': 'Conocida por su amplio surtido y personal atento, ideal para sus necesidades de salud. ',
+        'clothing_store': 'Perfecto para encontrar las últimas tendencias en moda y accesorios. ¡Los compradores lo adoran! ',
+        'bar': 'Un lugar popular para relajarse con buenas bebidas y excelente ambiente nocturno. ',
+        'cafe': 'Ideal para tomar un café y disfrutar de un momento tranquilo con un servicio rápido y amigable. '
+    };
+
+    // Intentar encontrar una coincidencia basada en el tipo de lugar (category)
+    const categoryKey = Object.keys(categoryMap).find(key => category.includes(key)) || 'default';
+
+    const specificReview = categoryMap[categoryKey] || defaultReview;
+    return specificReview.trim() + (ratingText ? ` ${ratingText.trim()}` : '');
+}
+
+
+/**
+ * 🟢 NUEVA FUNCIÓN: Obtiene detalles completos de un lugar usando Places API (Modo Búsqueda Directa).
+ * Ahora incluye rating, total de reseñas, y usa el rango de 15km.
+ */
+async function getFullPlaceDetails(queryOrPlaceId) { 
+    if (!placesApiKey) return null;
+    
+    let placeId = queryOrPlaceId;
+
+    // A) Si no parece un Place ID, lo buscamos por texto (con rango de 15km)
+    if (!queryOrPlaceId.startsWith('ChI')) {
+        try {
+            console.log(`Buscando Place ID (Rango 15km) para: ${queryOrPlaceId}`);
+            
+            // 🛑 IMPLEMENTACIÓN CRÍTICA: RANGO EXTENDIDO 15KM (locationRestriction)
+            const findPlaceResponse = await placesClient.findPlaceFromText({
+                params: {
+                    key: placesApiKey,
+                    input: queryOrPlaceId, 
+                    inputtype: PlaceInputType.textquery, 
+                    fields: ['place_id'], 
+                    locationRestriction: { 
+                        northeast: EXTENDED_NE_BOUND, 
+                        southwest: EXTENDED_SW_BOUND 
+                    },
+                    language: 'es'
+                }
+            });
+            placeId = findPlaceResponse.data.candidates?.[0]?.place_id;
+        } catch (e) {
+            console.error("Error buscando Place ID en Búsqueda Directa:", e.message);
+            return null;
+        }
+    }
+    
+    if (!placeId) {
+        console.log("No se encontró Place ID dentro del rango de 15km o la búsqueda falló.");
+        return null;
+    }
+
+    // B) Obtenemos los detalles completos del lugar
+    try {
+        // Se añaden rating y user_ratings_total
+        const fields = ['name', 'formatted_phone_number', 'url', 'website', 'photos', 'formatted_address', 'geometry', 'types', 'rating', 'user_ratings_total'];
+        
+        const detailsResponse = await placesClient.placeDetails({
+            params: {
+                key: placesApiKey,
+                place_id: placeId,
+                fields: fields,
+                language: 'es'
+            }
+        });
+
+        const place = detailsResponse.data.result;
+        if (!place) return null;
+        
+        const photoReference = place.photos?.[0]?.photo_reference || null;
+        
+        let imageUrl = photoReference 
+            ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=350&photoreference=${photoReference}&key=${placesApiKey}`
+            : null;
+
+        const isHealth = place.types.some(t => IS_HEALTH_PLACE_TYPES.includes(t));
+        
+        return {
+            name: place.name,
+            // Aplicar restricción de privacidad a números de teléfono y websites
+            phone: isHealth ? null : (place.formatted_phone_number || null), 
+            mapUrl: place.url || null,
+            reviewUrl: place.url || null, 
+            websiteUrl: isHealth ? null : (place.website || null), 
+            imageUrl: imageUrl,
+            formatted_address: place.formatted_address,
+            latitude: place.geometry.location.lat,
+            longitude: place.geometry.location.lng,
+            placeCategory: place.types?.[0] || 'Lugar de Interés',
+            isHealthPlace: isHealth, 
+            rating: place.rating || null, 
+            user_ratings_total: place.user_ratings_total || 0 
+        };
+
+    } catch (e) {
+        console.error("Error al obtener detalles de Place ID:", e.response ? e.response.data : e.message);
+        return null; 
+    }
+}
+
+
+/**
  * Función que busca el nombre de un lugar en la API de Google Places.
- * Ahora usa un rango de 10km (locationRestriction).
+ * Ahora usa un rango de 15km (locationRestriction).
  * @param {string} query Nombre del lugar a buscar.
  * @returns {object|null} Objeto con detalles del lugar o null si NO existe el lugar exacto en el rango.
  */
@@ -113,8 +248,6 @@ async function getPlaceDetails(query) {
         return null;
     }
     
-    // Coordenadas aproximadas de Nuevo Progreso (ya no se usa como locationBias)
-
     try {
         // 1. Buscar el place_id
         const findPlaceResponse = await placesClient.findPlaceFromText({
@@ -123,7 +256,7 @@ async function getPlaceDetails(query) {
                 input: query, 
                 inputtype: 'textquery',
                 fields: ['place_id'], 
-                // 🛑 IMPLEMENTACIÓN CRÍTICA: RANGO EXTENDIDO 10KM (locationRestriction)
+                // 🛑 IMPLEMENTACIÓN CRÍTICA: RANGO EXTENDIDO 15KM
                 locationRestriction: { 
                     northeast: EXTENDED_NE_BOUND, 
                     southwest: EXTENDED_SW_BOUND 
@@ -138,21 +271,21 @@ async function getPlaceDetails(query) {
         }
 
         // 2. Obtener los detalles del lugar (SOLO CAMPOS BÁSICOS)
+        // Se añade 'types' para la lógica de Salud
         const detailsResponse = await placesClient.placeDetails({
             params: {
                 key: placesApiKey,
                 place_id: placeId,
-                fields: ['name', 'formatted_phone_number', 'url', 'website', 'photos', 'formatted_address'] 
+                fields: ['name', 'formatted_phone_number', 'url', 'website', 'photos', 'types'] 
             }
         });
 
         const place = detailsResponse.data.result;
         
-        // 🛑 VALIDACIÓN GEOFENCING ELIMINADA: Confiamos en locationRestriction para el rango de 10km.
-        
-        // 3. Generar la URL de la foto
         const photoReference = place.photos?.[0]?.photo_reference || null;
         let imageUrl = null;
+        const isHealth = place.types.some(t => IS_HEALTH_PLACE_TYPES.includes(t));
+
 
         if (photoReference) {
             imageUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=250&photoreference=${photoReference}&key=${placesApiKey}`;
@@ -160,11 +293,13 @@ async function getPlaceDetails(query) {
 
         return {
             name: place.name,
-            phone: place.formatted_phone_number || null,
+            // Aplicar restricción de privacidad a números de teléfono y websites
+            phone: isHealth ? null : (place.formatted_phone_number || null),
             mapUrl: place.url || null,
             reviewUrl: place.url || null, 
-            websiteUrl: place.website || null,
-            imageUrl: imageUrl
+            websiteUrl: isHealth ? null : (place.website || null),
+            imageUrl: imageUrl,
+            isHealthPlace: isHealth // Nuevo campo
         };
 
     } catch (e) {
@@ -188,10 +323,60 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { history = [], userPrompt, currentLanguage } = req.body;
+        const { history = [], userPrompt, currentLanguage, directSearchQuery } = req.body; // Se añade directSearchQuery
         
         const langText = currentLanguage === 'es' ? 'español' : 'inglés';
         const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
+
+        // ----------------------------------------------------
+        // 🥇 PRIORIDAD MÁXIMA: MODO BÚSQUEDA DIRECTA (SPS/Power Search)
+        // ----------------------------------------------------
+        if (directSearchQuery) {
+            console.log(`⭐ Activado MODO BÚSQUEDA DIRECTA (15km) para: ${directSearchQuery}`);
+            
+            // Usamos la nueva función con rango de 15km y datos completos
+            const placeData = await getFullPlaceDetails(directSearchQuery); 
+            
+            if (placeData) {
+                
+                // 🛑 CRÍTICO: Generar reseña humana/opinión (SOLICITADO POR EL USUARIO)
+                const simulatedReview = generateSimulatedReview(
+                    placeData.placeCategory, 
+                    placeData.rating, 
+                    placeData.user_ratings_total
+                );
+
+                // Generar un JSON de Ficha de Lugar con todos los detalles
+                const finalFicha = {
+                    type: "place",
+                    placeName: placeData.name,
+                    placeToSearch: placeData.name,
+                    placeCategory: placeData.placeCategory,
+                    isHealthPlace: placeData.isHealthPlace, 
+                    description: simulatedReview, // <---- DESCRIPCIÓN HUMANA Y AMIGABLE
+                    isStructured: true,
+                    // Datos enriquecidos 
+                    placePhone: placeData.phone, 
+                    mapUrl: placeData.mapUrl,
+                    imageUrl: placeData.imageUrl,
+                    reviewUrl: placeData.reviewUrl,
+                    websiteUrl: placeData.websiteUrl, 
+                    latitude: placeData.latitude,
+                    longitude: placeData.longitude,
+                };
+                return res.status(200).json({ responseText: JSON.stringify(finalFicha) });
+            } else {
+                // Fallo en la búsqueda directa (no encontrado o fuera de bounds)
+                const failedFicha = {
+                    type: "place_not_found", 
+                    placeToSearch: directSearchQuery, 
+                    description: `No se pudo encontrar o recuperar detalles completos para el lugar: **${directSearchQuery}** en **Nuevo Progreso** dentro del rango de 15km. Por favor, verifica el nombre o intenta con el modo chat. 📍`,
+                    isStructured: true
+                };
+                return res.status(200).json({ responseText: JSON.stringify(failedFicha) });
+            }
+        }
+
 
         // ----------------------------------------------------
         // ⭐️ LÓGICA ROBUSTA DE BYPASS CANÓNICO (PRIORIDAD AL SERVIDOR)
@@ -205,6 +390,7 @@ export default async function handler(req, res) {
                 
                 console.log(`Interceptación CANÓNICA forzada para: ${key}`);
                 
+                // Usamos getPlaceDetails (que también ya usa 15km)
                 const placeData = await getPlaceDetails(exceptionData.searchName);
                 
                 const isHealthPlace = exceptionData.category.includes('Spa');
@@ -299,12 +485,14 @@ export default async function handler(req, res) {
                         if (ficha.type === 'place' && ficha.placeToSearch) {
                             
                             const placeNameSearch = ficha.placeToSearch.trim();
-                            const isHealthPlace = ficha.isHealthPlace === true; 
                             
                             // Búsqueda flexible (solo el nombre)
                             const searchForPlaces = placeNameSearch; 
                             
+                            // Esta función ahora usa 15km
                             const placeData = await getPlaceDetails(searchForPlaces);
+                            const isHealthPlace = placeData?.isHealthPlace || ficha.isHealthPlace === true;
+
 
                             // 🛑 BLINDAJE ANTI-CORRELACIÓN:
                             let isNameMiscorrelated = false;
@@ -362,7 +550,7 @@ export default async function handler(req, res) {
                                 enrichedFicha = {
                                     type: "place_not_found", 
                                     placeToSearch: placeNameSearch, 
-                                    description: `Disculpa, no se encontró un lugar llamado **${placeNameSearch}** ubicado en Nuevo Progreso.`,
+                                    description: `Disculpa, no se encontró un lugar llamado **${placeNameSearch}** ubicado en Nuevo Progreso (Rango 15km).`, // Mensaje actualizado
                                     isStructured: true
                                 };
                             }
