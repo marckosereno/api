@@ -19,19 +19,22 @@ const EXCEPTION_DATA_MAP = {
         description: 'Pinkys es una tienda de ropa y accesorios que ofrece las últimas tendencias de moda para damas y caballeros, con un enfoque en estilos casuales y de temporada.',
         searchName: 'Pinkys Fashion'
     }, 
+    // Puedes añadir más excepciones aquí si detectas alucinaciones persistentes
 };
 
 // 1. Inicializamos los clientes
 const ai = new GoogleGenAI({});
 const placesApiKey = process.env.GOOGLE_PLACES_API_KEY;
-const placesClient = new PlacesClient({}); // Corregida la inicialización
+const placesClient = new PlacesClient({}); // Inicialización corregida
 
-// 2. Definimos la Instrucción del Sistema (MODIFICADA PARA FORZAR CONTEXTO FRESCO)
+// 2. Definimos la Instrucción del Sistema (MODIFICADA CON REGLAS DE PROHIBICIÓN)
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 **REGLA DE ESTRICTO CUMPLIMIENTO:** Si la solicitud del usuario es para un LUGAR o CATEGORÍA, DEBES responder **EXCLUSIVAMENTE con un formato JSON**. Está **PROHIBIDO** responder en texto plano conversacional en estos casos. Usa el formato de FALLO si el servidor lo indica o si no estás seguro de la existencia del lugar.
 **NOTA CRÍTICA DE CLASIFICACIÓN:** Tu clasificación debe ser precisa. No asumas que todas las búsquedas son restaurantes. Usa las categorías más específicas posibles (Spa, Tienda de Ropa, Clínica Dental, Taquería, etc.).
-**REGLA CRÍTICA DE CONTEXTO:** Si el usuario solicita un **LUGAR ESPECÍFICO** (ej. "Farmacia Guadalajara", "El Cuñao"), DEBES IGNORAR CUALQUIER CATEGORÍA PREVIA del chat (ej. si la última búsqueda fue un restaurante). Debes clasificar la nueva solicitud desde CERO, de forma independiente.
+**REGLA CRÍTICA DE CONTEXTO:** Si el usuario solicita un **LUGAR ESPECÍFICO** (ej. "Farmacia Guadalajara", "El Cuñao"), DEBES IGNORAR CUALQUIER CATEGORÍA PREVIA del chat. Debes clasificar la nueva solicitud desde CERO, de forma independiente.
+
+**REGLA CRÍTICA DE PROHIBICIÓN GEOGRÁFICA:** Está **ESTRICTAMENTE PROHIBIDO** incluir las frases "Nuevo Progreso", "Tamaulipas", o "México" dentro del campo **"description"** de la ficha JSON. El usuario ya sabe dónde estás buscando; concéntrate SÓLO en la reseña y la opinión.
 
 REGLAS DE FORMATO:
 1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 📍, ☀️) al inicio o final de tus respuestas o descripciones.
@@ -114,7 +117,7 @@ async function getPlaceDetails(query) {
             return null;
         }
 
-        // 2. Obtener los detalles del lugar (SOLO CAMPOS BÁSICOS)
+        // 2. Obtener los detalles del lugar (AHORA INCLUIMOS formatted_address)
         const detailsResponse = await placesClient.placeDetails({
             params: {
                 key: placesApiKey,
@@ -125,8 +128,16 @@ async function getPlaceDetails(query) {
 
         const place = detailsResponse.data.result;
         
-        // 🛑 VALIDACIÓN GEOFENCING ELIMINADA: Confiamos en locationBias y descartamos el filtro de texto estricto.
-        
+        // 🛑 VALIDACIÓN GEOFENCING ESTRICTA
+        const address = place.formatted_address || '';
+        const addressLower = address.toLowerCase();
+
+        // Criterio estricto: Debe contener "progreso" Y no debe contener "reynosa" o "matamoros".
+        if (!addressLower.includes('progreso') || addressLower.includes('reynosa') || addressLower.includes('matamoros')) {
+            console.warn(`Lugar "${place.name}" descartado por geofencing. Dirección: ${address}.`);
+            return null; // 🛑 Descarta el lugar si falla el geofencing.
+        }
+
         // 3. Generar la URL de la foto
         const photoReference = place.photos?.[0]?.photo_reference || null;
         let imageUrl = null;
@@ -184,15 +195,18 @@ export default async function handler(req, res) {
                 
                 const placeData = await getPlaceDetails(exceptionData.searchName);
                 
+                // NOTA: Con el geofencing estricto, si placeData es null,
+                // significa que la excepción no pasó la validación de ubicación.
+                
                 const isHealthPlace = exceptionData.category.includes('Spa');
                 
                 forcedCanonicalResponse = {
-                    type: "place", 
+                    type: placeData ? "place" : "place_not_found", 
                     placeName: placeData ? placeData.name : exceptionData.searchName, 
                     placeToSearch: exceptionData.searchName,
                     placeCategory: exceptionData.category, 
                     isHealthPlace: isHealthPlace,
-                    description: exceptionData.description, // DESCRIPCIÓN CANÓNICA FIJA
+                    description: placeData ? exceptionData.description : `El lugar canónico **${exceptionData.searchName}** no pasó la validación de ubicación estricta.`, // Descripción canónica o fallo.
                     isStructured: true,
                     // Datos de Places API
                     mapUrl: placeData?.mapUrl || null,
@@ -201,6 +215,12 @@ export default async function handler(req, res) {
                     reviewUrl: placeData?.reviewUrl || null, 
                     websiteUrl: (placeData?.websiteUrl && !isHealthPlace) ? placeData.websiteUrl : null,
                 };
+                
+                // Si el lugar canónico falló la ubicación, lo notificamos en consola.
+                if (forcedCanonicalResponse.type === "place_not_found") {
+                     console.warn(`La excepción canónica "${key}" falló la prueba de geofencing.`);
+                }
+                
                 break; 
             }
         }
@@ -281,6 +301,7 @@ export default async function handler(req, res) {
                             // Búsqueda flexible (solo el nombre)
                             const searchForPlaces = placeNameSearch; 
                             
+                            // 🛑 Esta llamada aplicará el GEOFENCING ESTRICTO
                             const placeData = await getPlaceDetails(searchForPlaces);
 
                             // 🛑 BLINDAJE ANTI-CORRELACIÓN:
@@ -295,9 +316,10 @@ export default async function handler(req, res) {
                                 // **LÓGICA NORMAL: USAR RE-PROMPT con GOOGLE SEARCH RAG (Reseñas)**
                                 
                                 // REFUERZO RAG: MÁS AGRESIVO EN LAS INSTRUCCIONES
+                                // NOTA: La instrucción del sistema ya PROHÍBE incluir la ubicación en la descripción
                                 let placePrompt = `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder.`;
                                 
-                                placePrompt += ` La categoría es: ${enrichedFicha.placeCategory}. **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **Extrae las frases clave de una o dos reseñas REALES y úsalas para componer la 'description' en el JSON. La descripción debe ser corta y basada SÓLO en reseñas.** Si no encuentras reseñas, resume el giro del lugar. **NOTA CRÍTICA:** Solo usa la descripción que el RAG te proporciona.`;
+                                placePrompt += ` La categoría es: ${enrichedFicha.placeCategory}. **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **Extrae las frases clave de una o dos reseñas REALES y úsalas para componer la 'description' en el JSON. La descripción debe ser corta y basada SÓLO en reseñas.** Si no encuentras reseñas, resume el giro del lugar.`;
 
                                 const rePromptResult = await chat.sendMessage({ 
                                     message: placePrompt,
@@ -339,6 +361,7 @@ export default async function handler(req, res) {
                                 enrichedFicha = {
                                     type: "place_not_found", 
                                     placeToSearch: placeNameSearch, 
+                                    // Este mensaje ya está ajustado para ser una falla de búsqueda en NP.
                                     description: `Disculpa, no se encontró un lugar llamado **${placeNameSearch}** ubicado en Nuevo Progreso.`,
                                     isStructured: true
                                 };
@@ -349,6 +372,7 @@ export default async function handler(req, res) {
                              const categorySearch = ficha.categoryName.replace(/en Progreso/i, '',).trim();
                              const mapUrlQuery = categorySearch + GEOGRAPHIC_CONTEXT;
                              
+                             // Corregido para que la URL se genere correctamente si la necesitas en el front-end
                              const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapUrlQuery)}`;
                              
                              enrichedFicha.mapUrl = mapUrl; 
@@ -365,7 +389,7 @@ export default async function handler(req, res) {
                     finalResponseData.responseText = JSON.stringify(finalResponseJson);
 
                 } else {
-                    // Si el modelo generó texto sin JSON (FALLO GRAVE), lo devuelve.
+                    // Si el modelo generó texto sin JSON (FALLO GRAVE o conversación simple), lo devuelve.
                     finalResponseData.responseText = modelResponseText; 
                 }
             }
