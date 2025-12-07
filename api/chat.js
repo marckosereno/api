@@ -1,7 +1,7 @@
 // ====================================================================
-// Archivo: chat.js (Versión 8.7 - Descripción Ultra-Dinámica y Multifocal)
-// NOTA: Implementa la aleatoriedad temática (Experiencia, Servicio, Ubicación, Atención)
-//       en MODO BÚSQUEDA DIRECTA para eliminar la repetición y la obviedad en el lenguaje.
+// Archivo: chat.js (Versión 8.8 - Límite 44-50 palabras y 4 Tonos Dinámicos)
+// NOTA: Implementa la aleatoriedad de TONO (Profesional, Informal, Curioso, Gracioso)
+//       junto con la aleatoriedad temática y el límite de palabras.
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -115,7 +115,7 @@ REGLAS DE FORMATO:
 
 
 /**
- * 🟢 MEJORADA: Genera una descripción dinámica y multifocal usando Gemini, con un tono de resumen de reseñas/servicios.
+ * 🟢 MEJORADA: Genera una descripción dinámica y multifocal usando Gemini, con un tono y enfoque aleatorios.
  * @param {string} placeName Nombre del lugar.
  * @param {string} category Categoría principal.
  * @param {boolean} isHealthPlace Indica si es un lugar de salud.
@@ -131,12 +131,22 @@ async function generateDynamicDescription(placeName, category, isHealthPlace) {
     ];
     const selectedFocus = focusPoints[Math.floor(Math.random() * focusPoints.length)];
 
+    // 2. Definir y seleccionar un tono al azar
+    const tones = [
+        'informal (como un amigo que da un dato clave)',
+        'profesional (énfasis en la calidad y eficiencia del negocio)',
+        'curioso (tono intrigante, haciendo preguntas o invitando a descubrir)',
+        'gracioso (humor ligero, sin ser ofensivo o exagerado)'
+    ];
+    const selectedTone = tones[Math.floor(Math.random() * tones.length)];
+
+
     const chat = ai.chats.create({
         model: MODEL_NAME, 
         config: {
-            // Instrucción estricta para el tono deseado y la variación
-            systemInstruction: `Eres un redactor turístico profesional. Tu única tarea es generar una descripción de no más de 3 oraciones sobre un negocio. La descripción debe ser:
-            1. Totalmente única y con un tono conversacional natural (no robótico).
+            // Instrucción estricta para el tono deseado, la variación y el límite de palabras.
+            systemInstruction: `Eres un redactor turístico profesional con un tono **${selectedTone}**. Tu única tarea es generar una descripción sobre un negocio. La descripción debe:
+            1. **Tener una longitud de 44 a 50 palabras, sin incluir emojis.**
             2. Tener un tono de reporte o resumen de opiniones de terceros, NO tu opinión personal.
             3. **CRÍTICO:** Evitar las frases iniciales obvias y repetitivas como "Se comenta que..." o "Los clientes destacan...". **¡Sé creativo con la estructura de la oración para no repetir el patrón!**
             4. Enfocarse en el punto central de la descripción que se te pide.
@@ -144,11 +154,11 @@ async function generateDynamicDescription(placeName, category, isHealthPlace) {
         }
     });
 
-    let descriptionPrompt = `Genera una descripción única para el lugar: **${placeName}** (Categoría: ${category}). El enfoque principal de la descripción debe ser: **${selectedFocus}**.`;
+    let descriptionPrompt = `Genera una descripción única y dinámica para el lugar: **${placeName}** (Categoría: ${category}). El enfoque principal de la descripción debe ser: **${selectedFocus}**.`;
     
     // Reforzar el tono de confianza para salud
     if (isHealthPlace) {
-        descriptionPrompt += ` Asegúrate de que, incluso con el enfoque temático, se transmita un sentido de confianza, profesionalismo y buen trato al paciente.`;
+        descriptionPrompt += ` Asegúrate de que, incluso con el tono, se transmita un sentido de confianza y profesionalismo médico.`;
     }
 
     try {
@@ -157,7 +167,7 @@ async function generateDynamicDescription(placeName, category, isHealthPlace) {
     } catch (e) {
         console.error("Fallo al generar descripción dinámica:", e.message);
         // Fallback genérico en caso de fallo de la API
-        return `**${placeName}** se distingue por estar ubicado estratégicamente en la zona comercial de Nuevo Progreso. Los visitantes suelen comentar la facilidad de acceso y la calidad del servicio que se ofrece.`;
+        return `**${placeName}** se distingue por estar ubicado estratégicamente en la zona comercial de Nuevo Progreso. Los visitantes suelen comentar la facilidad de acceso y la calidad del servicio que se ofrece en un horario conveniente para el turista.`;
     }
 }
 
@@ -362,7 +372,7 @@ export default async function handler(req, res) {
                     placeToSearch: placeData.name,
                     placeCategory: placeData.placeCategory,
                     isHealthPlace: placeData.isHealthPlace, 
-                    description: fichaDescription, // <---- DESCRIPCIÓN 100% GEMINI Y DINÁMICA (con enfoque aleatorio)
+                    description: fichaDescription, // <---- DESCRIPCIÓN 100% GEMINI Y DINÁMICA (con enfoque y tono aleatorio)
                     isStructured: true,
                     // Datos enriquecidos 
                     placePhone: placeData.phone, 
