@@ -1,5 +1,5 @@
 // ====================================================================
-// Archivo: chat.js (Versión 7.1 - MODO BÚSQUEDA DIRECTA con SPS Estricto)
+// Archivo: chat.js (Versión 7.2 - MODO BÚSQUEDA DIRECTA con SPS Estricto y Opinión Simulado)
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -178,7 +178,8 @@ async function getFullPlaceDetails(queryOrPlaceId) {
 
     // B) Obtenemos los detalles completos del lugar
     try {
-        const fields = ['name', 'formatted_phone_number', 'url', 'website', 'photos', 'formatted_address', 'geometry', 'types'];
+        // Incluimos rating y user_ratings_total para usarlos si están disponibles
+        const fields = ['name', 'formatted_phone_number', 'url', 'website', 'photos', 'formatted_address', 'geometry', 'types', 'rating', 'user_ratings_total'];
         
         const detailsResponse = await placesClient.placeDetails({
             params: {
@@ -212,7 +213,9 @@ async function getFullPlaceDetails(queryOrPlaceId) {
             latitude: place.geometry.location.lat,
             longitude: place.geometry.location.lng,
             placeCategory: place.types?.[0] || 'Lugar de Interés',
-            isHealthPlace: isHealth // Enviamos la bandera para el frontend
+            isHealthPlace: isHealth, // Enviamos la bandera para el frontend
+            rating: place.rating || null, // Nuevo: Rating
+            user_ratings_total: place.user_ratings_total || 0 // Nuevo: Total de Ratings
         };
 
     } catch (e) {
@@ -271,6 +274,36 @@ function parseModelResponse(responseText) {
     // ...
 }
 
+/**
+ * NUEVA FUNCIÓN: Genera una opinión/reseña simulada basada en la categoría.
+ * @param {string} category Categoría del lugar.
+ * @param {number|null} rating Rating de Google Places.
+ * @param {number} totalRatings Número total de ratings.
+ * @returns {string} Opinión o reseña simulada.
+ */
+function generateSimulatedReview(category, rating, totalRatings) {
+    const defaultReview = "¡Este lugar es muy recomendado! La experiencia general es excelente para visitantes.";
+    
+    let ratingText = '';
+    if (rating && totalRatings > 5) {
+        ratingText = `Cuenta con una valoración de **${rating} estrellas** con base en ${totalRatings} reseñas. `;
+    } else if (totalRatings > 0) {
+        ratingText = `Ha recibido ${totalRatings} valoraciones de la comunidad. `;
+    }
+
+    const categoryMap = {
+        'restaurant': 'Los visitantes destacan la deliciosa comida y el ambiente acogedor. ¡Una parada obligatoria para el buen sabor! ',
+        'dentist': 'Clientes anteriores elogian el servicio profesional y la atención amable del personal. Es una opción de alta confianza. ',
+        'pharmacy': 'Conocida por su amplio surtido y personal atento, ideal para sus necesidades de salud. ',
+        'clothing_store': 'Perfecto para encontrar las últimas tendencias en moda y accesorios. ¡Los compradores lo adoran! ',
+        'bar': 'Un lugar popular para relajarse con buenas bebidas y excelente ambiente nocturno. ',
+        'cafe': 'Ideal para tomar un café y disfrutar de un momento tranquilo con un servicio rápido y amigable. '
+    };
+
+    const specificReview = categoryMap[category] || defaultReview;
+    return ratingText + specificReview.trim();
+}
+
 
 // ----------------------------------------------------------------
 // 🟢 FUNCIÓN PRINCIPAL DEL HANDLER
@@ -294,6 +327,15 @@ export default async function handler(req, res) {
             const placeData = await getFullPlaceDetails(directSearchQuery); 
             
             if (placeData) {
+                
+                // --- MODIFICACIÓN CLAVE APLICADA AQUÍ ---
+                const simulatedReview = generateSimulatedReview(
+                    placeData.placeCategory, 
+                    placeData.rating, 
+                    placeData.user_ratings_total
+                );
+                // ----------------------------------------
+                
                 // Generar un JSON de Ficha de Lugar con todos los detalles
                 const finalFicha = {
                     type: "place",
@@ -301,7 +343,8 @@ export default async function handler(req, res) {
                     placeToSearch: placeData.name,
                     placeCategory: placeData.placeCategory,
                     isHealthPlace: placeData.isHealthPlace, 
-                    description: `📍 Dirección: ${placeData.formatted_address}. Encontrado vía búsqueda directa de Google Places.`, // Descripción simple y directa
+                    // CAMBIO: Se usa la reseña simulada en lugar de la descripción simple de ubicación.
+                    description: simulatedReview, 
                     isStructured: true,
                     // Datos enriquecidos (Teléfono y Web ya vienen filtrados por confidencialidad)
                     placePhone: placeData.phone, 
@@ -318,7 +361,8 @@ export default async function handler(req, res) {
                 const failedFicha = {
                     type: "place_not_found", 
                     placeToSearch: directSearchQuery, 
-                    description: `No se pudo encontrar o recuperar detalles completos para el lugar: **${directSearchQuery}** en **Nuevo Progreso**. Por favor, verifica el nombre o intenta con el modo chat. 📍`,
+                    // CAMBIO: Se elimina la mención de "en Nuevo Progreso"
+                    description: `No se pudo encontrar o recuperar detalles completos para el lugar: **${directSearchQuery}**. Por favor, verifica el nombre o intenta con el modo chat. 📍`,
                     isStructured: true
                 };
                 return res.status(200).json({ responseText: JSON.stringify(failedFicha) });
