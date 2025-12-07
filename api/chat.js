@@ -1,6 +1,7 @@
 // ====================================================================
-// Archivo: chat.js (Versión 8.4 - Rango 15km y Descripción Hiper-Personalizada)
-// NOTA: Base en chat-6.1. Rango 15km. Descripción conversacional ampliada, creativa y dinámica (sin métricas ni 'recomendar').
+// Archivo: chat.js (Versión 8.5 - Rango 15km y Descripción 100% Gemini Dinámica)
+// NOTA: Base en chat-6.1. Rango 15km. Elimina la función local de reseña. Usa un re-prompt ligero de Gemini
+//       en MODO BÚSQUEDA DIRECTA para una descripción creativa y no repetitiva.
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -109,60 +110,45 @@ REGLAS DE FORMATO:
      "isStructured": true
    }
    
-   // REGLA CLAVE: Si la respuesta requiere MÚLTIPLES FICHAS, debes envolver todas las fichas en un array y añadir la propiedad "isMultiStructured": true.
+   // REGLA CLAVE: Si la respuesta requiere MÚLTIPLAS FICHAS, debes envolver todas las fichas en un array y añadir la propiedad "isMultiStructured": true.
    // El texto conversacional debe ir en "conversationText" y NO debe ser la respuesta principal.`;
 
+// 🛑 ELIMINADA: generateSimulatedReview (La descripción ahora la genera directamente Gemini en el re-prompt SPS)
+
+
 /**
- * 🟢 MODIFICADA: Genera una descripción atractiva, creativa, conversacional y sin el verbo "recomendar".
+ * 🟢 NUEVA FUNCIÓN: Genera una descripción atractiva y creativa usando Gemini.
  * @param {string} placeName Nombre del lugar.
  * @param {string} category Categoría principal.
- * @returns {string} Descripción atractiva y conversacional.
+ * @param {boolean} isHealthPlace Indica si es un lugar de salud.
+ * @returns {string} Descripción atractiva y conversacional generada por Gemini.
  */
-function generateSimulatedReview(placeName, category) {
-    const categoryLower = category.toLowerCase();
+async function generateCreativeDescription(placeName, category, isHealthPlace) {
+    const chat = ai.chats.create({
+        model: MODEL_NAME, 
+        config: {
+            // Instrucción específica para la creatividad
+            systemInstruction: `Eres un redactor turístico creativo. Tu única tarea es generar una descripción de no más de 3 oraciones sobre un lugar. La descripción debe sonar como una opinión personal o el resumen de una reseña, usando un tono conversacional, atractivo y evitando frases como "te recomiendo". No uses información de Google Search.`
+        }
+    });
+
+    let descriptionPrompt = `Genera una descripción única y conversacional para el lugar: **${placeName}** (Categoría: ${category}).`;
     
-    // Mapeo de frases por categoría (más opinión y menos promoción)
-    const categoryMap = {
-        'restaurant': `Es un sitio que resuena entre los clientes habituales por su sazón que se siente casera y un ambiente relajado, perfecto para disfrutar sin prisa. Los visitantes destacan constantemente la calidez del servicio y cómo cada platillo refleja la autenticidad de la cocina local.`,
-        
-        // Estructura basada en el ejemplo del usuario (Profesional y Cercano)
-        'dentist': `Si estás explorando opciones para cuidar tu salud dental, **${placeName}** es un lugar que suele destacarse entre quienes valoran un enfoque profesional y cercano. Muchos clientes que han pasado por sus instalaciones resaltan la confianza que inspira el equipo, así como la dedicación que ponen en cada detalle durante las consultas.`, 
-        
-        'pharmacy': `Esta farmacia es conocida en la comunidad por su fiabilidad y por tener un equipo que realmente se toma el tiempo de asistir a los clientes. Muchos la eligen por su amplio surtido y por ser un punto de referencia para encontrar productos de bienestar de manera rápida y eficiente.`,
-        
-        'clothing_store': `Es un destino ideal para quienes buscan renovar su estilo con las últimas tendencias sin gastar de más. Los clientes frecuentes disfrutan de la variedad de accesorios y la facilidad con la que se pueden encontrar prendas únicas y de moda para todas las ocasiones.`,
-        
-        'bar': `Para una noche agradable y relajada, este lugar es una excelente elección. Se ha ganado fama por su atmósfera vibrante y por las bebidas creativas que preparan. Un sitio perfecto para desconectar después de un largo día en Progreso.`,
-        
-        'cafe': `Muchos consideran este café como el rincón más tranquilo para hacer una pausa. Es ideal para disfrutar de una bebida de especialidad y un momento de calma. El servicio siempre es elogiado por su amabilidad y eficiencia, haciendo que te sientas bienvenido.`,
-        
-        'default': `Cuando los visitantes buscan un lugar con buen ambiente y servicio de alta calidad, **${placeName}** aparece frecuentemente. Es un negocio que se distingue por su enfoque en la satisfacción del cliente y por ser una parada confiable.`
-    };
-    
-    // Encuentra la clave de categoría más cercana
-    const categoryKey = Object.keys(categoryMap).find(key => categoryLower.includes(key)) || 'default';
-    
-    let review = categoryMap[categoryKey];
-    
-    // Si la categoría no es 'dentist' (que ya está personalizada) o 'default' (que se personaliza abajo), 
-    // añade un inicio conversacional dinámico.
-    if (categoryKey !== 'default' && categoryKey !== 'dentist') {
-         const openingPhrases = [
-             `Al preguntar por ${placeName}, los comentarios giran en torno a que... `,
-             `Quienes visitan ${placeName} a menudo mencionan que... `,
-             `La experiencia en ${placeName} se describe como... `
-         ];
-         // Añade la frase de apertura y asegura que el resto de la frase empiece en minúsculas
-         const openingPhrase = openingPhrases[Math.floor(Math.random() * openingPhrases.length)];
-         
-         // Capitaliza la primera palabra de la frase de apertura
-         review = openingPhrase.charAt(0).toUpperCase() + openingPhrase.slice(1) + review.toLowerCase().charAt(0) + review.slice(1);
+    // Si es de salud, forzar el tono de confianza (como el ejemplo del dentista)
+    if (isHealthPlace) {
+        descriptionPrompt += ` Usa un tono que destaque el profesionalismo, la confianza y la calidad del servicio, como si fuera una reseña de cliente que valora un enfoque cercano.`;
+    } else {
+        descriptionPrompt += ` Usa un tono que destaque el ambiente, el sabor o la experiencia de compra.`;
     }
 
-    // El caso 'default' ya incluye el nombre del lugar.
-    // El caso 'dentist' ya incluye el nombre del lugar y usa el tono deseado.
-
-    return review.trim();
+    try {
+        const result = await chat.sendMessage({ message: descriptionPrompt });
+        return result.text.trim().replace(/"/g, ''); // Limpiar el texto de comillas si Gemini las añade
+    } catch (e) {
+        console.error("Fallo al generar descripción creativa:", e.message);
+        // Fallback genérico en caso de fallo de la API
+        return `**${placeName}** se distingue en la comunidad de Nuevo Progreso por la calidad de su servicio y la excelente atención al cliente. Un lugar que sin duda ofrece una experiencia notable.`;
+    }
 }
 
 
@@ -351,10 +337,11 @@ export default async function handler(req, res) {
             
             if (placeData) {
                 
-                // 🛑 CRÍTICO: Generar reseña humana/opinión (DINÁMICA Y ATRACTIVA)
-                const simulatedReview = generateSimulatedReview(
+                // 🛑 CRÍTICO: Generar reseña humana/opinión (DINÁMICA y 100% GEMINI)
+                const simulatedReview = await generateCreativeDescription(
                     placeData.name,
-                    placeData.placeCategory
+                    placeData.placeCategory,
+                    placeData.isHealthPlace
                 );
 
                 // Generar un JSON de Ficha de Lugar con todos los detalles
@@ -364,13 +351,13 @@ export default async function handler(req, res) {
                     placeToSearch: placeData.name,
                     placeCategory: placeData.placeCategory,
                     isHealthPlace: placeData.isHealthPlace, 
-                    description: simulatedReview, // <---- DESCRIPCIÓN DINÁMICA Y ATRACTIVA
+                    description: simulatedReview, // <---- DESCRIPCIÓN 100% GEMINI Y DINÁMICA
                     isStructured: true,
                     // Datos enriquecidos 
                     placePhone: placeData.phone, 
-                    mapUrl: placeData.mapUrl,
+                    mapUrl: placeData.url, // Usar el URL directo del lugar
                     imageUrl: placeData.imageUrl,
-                    reviewUrl: placeData.reviewUrl,
+                    reviewUrl: placeData.url,
                     websiteUrl: placeData.websiteUrl, 
                     latitude: placeData.latitude,
                     longitude: placeData.longitude,
@@ -521,7 +508,15 @@ export default async function handler(req, res) {
                                 
                                 placePrompt += ` La categoría es: ${enrichedFicha.placeCategory}. **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **Extrae las frases clave de una o dos reseñas REALES y úsalas para componer la 'description' en el JSON. La descripción debe ser corta y basada SÓLO en reseñas.** Si no encuentras reseñas, resume el giro del lugar. **NOTA CRÍTICA:** Solo usa la descripción que el RAG te proporciona.`;
 
-                                const rePromptResult = await chat.sendMessage({ 
+                                // Usar un nuevo chat para no contaminar el historial principal
+                                const ragChat = ai.chats.create({
+                                    model: MODEL_NAME, 
+                                    config: {
+                                        systemInstruction: finalSystemInstruction 
+                                    }
+                                });
+
+                                const rePromptResult = await ragChat.sendMessage({ 
                                     message: placePrompt,
                                     tools: [{ googleSearch: {} }] 
                                 });
