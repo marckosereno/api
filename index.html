@@ -1205,6 +1205,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     
     /**
      * Inicializa el autocompletado de Google Places.
+     * CRÍTICO: Configurado para buscar lugares ('establishment') y direcciones ('geocode').
      */
     function initAutocomplete() {
         // Coordenadas de Nuevo Progreso (26.064, -98.005)
@@ -1216,7 +1217,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         autocomplete = new google.maps.places.Autocomplete(inputElement, {
             bounds: progressoBounds,
             strictBounds: true, // Restringe la búsqueda a la zona de Progreso
-            types: ['establishment', 'geocode'], // Buscar negocios y direcciones
+            types: ['establishment', 'geocode'], // ¡ESTO ES LO QUE BUSCA LUGARES Y DIRECCIONES!
             componentRestrictions: { country: 'mx' } // Restringir a México
         });
 
@@ -1238,7 +1239,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             inputElement.placeholder = UI_STRINGS[currentLanguage].searchPlaceholder;
             sendButton.disabled = true; // Deshabilitar el botón de enviar texto (solo autocompletado)
             
-            // Si Google Maps API está disponible, inicializa el autocompletado
+            // 🛑 CRÍTICO: Inicializar el autocompletado solo al entrar en modo búsqueda
             if (window.google && window.google.maps) {
                 initAutocomplete(); 
             }
