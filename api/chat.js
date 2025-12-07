@@ -1,4 +1,3 @@
-Y porfavor, quiero que de este codigo que tambien es un chat.js...quiero que solo extraigas lo del modo ficha y lo añadas chat-7.js...y me lo muestres aqui, listo para pegar...
 import { GoogleGenAI } from '@google/genai';
 import { Client as PlacesClient } from '@googlemaps/google-maps-services-js'; 
 
