@@ -96,48 +96,30 @@ font-family:Spline Sans Light;
 
         .chip-group-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 10px; padding-bottom: 5px }
         
-        /* Estilo de la barra de chat ANTERIOR */
+        /* Estilo de la barra de chat NUEVO (GLASSMOPRHISM) */
         .map-search-bar {
             background-color: #ffffffb8; /* Fondo blanco con 72% de opacidad (Glassmorphism) */
             border-radius: 20px;
             box-shadow: 1px 2px 2px 2px #000, 0 2px 4px -2px rgba(0, 0, 0, 0.06); /* Sombra personalizada */
             border: 1px solid #e5e7eb; /* Mantenemos el borde para definición */
-            /* 🛑 CLAVE 1: Usar flex para alinear los elementos internos (botón, input, sparkle) */
             display: flex;
             align-items: center;
             padding: 4px; 
             width: 100%; 
             box-sizing: border-box; 
         }
-
-        /* 🛑 CAMBIO CLAVE: NUEVO CSS CRÍTICO para el modo activo (AZUL) */
-        .map-search-bar.sps-active {
-            /* Diseño rectangular similar al de la flecha, pero con indicador de activación */
-            border: 2px solid #2563EB; /* Borde AZUL (Nuevo) */
-            background-color: #EBF8FF; /* Fondo AZUL CLARO (Nuevo) */
-            box-shadow: 0 0 8px rgba(37, 99, 235, 0.5); /* Sombra suave para destacar */
-        }
         
         .map-input {
             flex-grow: 1;
             padding: 0.75rem 0.75rem; 
-            color: #1f2937; /* Color de texto oscuro para el input */
+            color: #9ca3af;
             font-size: 1.125rem;
             background: transparent;
             border: none;
             min-width: 0; 
             outline: none !important;
             box-shadow: none !important;
-            /* 🛑 CLAVE 2: Asegurar que NO esté en itálica por defecto */
-            font-style: normal; 
         }
-        
-        /* 🛑 Nuevo estilo para el placeholder en modo activo (QUITAMOS LA CURSIVA) */
-        .map-search-bar.sps-active .map-input::placeholder {
-            color: #1E40AF; /* Texto azul oscuro para el placeholder */
-            font-style: normal; /* **CLAVE 3: SIN CURSIVA** */
-        }
-
         .go-button {
             background-color: black;
             color: white;
@@ -452,7 +434,7 @@ font-family:Spline Sans Light;
 
 
         /* Opcional: Quitar la rotación y el apilamiento en pantallas pequeñas */
-        @media (max-width: 640px) {
+        @med (max-width:) {
           .stacked-photo {
             transform: rotate(0deg) !important;
             box-shadow: none;
@@ -524,7 +506,6 @@ font-family:Spline Sans Light;
             background: rgb(226 246 255 / 80%) !important;
             box-shadow: none !important; 
         }
-
 
         /* 🛑 NUEVO ESTILO: Glass Chip Azulado para Botones de Acción (Mapa, Google, etc.) */
         .blue-glass-chip {
@@ -617,53 +598,38 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         }
         
         /* --- NUEVO ESTILO: MODO BÚSQUEDA (SEARCH MODE) --- */
-        
-        /* 🛑 CRÍTICO: Estilo del botón de alternancia - AHORA DENTRO DE LA BARRA */
+        #user-input.search-mode {
+            border-color: #dc3545; 
+            background-color: #fff0f0; /* Fondo sutilmente rojo para indicar el modo */
+            font-weight: bold;
+            color: #dc3545; /* Texto del input en rojo para indicar el modo */
+        }
         #toggle-mode-button {
-            /* 🛑 CLAVE 4: Estilo base (Modo CHAT/Apagado) */
-            background-color: #3b82f6; /* Azul que contrasta con el fondo de la barra */
+            background-color: #2563eb; /* Azul por defecto (Modo CHAT) */
             color: white;
             border: none;
-            border-radius: 15px; 
+            border-radius: 15px; /* Ajustamos para que coincida con el estilo de la barra */
             padding: 0.75rem 0.75rem; 
             cursor: pointer;
-            width: 44px; 
+            width: 44px; /* Aseguramos el tamaño */
             height: 44px;
             display: flex;
             justify-content: center;
             align-items: center;
             font-size: 1.2rem;
-            /* 🛑 CLAVE 5: Ajustamos los márgenes. Ahora va a la IZQUIERDA del input */
-            margin-left: 0; 
-            margin-right: 4px; 
+            margin-left: 4px; /* Separación de la barra de búsqueda */
             flex-shrink: 0;
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-            transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
+            transition: background-color 0.2s, transform 0.1s;
         }
         #toggle-mode-button:active {
             transform: scale(0.95);
         }
-        /* 🛑 CRÍTICO: Color del botón cuando el SPS está ACTIVO (Amarillo/Naranja) */
         #toggle-mode-button.active {
-            background-color: #FFA500; /* Naranja/Amarillo (Rayo Activo) */
-            color: black; /* Texto/Icono oscuro */
-            box-shadow: 0 0 10px rgba(255, 165, 0, 0.7); /* Efecto de brillo */
+            background-color: #dc3545; /* Rojo cuando está en modo Búsqueda */
+            color: white;
         }
         /* FIN NUEVOS ESTILOS DE BÚSQUEDA */
-        
-        /* 🛑 NUEVO: Estilo del icono para el emoji ⚡️ */
-        #mode-icon {
-            font-size: 1.5rem; /* Asegura que el emoji se vea grande */
-            line-height: 1; /* Para centrarlo correctamente */
-        }
-        
-        /* 🛑 CSS para el contenedor padre de la barra de búsqueda */
-        .search-bar-wrapper {
-            display: flex;
-            align-items: center;
-            width: 100%; /* Ocupa todo el ancho disponible */
-        }
-
 
     </style>
     <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
@@ -749,13 +715,12 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                 </div>
             </div>
             
-            <div class="p-4 flex-shrink-0 pt-2 search-bar-wrapper"> 
+            <div class="p-4 flex-shrink-0 pt-2 flex items-center space-x-2"> 
+                <button id="toggle-mode-button" title="Alternar Modo Búsqueda Geográfica">
+                    <i id="toggle-icon" class="fas fa-search"></i> 
+                </button>
                 
-                <div id="main-search-bar" class="map-search-bar w-full">
-                    
-                    <button id="toggle-mode-button" title="Alternar Modo Búsqueda Geográfica">
-                        <span id="mode-icon">⚡️</span> 
-                    </button>
+                <div class="map-search-bar w-full">
                     <input type="text" id="user-input" class="map-input focus:outline-none focus:ring-0" placeholder="Pregúntale al mapa">
                     
                     <button id="go-button" class="go-button transition hover:opacity-90 disabled:opacity-50">
@@ -764,7 +729,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                     </button>
                 </div>
             </div>
-            </div>
+        </div>
         </div>
     
     <div id="notification-preferences-modal" class="notification-modal-overlay">
@@ -881,8 +846,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     
     // 🛑 NUEVAS REFERENCIAS PARA EL MODO BÚSQUEDA DIRECTA
     const toggleButton = document.getElementById('toggle-mode-button');
-    const modeIconSpan = document.getElementById('mode-icon'); // 🛑 CAMBIO CLAVE: Referencia al SPAN del emoji
-    const mainSearchBar = document.getElementById('main-search-bar'); // 🛑 NUEVO: Referencia a la barra contenedora
+    const toggleIcon = document.getElementById('toggle-icon');
 
     // 🛑 NUEVO: Objeto de mapeo de Subcategorías (Clave: Query del Chip de Categoría General)
     const SUBCATEGORIES_MAP = {
@@ -921,7 +885,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         es: {
             header: "PROGRESO TOUR GUIDE",
             placeholder: "Pregúntale al mapa",
-            searchPlaceholder: "Búsqueda Geográfica: Ingresa un lugar...", // 🛑 MODIFICADO para indicar el enfoque
+            searchPlaceholder: "Búsqueda Exacta (Selecciona el lugar)...", // 🛑 NUEVO
             goButton: "Ir",
             loadingStatus: "Respondiendo tu petición...", // NUEVO: Estado de carga
             categories: "✨️ Categorías",
@@ -943,7 +907,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         en: {
             header: "PROGRESO TOUR GUIDE",
             placeholder: "Ask the map",
-            searchPlaceholder: "Geographic Search: Enter a place...", // 🛑 MODIFICADO para indicar el enfoque
+            searchPlaceholder: "Exact Search (Select the place)...", // 🛑 NUEVO
             goButton: "Go",
             loadingStatus: "Processing your request...", // NUEVO: Estado de carga
             categories: "✨️ Categories",
@@ -1018,13 +982,10 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         lastTotalCount = 0;
         lastApiQuery = null;
         
-        // 🛑 NUEVO: Si está en modo búsqueda, volver a modo chat (y limpiar el input)
+        // 🛑 NUEVO: Si está en modo búsqueda, volver a modo chat
         if (isSearchMode) toggleSearchMode();
         // Aseguramos que el placeholder se restablezca
         inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
-        
-        // 🛑 CRÍTICO: El botón de enviar debe estar deshabilitado si no hay texto y no estamos en modo búsqueda.
-        sendButton.disabled = true;
     }
     
     function loadHistory() {
@@ -1052,29 +1013,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         }
         return loaded;
     }
-    
-    // 🛑 NUEVO: Persistencia del modo de búsqueda (Para que NO se desactive manualmente hasta que el usuario lo haga)
-    function saveSearchModeState() {
-        try {
-            // Se usa el valor opuesto porque `toggleSearchMode` es quien llama a esto
-            localStorage.setItem('isSearchModeActive', isSearchMode ? 'true' : 'false');
-        } catch (e) {
-            console.error("Error al guardar el estado del modo de búsqueda:", e);
-        }
-    }
-
-    function loadSearchModeState() {
-        try {
-            const savedState = localStorage.getItem('isSearchModeActive');
-            if (savedState === 'true') {
-                return true;
-            }
-        } catch (e) {
-            console.error("Error al cargar el estado del modo de búsqueda:", e);
-        }
-        return false;
-    }
-
 
     // NUEVAS FUNCIONES PARA LA PERSISTENCIA DE NOTIFICACIONES
     function saveNotificationPreferences() {
@@ -1267,61 +1205,38 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     
     /**
      * Inicializa el autocompletado de Google Places.
-     * 🛑 CRÍTICO: Usa las coordenadas fijas de Nuevo Progreso para acotar.
      */
     function initAutocomplete() {
         // Coordenadas de Nuevo Progreso (26.064, -98.005)
         const progressoBounds = new google.maps.LatLngBounds(
-            new google.maps.LatLng(26.04, -98.02), // SW
-            new google.maps.LatLng(26.08, -97.98)  // NE
+            new google.maps.LatLng(26.0, -98.1), // SW
+            new google.maps.LatLng(26.1, -97.9)  // NE
         );
-        
-        // 🛑 CORRECCIÓN CLAVE: Si ya existe una instancia de autocompletado, la limpiamos.
-        // Google Maps API no tiene un método .destroy(), por lo que desvinculamos o la reemplazamos.
-        if (autocomplete && window.google.maps.event) {
-            // Desvincular listeners existentes del input
-            google.maps.event.clearInstanceListeners(inputElement);
-        }
-        
+
         autocomplete = new google.maps.places.Autocomplete(inputElement, {
             bounds: progressoBounds,
-            strictBounds: true, // Restringe la búsqueda a la zona de Progreso (CRÍTICO)
-            
-            // 🛑 CORRECCIÓN CRÍTICA: Incluir 'establishment' para encontrar lugares de interés/negocios.
-            types: ['establishment', 'geocode'], 
-            
+            strictBounds: true, // Restringe la búsqueda a la zona de Progreso
+            types: ['establishment', 'geocode'], // Buscar negocios y direcciones
             componentRestrictions: { country: 'mx' } // Restringir a México
         });
 
         // Evento que se dispara cuando el usuario selecciona un lugar de la lista
         autocomplete.addListener('place_changed', onPlaceSelected);
-        
-        // 🛑 CORRECCIÓN CLAVE 2: Forzar el foco para que el autocompletado se active visualmente
-        inputElement.focus();
     }
     
     /**
      * Alterna entre el modo Chat (normal) y el modo Búsqueda (Places API).
      */
     function toggleSearchMode() {
-        
-        // 🛑 LÓGICA DE PERSISTENCIA
-        const newState = !isSearchMode;
-        if (isSearchMode !== newState) {
-            isSearchMode = newState; 
-            saveSearchModeState(); // Guardar el nuevo estado
-        }
+        isSearchMode = !isSearchMode;
 
         if (isSearchMode) {
-            // Activar Modo Búsqueda (SPS)
-            mainSearchBar.classList.add('sps-active'); // 🛑 Aplica el estilo SPS a la barra (AZUL)
-            toggleButton.classList.add('active'); // 🛑 Ilumina el botón del Rayo (AMARILLO)
-            modeIconSpan.textContent = '⚡️'; 
-            
-            inputElement.placeholder = UI_STRINGS[currentLanguage].searchPlaceholder; 
-            
-            // Deshabilitar el botón de enviar texto (solo autocompletado)
-            sendButton.disabled = true; 
+            // Activar Modo Búsqueda
+            inputElement.classList.add('search-mode');
+            toggleButton.classList.add('active');
+            toggleIcon.className = 'fas fa-times'; // Icono de cerrar (para salir)
+            inputElement.placeholder = UI_STRINGS[currentLanguage].searchPlaceholder;
+            sendButton.disabled = true; // Deshabilitar el botón de enviar texto (solo autocompletado)
             
             // Si Google Maps API está disponible, inicializa el autocompletado
             if (window.google && window.google.maps) {
@@ -1330,24 +1245,15 @@ padding-bottom:40px; /* Devolvemos la altura automática */
 
         } else {
             // Activar Modo Chat
-            mainSearchBar.classList.remove('sps-active'); 
-            toggleButton.classList.remove('active'); 
-            modeIconSpan.textContent = '⚡️'; 
-            
+            inputElement.classList.remove('search-mode');
+            toggleButton.classList.remove('active');
+            toggleIcon.className = 'fas fa-search'; // Icono de búsqueda/chat
             inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
-            
-            // 🛑 CRÍTICO: Eliminar el listener o la instancia de autocompletado.
-            if (autocomplete && window.google.maps.event) {
-                // Esto remueve el listener del input, evitando el autocompletado en modo normal
-                google.maps.event.clearInstanceListeners(inputElement); 
-                autocomplete = null; // Liberar la referencia
-            }
             
             // Habilitar el botón de enviar solo si hay texto
             sendButton.disabled = inputElement.value.trim() === ''; 
         }
         inputElement.value = '';
-        // 🛑 CRÍTICO: Re-enfocar el input DESPUÉS de limpiar.
         inputElement.focus();
     }
     
@@ -1363,7 +1269,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             // Esto puede pasar si el usuario presiona Enter sin seleccionar una sugerencia
             alertUser(currentLanguage === 'es' ? "Por favor, selecciona un lugar de la lista de sugerencias." : "Please select a place from the suggestions list.", 'i', 'news');
             inputElement.value = '';
-            // Mantenemos el modo activo para que el usuario pueda volver a buscar.
             return;
         }
 
@@ -1374,19 +1279,17 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         chatHistory.push({ 
             role: 'user', 
             text: currentLanguage === 'es' 
-                ? `🔎 Búsqueda Geográfica Directa: **${query}**`
-                : `🔎 Direct Geographic Search: **${query}**`, 
+                ? `🔎 Búsqueda Directa del lugar: **${query}**`
+                : `🔎 Direct Search for place: **${query}**`, 
             timestamp: new Date() 
         });
         if (typeof renderChat === 'function') renderChat();
         
         inputElement.value = '';
-        
-        // 🛑 LÍNEA MODIFICADA (Mantenemos el modo SPS activo, el usuario deberá desactivarlo manualmente).
-        // **toggleSearchMode();** // LÍNEA DE DESACTIVACIÓN COMENTADA POR SOLICITUD
-        
+        toggleSearchMode(); // Volver a Modo Chat después de la búsqueda
+
         // 2. Disparar el envío al backend con el PLACE ID
-        handleSend(`Búsqueda geográfica directa del lugar ${query}`, placeId);
+        handleSend(`Búsqueda directa del lugar ${query}`, placeId);
     }
 
     // --- Funciones de INTERACCIÓN (SIN CAMBIOS EN LÓGICA) ---
@@ -1431,8 +1334,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         hideChipGroup(languageChipsGroup, languageChips);
         languageMenuVisible = false;
 
-        // 🛑 MODIFICACIÓN: Ajustar placeholder según el modo actual
-        inputElement.placeholder = isSearchMode ? strings.searchPlaceholder : strings.placeholder; 
+        inputElement.placeholder = isSearchMode ? strings.searchPlaceholder : strings.placeholder; // 🛑 NUEVO: Ajustar al modo actual
         document.getElementById('go-text').textContent = strings.goButton; 
 
         document.getElementById('btn-categorias').textContent = strings.categories;
@@ -2026,8 +1928,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         } else if (finalMessage.isStructured) {
             // Caso de FICHA ESTRUCTURADA (SOLO SI LLEGÓ UNA AQUÍ, si no, ya salió antes)
             const isPlace = finalMessage.type === 'place';
-            const entityName = finalMessage.type === 'place'
-                ? (finalMessage.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location'))
+            const entityName = isPlace 
+                ? (finalMessage.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) 
                 : (finalMessage.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
 
             const alertText = isPlace 
@@ -2067,13 +1969,11 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     
     // 🛑 Listener del Botón de Enviar (Solo modo Chat)
     if (sendButton) sendButton.addEventListener('click', () => {
-        // Solo enviar si NO está en modo búsqueda.
         if (!isSearchMode) handleSend();
     });
     
-    // 🛑 Listener de la Tecla Enter (Solo modo Chat, el modo búsqueda tiene su propio onPlaceSelected)
+    // 🛑 Listener de la Tecla Enter (Solo modo Chat)
     if (inputElement) inputElement.addEventListener('keypress', function(e) { 
-        // Solo enviar si NO está en modo búsqueda.
         if (e.key === 'Enter' && !isSearchMode) { 
             handleSend(); 
         } 
@@ -2232,20 +2132,17 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         // 4. Cargar preferencias de notificación
         loadNotificationPreferences(); 
         
-        // 5. Inicializar el modo de búsqueda según la persistencia
-        const savedIsSearchMode = loadSearchModeState();
-        // El estado guardado es el estado FINAL. Lo inicializamos en el opuesto para que el toggle lo ponga bien.
-        isSearchMode = !savedIsSearchMode; 
-        
-        toggleSearchMode(); // Llama a toggle (lo pone en el estado guardado y aplica listeners si está activo)
-        
-        hideLoadingIndicator(); // Ocultar el indicador de carga que se activó en toggle
+        // 5. Establecer el modo inicial (Chat) y ocultar el indicador de carga
+        // El toggleSearchMode inicializa correctamente el botón y el input
+        toggleSearchMode();
+        toggleSearchMode(); 
+        hideLoadingIndicator(); 
 
         // 6. Mensaje de bienvenida inicial (solo si el historial está vacío)
         if (chatHistory.length === 0) {
              const welcomeMessage = currentLanguage === 'es'
-                ? "¡Hola! Soy tu **PROGRESO TOUR GUIDE**. Estoy listo para ayudarte. Usa el icono azul **⚡️** para activar la **Búsqueda Geográfica Directa** 📍."
-                : "Hello! I'm your **PROGRESO TOUR GUIDE**. I'm ready to help. Use the blue icon **⚡️** to activate **Direct Geographic Search** 📍.";
+                ? "¡Hola! Soy tu **PROGRESO TOUR GUIDE**. Estoy listo para ayudarte. Usa el icono azul <i class='fas fa-search'></i> para activar la **Búsqueda Geográfica Directa** 📍."
+                : "Hello! I'm your **PROGRESO TOUR GUIDE**. I'm ready to help. Use the blue icon <i class='fas fa-search'></i> to activate **Direct Geographic Search** 📍.";
              
              chatHistory.push({ role: 'model', text: welcomeMessage, timestamp: new Date(), isStructured: false });
              renderChat();
