@@ -788,7 +788,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             </div>
             
             <div class="p-4 flex-shrink-0 pt-2 flex items-center space-x-2"> 
-                <div class="map-search-bar w-full">
+                <div id="map-search-bar" class="map-search-bar w-full">
                     <button id="toggle-mode-button" title="Alternar Modo Búsqueda Geográfica">
                         <span id="toggle-icon" class="text-xl">💬</span> 
                     </button>
@@ -914,6 +914,9 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     
     // 🛑 NUEVAS REFERENCIAS PARA CHIPS DE AUTOCOMPLETADO
     const autocompleteChipsGroupContainer = document.getElementById('autocomplete-chips-group-container');
+    // 🛑 NUEVA REFERENCIA CRÍTICA: La barra de búsqueda completa
+    const mapSearchBar = document.getElementById('map-search-bar'); 
+
 
     // NUEVA REFERENCIA PARA LA BURBUJA DE ESCRITURA DEL USUARIO Y MODELO
     const userTypingBubble = document.getElementById('user-typing-bubble');
@@ -1211,13 +1214,14 @@ padding-bottom:40px; /* Devolvemos la altura automática */
 
     // --- Funciones de INTERFAZ CORE MODIFICADAS PARA EL PROBLEMA DEL TECLADO ---
 
-    // 🛑 FUNCIÓN MODIFICADA: Optimizada para Chrome/Android (Scroll instantáneo y timeout más corto)
+    // 🛑 FUNCIÓN MEJORADA: Scroll instantáneo más robusto usando la barra de búsqueda como target
     function handleInputFocus() {
-        if (!inputElement || !messageContainer) return;
+        if (!inputElement || !messageContainer || !mapSearchBar) return;
 
-        // **PASO CLAVE 1:** Scroll instantáneo del input a la vista.
-        inputElement.scrollIntoView({ 
-            behavior: 'instant', // CAMBIO: Usamos 'instant' para reaccionar rápido
+        // **PASO CLAVE 1:** Scroll instantáneo de la barra de chat completa a la vista.
+        // Esto le dice al navegador que muestre este elemento justo encima del teclado.
+        mapSearchBar.scrollIntoView({ 
+            behavior: 'instant',
             block: 'end' 
         });
 
@@ -1227,15 +1231,14 @@ padding-bottom:40px; /* Devolvemos la altura automática */
              // 2a. Scroll del contenedor de mensajes al fondo
              messageContainer.scrollTop = messageContainer.scrollHeight;
              
-             // 2b. Forzar scroll de la ventana (ayuda a Chrome a reajustar)
-             window.scrollTo(0, document.body.scrollHeight);
-             
-             // 2c. Reconfirmar el scroll del elemento (instantáneo)
-             inputElement.scrollIntoView({ 
+             // 2b. Reconfirmar el scroll de la barra de chat (instantáneo)
+             mapSearchBar.scrollIntoView({ 
                 behavior: 'instant', 
                 block: 'end' 
              });
-        }, 150); // Tiempo de espera reducido a 150ms.
+             // No es necesario window.scrollTo(0, document.body.scrollHeight) si el contenedor
+             // del chat está manejando el scroll correctamente, y en iOS puede causar rebotes.
+        }, 150); 
     }
     
     function hideModelTypingBubble() {
