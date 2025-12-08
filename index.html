@@ -438,7 +438,7 @@ font-family:Spline Sans Light;
 
 
         /* Opcional: Quitar la rotación y el apilamiento en pantallas pequeñas */
-        @med (max-width:) {
+        @media (max-width: 640px) {
           .stacked-photo {
             transform: rotate(0deg) !important;
             box-shadow: none;
@@ -1213,22 +1213,30 @@ padding-bottom:40px; /* Devolvemos la altura automática */
 
     // 🛑 NUEVA FUNCIÓN: Maneja el enfoque del input para forzar el scroll
     function handleInputFocus() {
-        if (!inputElement) return;
+        if (!inputElement || !messageContainer) return;
 
-        // CRÍTICO: Usamos setTimeout para asegurar que el teclado haya aparecido
-        // y el viewport se haya ajustado ANTES de calcular el scroll.
+        // 1. Scroll del propio elemento para iniciar el proceso de iOS (rápido)
+        inputElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'end' 
+        });
+
+        // 2. Scroll forzado y tardío al fondo (más agresivo para iOS)
         setTimeout(() => {
-             // 'block: end' asegura que el final del elemento (el input) esté visible.
-             inputElement.scrollIntoView({ 
-                 behavior: 'smooth', 
-                 block: 'end' 
-             });
-        }, 300); // Pequeña espera (300ms) para que el navegador reaccione al teclado.
-        
-        // También aseguramos que el contenedor de mensajes baje para ver la última burbuja
-        if (messageContainer) {
-            scrollToBottom();
-        }
+             // Forzar el scroll del contenedor de mensajes
+             messageContainer.scrollTop = messageContainer.scrollHeight;
+             
+             // Forzar el scroll del cuerpo de la página (esto a menudo obliga a iOS a reajustar)
+             window.scrollTo(0, document.body.scrollHeight);
+        }, 400); // Aumentamos la espera a 400ms para darle más tiempo al teclado.
+
+        // 3. Un scroll final (más rápido) del elemento para asegurar que esté visible
+        setTimeout(() => {
+            inputElement.scrollIntoView({ 
+                behavior: 'instant', 
+                block: 'end' 
+            });
+        }, 500); 
     }
     
     function hideModelTypingBubble() {
