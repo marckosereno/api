@@ -1211,32 +1211,31 @@ padding-bottom:40px; /* Devolvemos la altura automática */
 
     // --- Funciones de INTERFAZ CORE MODIFICADAS PARA EL PROBLEMA DEL TECLADO ---
 
-    // 🛑 NUEVA FUNCIÓN: Maneja el enfoque del input para forzar el scroll
+    // 🛑 FUNCIÓN MODIFICADA: Optimizada para Chrome/Android (Scroll instantáneo y timeout más corto)
     function handleInputFocus() {
         if (!inputElement || !messageContainer) return;
 
-        // 1. Scroll del propio elemento para iniciar el proceso de iOS (rápido)
+        // **PASO CLAVE 1:** Scroll instantáneo del input a la vista.
         inputElement.scrollIntoView({ 
-            behavior: 'smooth', 
+            behavior: 'instant', // CAMBIO: Usamos 'instant' para reaccionar rápido
             block: 'end' 
         });
 
-        // 2. Scroll forzado y tardío al fondo (más agresivo para iOS)
+        // **PASO CLAVE 2 (Timeout):** Chrome/Android a menudo requiere un breve retraso
+        // para que la reubicación del viewport por el teclado se complete.
         setTimeout(() => {
-             // Forzar el scroll del contenedor de mensajes
+             // 2a. Scroll del contenedor de mensajes al fondo
              messageContainer.scrollTop = messageContainer.scrollHeight;
              
-             // Forzar el scroll del cuerpo de la página (esto a menudo obliga a iOS a reajustar)
+             // 2b. Forzar scroll de la ventana (ayuda a Chrome a reajustar)
              window.scrollTo(0, document.body.scrollHeight);
-        }, 400); // Aumentamos la espera a 400ms para darle más tiempo al teclado.
-
-        // 3. Un scroll final (más rápido) del elemento para asegurar que esté visible
-        setTimeout(() => {
-            inputElement.scrollIntoView({ 
+             
+             // 2c. Reconfirmar el scroll del elemento (instantáneo)
+             inputElement.scrollIntoView({ 
                 behavior: 'instant', 
                 block: 'end' 
-            });
-        }, 500); 
+             });
+        }, 150); // Tiempo de espera reducido a 150ms.
     }
     
     function hideModelTypingBubble() {
