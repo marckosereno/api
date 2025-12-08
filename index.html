@@ -124,30 +124,8 @@ font-family:Spline Sans Light;
             outline: none !important;
             box-shadow: none !important;
         }
-        .go-button {
-            background-color: black;
-            color: white;
-            font-size: 1rem;
-            font-weight: bold;
-            border-radius: 15px;
-            padding: 0.5rem 1rem; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: hover:opacity-90 disabled:opacity-50;
-            flex-shrink: 0;
-            min-width: 60px;
-            height: 44px;
-            box-sizing: border-box;
-            margin-right: 4px;
-            outline: none !important;
-        }
-        .go-button svg {
-            margin-right: 0.25rem;
-            width: 1.25rem; 
-            height: 1.25rem;
-            fill: currentColor;
-        }
+        /* 🛑 ELIMINADO: Estilos del botón 'go-button' que contenía el ícono de las flechas */
+        /* .go-button {} ... */
 
         /* --- Eliminación de Efecto Celeste/Ring/Highlight en TODOS los botones y chips --- */
         
@@ -157,12 +135,14 @@ font-family:Spline Sans Light;
         }
         
         /* 2. Asegura la eliminación del outline/ring en estados focus/active */
-        .action-chip, .category-chip, .language-chip, .go-button, .map-input, .dynamic-chip, #toggle-mode-button, .autocomplete-chip, .attribution-chip { /* 🛑 AÑADIDO: .autocomplete-chip, .attribution-chip */
+        /* 🛑 CRÍTICO: Eliminamos 'go-button' de aquí */
+        .action-chip, .category-chip, .language-chip, .map-input, .dynamic-chip, #toggle-mode-button, .autocomplete-chip, .attribution-chip { 
             outline: none !important;
             box-shadow: none !important;
             --tw-ring-color: transparent !important;
         }
-        .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active, .go-button:focus, .go-button:active, .dynamic-chip:focus, .dynamic-chip:active, #toggle-mode-button:focus, #toggle-mode-button:active, .autocomplete-chip:focus, .autocomplete-chip:active, .attribution-chip:focus, .attribution-chip:active { /* 🛑 AÑADIDO: .autocomplete-chip, .attribution-chip */
+        /* 🛑 CRÍTICO: Eliminamos 'go-button' de aquí */
+        .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active, .dynamic-chip:focus, .dynamic-chip:active, #toggle-mode-button:focus, #toggle-mode-button:active, .autocomplete-chip:focus, .autocomplete-chip:active, .attribution-chip:focus, .attribution-chip:active { 
             outline: none !important;
             box-shadow: none !important;
             --tw-ring-color: transparent !important;
@@ -608,35 +588,61 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             font-weight: bold;
             color: #d97706; /* Texto del input en naranja oscuro */
         }
-        /* 🛑 CAMBIO CRÍTICO: Estilo para el botón de modo DENTRO de la barra (reubicado) */
+        
+        /* 🛑 CRÍTICO - CAMBIOS SOLICITADOS */
+        /* Eliminamos el estilo anterior de #toggle-mode-button y lo redefinimos como un chip de acción */
         #toggle-mode-button {
-            background-color: #3b82f6; /* Azul por defecto (Modo CHAT/Normal) */
-            color: white;
-            border: none;
-            border-radius: 15px; /* Ajustamos para que coincida con el estilo de la barra */
-            padding: 0.75rem 0.75rem; 
-            cursor: pointer;
-            width: 44px; /* Aseguramos el tamaño */
-            height: 44px;
-            display: flex;
-            justify-content: center;
+            /* Usamos la clase glass-chip como base para el estilo */
+            background: linear-gradient(90deg, rgb(215 236 255 / 50%) 0%, rgb(230 245 255 / 80%) 90%) !important;
+            backdrop-filter: blur(8px); 
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(130, 180, 255, 0.8) !important; 
+            color: #1e40af !important; 
+            font-weight: 600; 
+            
+            white-space: nowrap;
+            display: inline-flex;
             align-items: center;
-            font-size: 1.2rem;
-            margin-left: 0; /* 🛑 CLAVE: Eliminamos el margen izquierdo */
-            margin-right: 4px; /* 🛑 CLAVE: Añadimos un margen derecho para separarlo del input */
+            border-radius: 9999px; /* Chip redondeado */
+            
+            /* Ajustes para el padding y tamaño, es un chip, no un botón cuadrado */
+            padding: 8px 12px;
+            height: auto; /* Ya no es un botón de 44px */
+            width: auto;
+            
+            margin-left: 0; 
+            margin-right: 8px; /* Separación del input */
+            
             flex-shrink: 0;
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-            transition: background-color 0.2s, transform 0.1s;
+            transition: all 0.2s ease-in-out;
         }
-        #toggle-mode-button:active {
-            transform: scale(0.95);
+
+        #toggle-mode-button:hover {
+            background: linear-gradient(90deg, rgb(190 220 255 / 70%) 0%, rgb(210 235 255 / 90%) 100%) !important;
+            box-shadow: 
+                0 2px 4px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 1),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.2);
         }
+
         /* 🛑 CRÍTICO: Estilo para el modo ACTIVO (SPS) */
         #toggle-mode-button.active {
-            background-color: #f59e0b; /* Amarillo/Ámbar cuando está en modo SPS */
-            color: #1f2937; /* Texto oscuro para el rayo */
+            background: linear-gradient(90deg, rgb(245 158 11 / 80%) 0%, rgb(255 180 0 / 90%) 90%) !important; /* Amarillo/Ámbar cuando está en modo SPS */
+            border: 1px solid rgba(255, 165, 0, 0.8) !important; 
+            color: #1f2937 !important; /* Texto oscuro para el rayo */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-        /* FIN NUEVOS ESTILOS DE BÚSQUEDA */
+        
+        #toggle-mode-button:active {
+            transform: scale(0.98); /* Suave efecto de pulsación */
+        }
+
+        /* Ocultar el span del ícono ya que el texto lo reemplaza */
+        #toggle-icon {
+            display: none !important;
+        }
+        /* FIN CAMBIOS SOLICITADOS */
 
         /* --- ESTILOS PARA CHIPS DE AUTOCOMPLETADO Y ATRIBUCIÓN (NUEVO) --- */
         
@@ -789,13 +795,15 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             
             <div class="p-4 flex-shrink-0 pt-2 flex items-center space-x-2"> 
                 <div id="map-search-bar" class="map-search-bar w-full">
+                    
                     <button id="toggle-mode-button" title="Alternar Modo Búsqueda Geográfica">
                         <span id="toggle-icon" class="text-xl">💬</span> 
+                        <span id="toggle-text">Modo SPS</span>
                     </button>
                     
                     <input type="text" id="user-input" class="map-input focus:outline-none focus:ring-0" placeholder="Pregúntale al mapa">
                     
-                    <button id="go-button" class="go-button transition hover:opacity-90 disabled:opacity-50">
+                    <button id="go-button" class="go-button transition hover:opacity-90 disabled:opacity-50 hidden">
                         <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 122.88 122.88" class="h-5 w-5"><g><path class="st0" d="M62.43,122.88h-1.98c0-16.15-6.04-30.27-18.11-42.34C30.27,68.47,16.16,62.43,0,62.43v-1.98 c16.16,0,30.27-6.04,42.34-18.14C54.41,30.21,60.45,16.1,60.45,0h1.98c0,16.15,6.04,30.27,18.11,42.34 c12.07,12.07,26.18,18.11,42.34,18.11v1.98c-16.15,0-30.27,6.04-42.34,18.11C68.47,92.61,62.43,106.72,62.43,122.88L62.43,122.88z"/></g></svg>
                         <span id="go-text">Ir</span> 
                     </button>
@@ -884,6 +892,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
 
     // Referencias a Elementos del DOM
     const inputElement = document.getElementById('user-input');
+    // 🛑 CRÍTICO: El botón de enviar ahora está oculto
     const sendButton = document.getElementById('go-button'); 
     const messageContainer = document.getElementById('message-container');
     const appAlertContainer = document.getElementById('app-alert-container');
@@ -925,6 +934,9 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     // 🛑 NUEVAS REFERENCIAS PARA EL MODO BÚSQUEDA DIRECTA (SPS)
     const toggleButton = document.getElementById('toggle-mode-button');
     const toggleIcon = document.getElementById('toggle-icon');
+    // 🛑 NUEVA REFERENCIA CRÍTICA: El texto del botón Action Chip
+    const toggleText = document.getElementById('toggle-text');
+
 
     // 🛑 NUEVO: Objeto de mapeo de Subcategorías (Clave: Query del Chip de Categoría General)
     const SUBCATEGORIES_MAP = {
@@ -981,6 +993,9 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             btnPhone: "Llamar Ahora 📞",
             btnReview: "Reseñas ⭐",
             btnWebsite: "Sitio Web/Redes 🌐", 
+            // 🛑 NUEVO: Textos para el Action Chip de Modo
+            spsMode: "Modo SPS ⚡️",
+            chatMode: "Modo Chat 💬" 
         },
         en: {
             header: "PROGRESO TOUR GUIDE",
@@ -1003,6 +1018,9 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             btnPhone: "Call Now 📞",
             btnReview: "Reviews ⭐",
             btnWebsite: "Website/Social 🌐", 
+            // 🛑 NUEVO: Textos para el Action Chip de Modo
+            spsMode: "SPS Mode ⚡️",
+            chatMode: "Chat Mode 💬"
         }
     };
 
@@ -1281,7 +1299,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         toggleButton.disabled = false;
         
         // El botón de enviar solo se activa si hay texto Y NO está en modo SPS
-        sendButton.disabled = isSPSMode || inputElement.value.trim() === ''; // 🛑 CAMBIO DE VARIABLE
+        // 🛑 CRÍTICO: sendButton.disabled siempre será true ya que el botón está oculto. Se mantiene la línea por si se habilita en el futuro, pero no afecta la lógica de envío con ENTER.
+        sendButton.disabled = isSPSMode || inputElement.value.trim() === ''; 
     }
     
     function showUserTypingBubble() {
@@ -1323,7 +1342,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             // Activar Modo SPS (Búsqueda)
             inputElement.classList.add('sps-mode'); // 🛑 CAMBIO DE CLASE
             toggleButton.classList.add('active');
-            toggleIcon.innerHTML = '⚡️'; // 🛑 CRÍTICO: Ícono de rayo
+            // 🛑 CRÍTICO: Actualizar texto del chip
+            toggleText.innerHTML = UI_STRINGS[currentLanguage].spsMode; 
             inputElement.placeholder = UI_STRINGS[currentLanguage].searchPlaceholder;
             
             // 🛑 CRÍTICO: El botón de enviar debe estar SIEMPRE DESHABILITADO en Modo SPS.
@@ -1340,10 +1360,11 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             // Activar Modo Chat (Normal)
             inputElement.classList.remove('sps-mode'); // 🛑 CAMBIO DE CLASE
             toggleButton.classList.remove('active');
-            toggleIcon.innerHTML = '💬'; // 🛑 Ícono de chat
+            // 🛑 CRÍTICO: Actualizar texto del chip
+            toggleText.innerHTML = UI_STRINGS[currentLanguage].chatMode; 
             inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
             
-            // Habilitar el botón de enviar solo si hay texto
+            // Habilitar el botón de enviar solo si hay texto (aunque esté oculto, por si se usa ENTER)
             sendButton.disabled = inputElement.value.trim() === ''; 
             
             // Ocultar chips de autocompletado
@@ -1509,8 +1530,11 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         
         hideChipGroup(languageChipsGroup, languageChips);
         languageMenuVisible = false;
-
+        
+        // 🛑 CRÍTICO: Actualizar el placeholder y el texto del Action Chip
         inputElement.placeholder = isSPSMode ? strings.searchPlaceholder : strings.placeholder;
+        toggleText.textContent = isSPSMode ? strings.spsMode : strings.chatMode; 
+
         document.getElementById('go-text').textContent = strings.goButton; 
 
         document.getElementById('btn-categorias').textContent = strings.categories;
@@ -2155,13 +2179,14 @@ padding-bottom:40px; /* Devolvemos la altura automática */
     // --- Event Listeners e Inicio (ACTUALIZADO) ---
     
     // 🛑 Listener del Botón de Enviar (Solo modo Chat)
+    // CRÍTICO: Aunque el botón está oculto, se mantiene por si se presiona con scripting
     if (sendButton) sendButton.addEventListener('click', () => {
         if (!isSPSMode) handleSend(); // 🛑 CAMBIO DE VARIABLE
     });
     
     // 🛑 Listener de la Tecla Enter (Solo modo Chat)
     if (inputElement) inputElement.addEventListener('keypress', function(e) { 
-        if (e.key === 'Enter' && !isSPSMode) { // 🛑 CAMBIO DE VARIABLE
+        if (e.key === 'Enter' && !isSPSMode) { // 🛑 CRÍTICO: Se mantiene para la lógica de CHAT
             handleSend(); 
         } 
     });
@@ -2177,8 +2202,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         inputElement.addEventListener('focus', handleInputFocus);
 
         inputElement.addEventListener('input', () => {
-            // Habilitar/Deshabilitar el botón de envío (solo si NO está en modo SPS)
-            sendButton.disabled = isSPSMode || inputElement.value.trim() === ''; // 🛑 CAMBIO DE VARIABLE
+            // Habilitar/Deshabilitar el botón de envío (solo si NO está en modo SPS y solo por si acaso se habilita el botón)
+            sendButton.disabled = isSPSMode || inputElement.value.trim() === ''; 
             // Manejar la burbuja de escritura del usuario (solo si NO está en modo SPS)
             if (!isSPSMode) { // 🛑 CAMBIO DE VARIABLE
                 handleTypingIndicator();
@@ -2340,8 +2365,8 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         // 6. Mensaje de bienvenida inicial (solo si el historial está vacío)
         if (chatHistory.length === 0) {
              const welcomeMessage = currentLanguage === 'es'
-                ? "¡Hola! Soy tu **PROGRESO TOUR GUIDE**. Estoy listo para ayudarte. Usa el icono **💬** para el modo de chat normal o **tócalo de nuevo** para activar la **Búsqueda Geográfica Directa (SPS)** ⚡️."
-                : "Hello! I'm your **PROGRESO TOUR GUIDE**. I'm ready to help. Use the **💬** icon for normal chat mode or **tap it again** to activate **Direct Geographic Search (SPS)** ⚡️.";
+                ? "¡Hola! Soy tu **PROGRESO TOUR GUIDE**. Estoy listo para ayudarte. Usa el chip **Modo Chat 💬** para el modo de chat normal o **tócalo** para activar la **Búsqueda Geográfica Directa (SPS)** ⚡️."
+                : "Hello! I'm your **PROGRESO TOUR GUIDE**. I'm ready to help. Use the **Chat Mode 💬** chip for normal chat mode or **tap it** to activate **Direct Geographic Search (SPS)** ⚡️.";
              
              chatHistory.push({ role: 'model', text: welcomeMessage, timestamp: new Date(), isStructured: false });
              renderChat();
