@@ -1,6 +1,10 @@
 // ====================================================================
-// Archivo: chat.js (Versión 9.3 - Patrón de Recomendación Flexible)
-// ⭐️ CORREGIDO: Regex de recomendación simplificado y más permisivo para garantizar Action Chips.
+// Archivo: chat.js (Versión 8.9 - Optimizada para Conversación y Estructura Opcional)
+// NOTA: Implementa la aleatoriedad de TONO (Profesional, Informal, Curioso)
+//       junto con la aleatoriedad temática y el límite de palabras.
+// 🛑 DESCARTE: Se elimina el Tono 'Gracioso' y el enfoque en 'Ubicación'
+// ⭐️ NUEVO: Prioriza la respuesta conversacional para recomendaciones, 
+//           adjuntando la ficha de categoría como dato opcional Y action chips.
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -23,7 +27,7 @@ const LNG_OFFSET = 0.150; // ~15km
 
 // 🛑 RANGO EXTENDIDO (30x30km centrado en Progreso - Sustituye a los bounds estrictos/bias simple)
 const EXTENDED_NE_BOUND = { lat: CENTER_LAT + LAT_OFFSET, lng: CENTER_LNG + LNG_OFFSET }; 
-const EXTENDED_SW_BOUND = { lat: CENTER_LAT - LAT_OFFSET, lng: CENTER_LNG - LAT_OFFSET }; 
+const EXTENDED_SW_BOUND = { lat: CENTER_LAT - LAT_OFFSET, lng: CENTER_LNG - LNG_OFFSET }; 
 
 
 // 🛑 TIPOS DE SALUD (Para Confidencialidad)
@@ -113,9 +117,14 @@ REGLAS DE FORMATO:
 
 /**
  * 🟢 MEJORADA: Genera una descripción dinámica y multifocal usando Gemini, con un tono y enfoque aleatorios.
+ * @param {string} placeName Nombre del lugar.
+ * @param {string} category Categoría principal.
+ * @param {boolean} isHealthPlace Indica si es un lugar de salud.
+ * @returns {string} Descripción atractiva y conversacional generada por Gemini.
  */
 async function generateDynamicDescription(placeName, category, isHealthPlace) {
     // 1. Definir y seleccionar un punto focal al azar
+    // 🛑 AJUSTE: Se elimina el enfoque en "Ubicación, Acceso y Conveniencia"
     const focusPoints = [
         'Experiencia General del Cliente (lo que más se comenta en las reseñas)',
         'Servicios y Oferta Principal (énfasis en qué se hace, qué se vende o cuál es el plato estrella)',
@@ -124,6 +133,7 @@ async function generateDynamicDescription(placeName, category, isHealthPlace) {
     const selectedFocus = focusPoints[Math.floor(Math.random() * focusPoints.length)];
 
     // 2. Definir y seleccionar un tono al azar
+    // 🛑 AJUSTE: Se elimina el tono 'gracioso'
     const tones = [
         'informal (como un amigo que da un dato clave)',
         'profesional (énfasis en la calidad y eficiencia del negocio)',
@@ -328,39 +338,22 @@ function areNamesSimilar(searchName, returnedName) {
     return s2.includes(s1) || s1.includes(s2) || s1 === s2;
 }
 
-
-// ⭐️ MODIFICADA: Función para generar chips de acción/subcategorías
+// ⭐️ NUEVO: Función para generar chips de acción/subcategorías
 function generateActionChips(categoryName) {
-    // Normalizar la categoría a minúsculas y sin acentos para un match más robusto.
-    const normalizedCategory = categoryName.toLowerCase()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-    if (normalizedCategory.includes("peluqueria") || normalizedCategory.includes("estetica") || normalizedCategory.includes("beauty") || normalizedCategory.includes("hair")) {
-        return ["Cortes de Hombre", "Tintes", "Manicure", "Pedicure"];
+    switch (categoryName) {
+        case "Peluquería / Salón de Belleza":
+            return ["Cortes de Hombre", "Tintes", "Manicure", "Pedicure"];
+        case "Taquerías y Tacos":
+            return ["Tacos de Pastor", "Tacos de Barbacoa", "Tacos de Canasta", "Horarios Nocturnos"];
+        case "Restaurantes y Comida":
+            return ["Comida Mexicana", "Comida Rápida", "Desayunos", "Cenas"];
+        case "Salud y Estética":
+            return ["Clínicas Dentales", "Farmacias", "Ópticas", "Consultorios"];
+        case "Tiendas de Artesanías y Souvenirs":
+            return ["Ropa Típica", "Artesanía Local", "Dulces Regionales"];
+        default:
+            return [];
     }
-    if (normalizedCategory.includes("tacos") || normalizedCategory.includes("taqueria") || normalizedCategory.includes("taco")) {
-        return ["Tacos de Pastor", "Tacos de Barbacoa", "Tacos de Canasta", "Horarios Nocturnos"];
-    }
-    if (normalizedCategory.includes("restaurantes") || normalizedCategory.includes("comida") || normalizedCategory.includes("cenas") || normalizedCategory.includes("food") || normalizedCategory.includes("restaurant")) {
-        return ["Comida Mexicana", "Comida Rápida", "Desayunos", "Bares y Cerveza"];
-    }
-    if (normalizedCategory.includes("salud") || normalizedCategory.includes("estetica") || normalizedCategory.includes("dental") || normalizedCategory.includes("farmacia") || normalizedCategory.includes("optica") || normalizedCategory.includes("health")) {
-        return ["Clínicas Dentales", "Farmacias", "Ópticas", "Spa y Masajes"];
-    }
-    if (normalizedCategory.includes("tiendas") || normalizedCategory.includes("compras") || normalizedCategory.includes("ropa") || normalizedCategory.includes("shopping") || normalizedCategory.includes("stores")) {
-        return ["Ropa y Moda 👕", "Artesanías 🎁", "Souvenirs", "Dulces Regionales"];
-    }
-    if (normalizedCategory.includes("barbacoa") || normalizedCategory.includes("birria")) {
-         return ["Barbacoa", "Birria", "Menudo", "Tacos de Barbacoa"];
-    }
-
-    // Default para categorías que no tienen mapeo específico, pero que son generales.
-    if (normalizedCategory.includes("lugares") || normalizedCategory.includes("negocios") || normalizedCategory.includes("places")) {
-        // Chips generales para exploración
-        return ["Restaurantes", "Clínicas Dentales", "Tiendas de Ropa", "Farmacias"];
-    }
-    
-    return [];
 }
 
 
@@ -472,21 +465,13 @@ export default async function handler(req, res) {
         
         let promptToSend = userPrompt;
         
-        // ⭐️ PATRÓN DE RECOMENDACIÓN MEJORADO (V9.3: Un solo grupo de captura para la categoría)
-        // Permite cualquier cosa antes de la categoría, lo que lo hace muy flexible.
-        const recommendationPattern = new RegExp(
-            // El (?:...) es un grupo que no se captura, haciendo que el índice 1 sea la categoría.
-            // Acepta cualquier cosa antes (.*) que contenga una palabra clave de recomendación (dime, categoria, etc.)
-            `(?:.*(?:dime|recomienda|sugiere|dame|busca|quiero|lista|muestra|categoria|que opciones de)\\s)?` + 
-            // Capturamos solo la palabra clave de la categoría:
-            `((taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias|clinica|farmacia|dental|optica|peluqueria|estetica|compras|shopping|stores|comer)s?)`, 
-            'i'
-        );
+        // ⭐️ NUEVO: Lógica para identificar la categoría de recomendación SIN forzar el JSON de Gemini
+        // Se añade 'peluqueria' y 'estetica' al patrón de recomendación para la lógica de chips
+        const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra).*\\s+(\\d+|unos cuantos)?\\s*(taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias|clinica|farmacia|dental|optica|peluqueria|estetica)s?`, 'i');
         
-        // 🎯 DECLARACIÓN DE recMatch (Solo para el console.log, no afecta la lógica central)
-        const recMatch = userPrompt.match(recommendationPattern);
+        const match = userPrompt.match(recommendationPattern);
         
-        if (recMatch) {
+        if (match) {
             console.log("Petición de recomendación detectada. Dejando a Gemini responder con creatividad.");
         }
         // FIN DE LÓGICA DE INTERCEPTACIÓN MODIFICADA
@@ -607,7 +592,7 @@ export default async function handler(req, res) {
                         } else if (ficha.type === 'category') {
                              // ENRIQUECIMIENTO PARA CATEGORÍA (Mapa)
                              
-                             const categorySearch = ficha.categoryName.replace(/en Progreso/i, '', 'g').trim();
+                             const categorySearch = ficha.categoryName.replace(/en Progreso/i, '').trim();
                              const mapUrlQuery = categorySearch + GEOGRAPHIC_CONTEXT;
                              
                              const mapUrl = `https://www.google.com/maps/search/?api=1&query=$${encodeURIComponent(mapUrlQuery)}`;
@@ -637,23 +622,19 @@ export default async function handler(req, res) {
                 
                 // 🛑 LÓGICA: Revisa si la pregunta original es una recomendación para ADJUNTAR la ficha y los chips
                 const originalUserPrompt = req.body.userPrompt;
+                const recMatch = originalUserPrompt.match(recommendationPattern);
                 
-                // 🎯 RE-DECLARACIÓN/Uso de recMatch (Usamos la misma declaración para consistencia)
-                const recMatchFinal = originalUserPrompt.match(recommendationPattern);
-                
-                if (recMatchFinal) {
-                    // CRÍTICO: El índice 1 es ahora la palabra clave de la categoría, gracias al nuevo regex.
-                    let categoryKeyRaw = recMatchFinal[1] ? recMatchFinal[1].toLowerCase() : 'lugar';
-                    let categoryName = "Lugares y Negocios"; // Default
-
-                    // ⭐️ Mapeo robusto de categorías para la generación de chips y el structuredOptionData
+                if (recMatch) {
+                    let categoryKeyRaw = recMatch[3] ? recMatch[3].toLowerCase() : 'lugar';
+                    let categoryName = "Lugares de Interés"; 
+                    
+                    // Mapeo de Categorías
                     if (categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('tacos')) categoryName = "Taquerías y Tacos";
                     else if (categoryKeyRaw.includes('restaurante') || categoryKeyRaw.includes('comer')) categoryName = "Restaurantes y Comida";
                     else if (categoryKeyRaw.includes('artesanias') || categoryKeyRaw.includes('souvenirs')) categoryName = "Tiendas de Artesanías y Souvenirs";
                     else if (categoryKeyRaw.includes('barbacoa')) categoryName = "Barbacoa y Birria";
                     else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = "Salud y Estética";
                     else if (categoryKeyRaw.includes('peluqueria') || categoryKeyRaw.includes('estetica')) categoryName = "Peluquería / Salón de Belleza"; 
-                    else if (categoryKeyRaw.includes('tienda') || categoryKeyRaw.includes('compras') || categoryKeyRaw.includes('shopping') || categoryKeyRaw.includes('stores')) categoryName = "Tiendas y Compras";
                     
                     // Construye la Ficha de Categoría para la opción
                     const mapUrlQuery = categoryName + GEOGRAPHIC_CONTEXT;
@@ -670,7 +651,7 @@ export default async function handler(req, res) {
                     // Adjunta la Ficha de Categoría y los Chips
                     finalResponseData.hasStructuredOption = true;
                     finalResponseData.structuredOptionData = structuredOption;
-                    finalResponseData.actionChips = generateActionChips(categoryName); // ⭐️ INYECCIÓN DE CHIPS UNIVERSAL
+                    finalResponseData.actionChips = generateActionChips(categoryName); // ⭐️ INYECCIÓN DE CHIPS
                     
                     console.log(`Opción estructurada y chips adjuntados a respuesta conversacional.`);
                 }
