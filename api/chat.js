@@ -147,11 +147,13 @@ async function generateDynamicDescription(placeName, category, isHealthPlace) {
         config: {
             // Instrucción estricta para el tono deseado, la variación y el límite de palabras.
             systemInstruction: `Eres un redactor turístico profesional con un tono **${selectedTone}**. Tu única tarea es generar una descripción sobre un negocio. La descripción debe:
-            1. **Tener una longitud de 44 a 50 palabras, sin incluir emojis.**
+            1. **Tener una longitud de 34 a 42 palabras, incluiyendo emojis.**
             2. Tener un tono de reporte o resumen de opiniones de terceros, NO tu opinión personal.
             3. **CRÍTICO:** Evitar las frases iniciales obvias y repetitivas como "Se comenta que..." o "Los clientes destacan...". **¡Sé creativo con la estructura de la oración para no repetir el patrón!**
             4. Enfocarse en el punto central de la descripción que se te pide.
-            5. Nunca usar la palabra 'recomendar'.`
+5. Responder en el Lenguaje que haya seleccionado el usuario.
+6. si puedes utiliza el estilo streaming para dar la respuesta y no hacer esperar mucho al usuario.
+            7. Nunca usar la palabra 'recomendar'.`
         }
     });
 
