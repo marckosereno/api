@@ -1,8 +1,6 @@
 // ====================================================================
-// Archivo: chat.js (Versión 8.9 - Límite 44-50 palabras y 3 Tonos Dinámicos)
-// NOTA: Implementa la aleatoriedad de TONO (Profesional, Informal, Curioso)
-//       junto con la aleatoriedad temática y el límite de palabras.
-// 🛑 DESCARTE: Se elimina el Tono 'Gracioso' y el enfoque en 'Ubicación'
+// Archivo: chat.js (Versión 9.0 - Universal Action Chips)
+// ⭐️ NUEVO: Mapeo robusto de categorías para Action Chips en todas las búsquedas de recomendación.
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -25,7 +23,7 @@ const LNG_OFFSET = 0.150; // ~15km
 
 // 🛑 RANGO EXTENDIDO (30x30km centrado en Progreso - Sustituye a los bounds estrictos/bias simple)
 const EXTENDED_NE_BOUND = { lat: CENTER_LAT + LAT_OFFSET, lng: CENTER_LNG + LNG_OFFSET }; 
-const EXTENDED_SW_BOUND = { lat: CENTER_LAT - LAT_OFFSET, lng: CENTER_LNG - LNG_OFFSET }; 
+const EXTENDED_SW_BOUND = { lat: CENTER_LAT - LAT_OFFSET, lng: CENTER_LNG - LAT_OFFSET }; 
 
 
 // 🛑 TIPOS DE SALUD (Para Confidencialidad)
@@ -62,7 +60,7 @@ const placesClient = new PlacesClient({});
 // 2. Definimos la Instrucción del Sistema
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
-**REGLA DE ESTRICTO CUMPLIMIENTO:** Si la solicitud del usuario es para un LUGAR o CATEGORÍA, DEBES responder **EXCLUSIVAMENTE con un formato JSON**. Está **PROHIBIDO** responder en texto plano conversacional en estos casos. Usa el formato de FALLO si el servidor lo indica o si no estás seguro de la existencia del lugar.
+**REGLA DE ESTRICTO CUMPLIMIENTO (MODIFICADA):** Si la solicitud del usuario es para un **LUGAR ESPECÍFICO** (ej. "Farmacia Guadalajara"), DEBES responder **EXCLUSIVAMENTE con un formato JSON (MODO FICHA DE LUGAR)**. Para preguntas de **categorías, recomendaciones o servicios** (ej. "¿dónde cortan cabello?", "¿qué taquerías recomiendas?"), **prioriza la creatividad y el MODO CONVERSACIONAL**, y menciona el lugar o la categoría en la respuesta de texto. Usa el formato de FALLO si el servidor lo indica o si no estás seguro de la existencia del lugar.
 **NOTA CRÍTICA DE CLASIFICACIÓN:** Tu clasificación debe ser precisa. No asumas que todas las búsquedas son restaurantes. Usa las categorías más específicas posibles (Spa, Tienda de Ropa, Clínica Dental, Taquería, etc.).
 **REGLA CRÍTICA DE CONTEXTO:** Si el usuario solicita un **LUGAR ESPECÍFICO** (ej. "Farmacia Guadalajara", "El Cuñao"), DEBES IGNORAR CUALQUIER CATEGORÍA PREVIA del chat (ej. si la última búsqueda fue un restaurante). Debes clasificar la nueva solicitud desde CERO, de forma independiente.
 
@@ -72,15 +70,13 @@ REGLAS DE FORMATO:
 
 ---
 
-### PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES (MODO FICHA DE CATEGORÍA)
-**REGLA CRÍTICA:** Si el usuario pide recomendaciones, sugerencias o un listado de lugares, DEBES usar el **MODO FICHA DE CATEGORÍA (JSON)**.
+// 🛑 PROTOCOLO DE RESTRICCIÓN ELIMINADO: Gemini ahora debe ser conversacional para recomendaciones.
 
 ---
 
 3. **MODO FICHA DE LUGAR (JSON):** Úsalo si la solicitud es de un lugar o negocio **específico**.
-4. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo para solicitudes de categorías generales O para **CUMPLIR EL PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES**.
-
-5. **MODO CONVERSACIONAL (Texto Plano):** Úsalo *SOLO* para preguntas generales o de seguimiento (ej: "gracias", "¿cómo está el clima?") que **no** requieran una ficha.
+4. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo *SOLO* si el usuario lo pide explícitamente ("dame la ficha de categoría") o si el prompt forzado del servidor lo indica.
+5. **MODO CONVERSACIONAL (Texto Plano):** Úsalo para preguntas generales, seguimiento Y **PREGUNTAS DE RECOMENDACIÓN/LISTADO**, ofreciendo la categoría o el lugar como parte de la respuesta.
 
 6. Los formatos JSON requeridos son:
    
@@ -117,14 +113,9 @@ REGLAS DE FORMATO:
 
 /**
  * 🟢 MEJORADA: Genera una descripción dinámica y multifocal usando Gemini, con un tono y enfoque aleatorios.
- * @param {string} placeName Nombre del lugar.
- * @param {string} category Categoría principal.
- * @param {boolean} isHealthPlace Indica si es un lugar de salud.
- * @returns {string} Descripción atractiva y conversacional generada por Gemini.
  */
 async function generateDynamicDescription(placeName, category, isHealthPlace) {
     // 1. Definir y seleccionar un punto focal al azar
-    // 🛑 AJUSTE: Se elimina el enfoque en "Ubicación, Acceso y Conveniencia"
     const focusPoints = [
         'Experiencia General del Cliente (lo que más se comenta en las reseñas)',
         'Servicios y Oferta Principal (énfasis en qué se hace, qué se vende o cuál es el plato estrella)',
@@ -133,7 +124,6 @@ async function generateDynamicDescription(placeName, category, isHealthPlace) {
     const selectedFocus = focusPoints[Math.floor(Math.random() * focusPoints.length)];
 
     // 2. Definir y seleccionar un tono al azar
-    // 🛑 AJUSTE: Se elimina el tono 'gracioso'
     const tones = [
         'informal (como un amigo que da un dato clave)',
         'profesional (énfasis en la calidad y eficiencia del negocio)',
@@ -339,6 +329,41 @@ function areNamesSimilar(searchName, returnedName) {
 }
 
 
+// ⭐️ NUEVO: Función para generar chips de acción/subcategorías
+function generateActionChips(categoryName) {
+    // Normalizar la categoría a minúsculas y sin acentos para un match más robusto.
+    const normalizedCategory = categoryName.toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    if (normalizedCategory.includes("peluqueria") || normalizedCategory.includes("estetica")) {
+        return ["Cortes de Hombre", "Tintes", "Manicure", "Pedicure"];
+    }
+    if (normalizedCategory.includes("tacos") || normalizedCategory.includes("taqueria")) {
+        return ["Tacos de Pastor", "Tacos de Barbacoa", "Tacos de Canasta", "Horarios Nocturnos"];
+    }
+    if (normalizedCategory.includes("restaurantes") || normalizedCategory.includes("comida") || normalizedCategory.includes("cenas")) {
+        return ["Comida Mexicana", "Comida Rápida", "Desayunos", "Bares y Cerveza"];
+    }
+    if (normalizedCategory.includes("salud") || normalizedCategory.includes("estetica") || normalizedCategory.includes("dental") || normalizedCategory.includes("farmacia") || normalizedCategory.includes("optica")) {
+        return ["Clínicas Dentales", "Farmacias", "Ópticas", "Spa y Masajes"];
+    }
+    if (normalizedCategory.includes("tiendas") || normalizedCategory.includes("compras") || normalizedCategory.includes("ropa")) {
+        return ["Ropa y Moda 👕", "Artesanías 🎁", "Souvenirs", "Dulces Regionales"];
+    }
+    if (normalizedCategory.includes("barbacoa") || normalizedCategory.includes("birria")) {
+         return ["Barbacoa", "Birria", "Menudo", "Tacos de Barbacoa"];
+    }
+
+    // Default para categorías que no tienen mapeo específico, pero que son generales.
+    if (normalizedCategory.includes("lugares") || normalizedCategory.includes("negocios")) {
+        // Chips generales para exploración
+        return ["Restaurantes", "Clínicas Dentales", "Tiendas de Ropa", "Farmacias"];
+    }
+    
+    return [];
+}
+
+
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Método no permitido' });
@@ -446,28 +471,16 @@ export default async function handler(req, res) {
         // ----------------------------------------------------
         
         let promptToSend = userPrompt;
-
-        // Patrón para detectar solicitudes de listado/recomendación
-        const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra).*\\s+(\\d+|unos cuantos)?\\s*(taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias|clinica|farmacia|dental|optica)s?`, 'i');
+        
+        // ⭐️ PATRÓN DE RECOMENDACIÓN AMPLIO
+        const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra).*\\s+(\\d+|unos cuantos)?\\s*(taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias|clinica|farmacia|dental|optica|peluqueria|estetica|compras|shopping|stores|comer)s?`, 'i');
         
         const match = userPrompt.match(recommendationPattern);
         
         if (match) {
-            const categoryKeyRaw = match[3].toLowerCase(); 
-            let categoryName = "lugares y negocios"; 
-            
-            if (categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('tacos')) categoryName = "Taquerías y Tacos";
-            else if (categoryKeyRaw.includes('restaurante') || categoryKeyRaw.includes('comer')) categoryName = "Restaurantes y Comida";
-            else if (categoryKeyRaw.includes('artesanias') || categoryKeyRaw.includes('souvenirs')) categoryName = "Tiendas de Artesanías y Souvenirs";
-            else if (categoryKeyRaw.includes('barbacoa')) categoryName = "Barbacoa y Birria";
-            else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = "Salud y Estética";
-            
-            // SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA
-            promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría ${categoryName} en Nuevo Progreso.`;
-            
-            console.log("PROTOCOLO CATEGORÍA GENERAL ACTIVADO para:", categoryName);
+            console.log("Petición de recomendación detectada. Dejando a Gemini responder con creatividad.");
         }
-        // FIN DE LÓGICA DE INTERCEPTACIÓN
+        // FIN DE LÓGICA DE INTERCEPTACIÓN MODIFICADA
 
 
         // Inicializar el chat con el historial y la instrucción de sistema
@@ -484,13 +497,20 @@ export default async function handler(req, res) {
         const result = await chat.sendMessage({ message: promptToSend });
         let modelResponseText = result.text.trim();
         
-        let finalResponseData = { responseText: modelResponseText };
+        // ⭐️ CAMBIO CRÍTICO: Inicializamos para permitir la estructura opcional y los chips
+        let finalResponseData = { 
+            responseText: modelResponseText, 
+            hasStructuredOption: false,      
+            structuredOptionData: null,
+            actionChips: [] // ⭐️ NUEVO CAMPO PARA LOS CHIPS
+        };
 
         // Lógica de ENRIQUECIMIENTO con Places API
         try {
             const jsonStart = modelResponseText.indexOf('{');
             const jsonEnd = modelResponseText.lastIndexOf('}');
             
+            // Caso 1: Gemini responde con JSON (para un LUGAR ESPECÍFICO o una ficha forzada)
             if (jsonStart !== -1 && jsonEnd !== -1) {
                 const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
                 const parsedJson = JSON.parse(jsonString);
@@ -507,15 +527,10 @@ export default async function handler(req, res) {
                         if (ficha.type === 'place' && ficha.placeToSearch) {
                             
                             const placeNameSearch = ficha.placeToSearch.trim();
-                            
-                            // Búsqueda flexible (solo el nombre)
                             const searchForPlaces = placeNameSearch; 
-                            
-                            // Esta función ahora usa 15km
                             const placeData = await getPlaceDetails(searchForPlaces);
                             const isHealthPlace = placeData?.isHealthPlace || ficha.isHealthPlace === true;
-
-
+                            
                             // 🛑 BLINDAJE ANTI-CORRELACIÓN:
                             let isNameMiscorrelated = false;
                             if (placeData && !areNamesSimilar(placeNameSearch, placeData.name)) {
@@ -526,14 +541,9 @@ export default async function handler(req, res) {
 
                             if (placeData && !isNameMiscorrelated) {
                                 // **LÓGICA NORMAL: USAR RE-PROMPT con GOOGLE SEARCH RAG (Reseñas)**
-                                
-                                // REFUERZO RAG: MÁS AGRESIVO EN LAS INSTRUCCIONES
                                 let placePrompt = `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder.`;
-                                
-                                // Modificada la instrucción para el RAG para mejorar el tono
                                 placePrompt += ` La categoría es: ${enrichedFicha.placeCategory}. **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **Extrae las frases clave de una o dos reseñas REALES y úsalas para componer la 'description' en el JSON.** La descripción debe ser corta, estar basada en las reseñas encontradas, y enfocada en lo que dicen los clientes y los servicios. **CRÍTICO: Evita las frases de inicio repetitivas como 'Se comenta que' o 'Según las reseñas'. Sé creativo con el tono de voz.** Si no encuentras reseñas, resume el giro del lugar con un tono conversacional. **NOTA CRÍTICA:** Solo usa la descripción que el RAG te proporciona.`;
 
-                                // Usar un nuevo chat para no contaminar el historial principal
                                 const ragChat = ai.chats.create({
                                     model: MODEL_NAME, 
                                     config: {
@@ -564,7 +574,7 @@ export default async function handler(req, res) {
                                 } catch (e) {
                                     console.error("Fallo al re-parsear el JSON de anti-alucinación RAG. Usando ficha original sin descripción RAG.", e);
                                     
-                                    // Fallback: Si el RAG falla, usamos la ficha original y dejamos la descripción del primer intento de Gemini
+                                    // Fallback
                                     enrichedFicha = {
                                         ...enrichedFicha,
                                         placeName: placeData.name,
@@ -577,7 +587,7 @@ export default async function handler(req, res) {
                                 }
                                 
                             } else { 
-                                // Si NO existe (Fallo de geofencing, API, o Correlación de nombres)
+                                // Si NO existe 
                                 enrichedFicha = {
                                     type: "place_not_found", 
                                     placeToSearch: placeNameSearch, 
@@ -594,6 +604,9 @@ export default async function handler(req, res) {
                              const mapUrl = `https://www.google.com/maps/search/?api=1&query=$${encodeURIComponent(mapUrlQuery)}`;
                              
                              enrichedFicha.mapUrl = mapUrl; 
+
+                             // ⭐️ INYECCIÓN DE CHIPS PARA FICHA DE CATEGORÍA
+                             finalResponseData.actionChips = generateActionChips(ficha.categoryName);
                         }
                         
                         enrichedFichas.push(enrichedFicha);
@@ -610,12 +623,53 @@ export default async function handler(req, res) {
                     // Si el modelo generó texto sin JSON (FALLO GRAVE), lo devuelve.
                     finalResponseData.responseText = modelResponseText; 
                 }
+            } else {
+                // Caso 2: Gemini responde CONVERSACIONALMENTE (Texto Plano)
+                
+                // 🛑 LÓGICA: Revisa si la pregunta original es una recomendación para ADJUNTAR la ficha y los chips
+                const originalUserPrompt = req.body.userPrompt;
+                const recMatch = originalUserPrompt.match(recommendationPattern);
+                
+                if (recMatch) {
+                    let categoryKeyRaw = recMatch[3] ? recMatch[3].toLowerCase() : 'lugar';
+                    let categoryName = "Lugares y Negocios"; // Default
+
+                    // ⭐️ Mapeo robusto de categorías para la generación de chips y el structuredOptionData
+                    if (categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('tacos')) categoryName = "Taquerías y Tacos";
+                    else if (categoryKeyRaw.includes('restaurante') || categoryKeyRaw.includes('comer')) categoryName = "Restaurantes y Comida";
+                    else if (categoryKeyRaw.includes('artesanias') || categoryKeyRaw.includes('souvenirs')) categoryName = "Tiendas de Artesanías y Souvenirs";
+                    else if (categoryKeyRaw.includes('barbacoa')) categoryName = "Barbacoa y Birria";
+                    else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = "Salud y Estética";
+                    else if (categoryKeyRaw.includes('peluqueria') || categoryKeyRaw.includes('estetica')) categoryName = "Peluquería / Salón de Belleza"; 
+                    else if (categoryKeyRaw.includes('tienda') || categoryKeyRaw.includes('compras') || categoryKeyRaw.includes('shopping') || categoryKeyRaw.includes('stores')) categoryName = "Tiendas y Compras";
+                    
+                    // Construye la Ficha de Categoría para la opción
+                    const mapUrlQuery = categoryName + GEOGRAPHIC_CONTEXT;
+                    const mapUrl = `https://www.google.com/maps/search/?api=1&query=$${encodeURIComponent(mapUrlQuery)}`;
+
+                    const structuredOption = {
+                         type: "category", 
+                         categoryName: categoryName,
+                         description: `Listado de ${categoryName} cerca de Nuevo Progreso.`,
+                         isStructured: true,
+                         mapUrl: mapUrl
+                    };
+                    
+                    // Adjunta la Ficha de Categoría y los Chips
+                    finalResponseData.hasStructuredOption = true;
+                    finalResponseData.structuredOptionData = structuredOption;
+                    finalResponseData.actionChips = generateActionChips(categoryName); // ⭐️ INYECCIÓN DE CHIPS UNIVERSAL
+                    
+                    console.log(`Opción estructurada y chips adjuntados a respuesta conversacional.`);
+                }
+                // Si no es recomendación, se devuelve solo el texto.
             }
         } catch (jsonError) {
-            console.error("Fallo en el parseo o enriquecimiento del JSON. Asumiendo que el texto no contenía JSON estructurado.", jsonError);
+            console.error("Fallo en el parseo o enriquecimiento del JSON. Devolviendo texto sin modificar.", jsonError);
             finalResponseData.responseText = modelResponseText; 
         }
 
+        // Devolvemos el objeto que contiene el texto y los datos opcionales
         res.status(200).json(finalResponseData);
 
     } catch (error) {
