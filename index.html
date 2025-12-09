@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -1279,7 +1279,7 @@ padding-top:0px;
             }
             // Aplicar el estado guardado a los toggles del modal
             if (toggleNews) toggleNews.checked = notificationPreferences.news;
-            if (toggleReminders) toggleReminders.checked = notificationPreferences.reminders;
+            if (toggleReminders) toggleReminders.checked = notificationPreferences.preferences;
             // No aplicamos 'promotions' ya que está deshabilitado
         } catch (e) {
             console.error("Error al cargar las preferencias de notificación:", e);
@@ -1380,13 +1380,16 @@ padding-top:0px;
 
     // 🛑 FUNCIÓN MEJORADA: Scroll instantáneo más robusto usando la barra de búsqueda como target
     function handleInputFocus() {
-        if (!inputElement || !messageContainer || !mapSearchBar) return;
+        if (!inputElement || !messageContainer || !document.getElementById('bottom-bar-search-wrapper')) return;
 
-        // **PASO CLAVE 1:** Scroll instantáneo de la barra de chat completa a la vista.
+        // **PASO CLAVE 1:** Scroll instantáneo del contenedor de la barra completa a la vista.
         // Esto le dice al navegador que muestre este elemento justo encima del teclado.
-        mapSearchBar.scrollIntoView({ 
+        // CRÍTICO: Usamos 'bottom-bar-search-wrapper' que es el contenedor que flota
+        const bottomBarWrapper = document.getElementById('bottom-bar-search-wrapper');
+
+        bottomBarWrapper.scrollIntoView({ 
             behavior: 'instant',
-            block: 'end' 
+            block: 'end' // Scroll para que el final del elemento quede a la vista
         });
 
         // **PASO CLAVE 2 (Timeout):** Chrome/Android a menudo requiere un breve retraso
@@ -1396,7 +1399,7 @@ padding-top:0px;
              messageContainer.scrollTop = messageContainer.scrollHeight;
              
              // 2b. Reconfirmar el scroll de la barra de chat (instantáneo)
-             mapSearchBar.scrollIntoView({ 
+             bottomBarWrapper.scrollIntoView({ 
                 behavior: 'instant', 
                 block: 'end' 
              });
@@ -1806,10 +1809,12 @@ padding-top:0px;
                 
                 // 1. Contenido de la burbuja (COMBINANDO IMAGEN Y TEXTO)
                 content = `
-                    <div class="model-bubble-wrapper p-3 shadow-md">
-                        ${imageHTML} 
-                        <div class="model-bubble">
-                            ${m.text}
+                    <div class="flex flex-col items-start">
+                        <div class="model-bubble-wrapper p-3 shadow-md">
+                            ${imageHTML} 
+                            <div class="model-bubble">
+                                ${m.text}
+                            </div>
                         </div>
                     </div>
                 `;
@@ -2391,7 +2396,7 @@ padding-top:0px;
         });
     });
 
-    // NUEVO LISTENER PARA EL BOTÓN "VER TODOS LOS LUGARES" (usa las variables globales)
+    // NUEVO LISTENER: Para el botón "VER TODOS LOS LUGARES" (usa las variables globales)
     if (btnViewAllPlaces) {
         btnViewAllPlaces.addEventListener('click', () => {
             vibrateDevice();
