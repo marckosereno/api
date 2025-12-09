@@ -930,7 +930,7 @@ padding-top:0px;
                 <div class="bottom-bar-wrapper"> 
                     
                     <div id="map-search-bar" class="map-search-bar mb-2 w-full">
-                        <input type="text" id="user-input" class="map-input" placeholder="Pregúntale al mapa">
+                        <input type="text" id="user-input" class="map-input" placeholder="Pregúntale al mapa" autocomplete="off" inputmode="text">
                     </div>
                     
                     <div id="input-area-container" class="flex justify-between items-center w-full"> 
@@ -1519,6 +1519,12 @@ padding-top:0px;
             // Ocultar chips de autocompletado
             autocompleteChipsGroupContainer.classList.add('hidden');
             autocompleteChipsGroupContainer.innerHTML = '';
+            
+            // 🛑 CORRECCIÓN: Remover el listener del autocompletado si existe
+            if (inputElement && inputElement.hasAutocompleteListener) {
+                 inputElement.removeEventListener('input', handleAutocompleteInput);
+                 inputElement.hasAutocompleteListener = false;
+            }
         }
         inputElement.value = '';
         inputElement.focus();
