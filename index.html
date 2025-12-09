@@ -42,7 +42,7 @@ font-family:Spline Sans Light;
             color: #373737; /* Texto negro */
             border-radius: 18px 18px 18px 0;
             padding: 12px; /* Mantiene el padding uniforme de la burbuja */
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.6);
+            box-sha: 0 4px 6px rgba(0, 0, 0, 0.6);
             max-width: 91%;
             width: fit-content;
         }
@@ -105,7 +105,7 @@ font-family:Spline Sans Light;
             -webkit-backdrop-filter: blur(12px); 
             /* ------------------------------------------ */
             border-radius: 20px;
-            box-shadow: 1px 2px 2px 2px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.06); 
+            box-sha: 1px 2px 2px 2px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.06); 
             border: 1px solid rgba(255, 255, 255, 0.6); 
             display: flex;
             align-items: center;
@@ -685,7 +685,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         }
 
         #send-message-button:disabled {
-            background-color: #cbd5e1 !important; /* Azul claro cuando está deshabilitado */
+            background-color: #000 !important; /* Azul claro cuando está deshabilitado */
             cursor: not-allowed;
         }
 
@@ -735,7 +735,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             backdrop-filter: blur(12px); 
             -webkit-backdrop-filter: blur(12px); 
             border-radius: 20px;
-            box-shadow: 1px 2px 2px 2px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.06); 
+            box: 1px 2px 2px 2px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.06); 
             border: 1px solid rgba(255, 255, 255, 0.6); 
         }
 
@@ -928,6 +928,10 @@ padding-top:0px;
             <div id="bottom-bar-search-wrapper" class="w-full"> 
                 <div class="bottom-bar-wrapper"> 
                     
+                    <div id="map-search-bar" class="map-search-bar mb-2 w-full">
+                        <input type="text" id="user-input" class="map-input" placeholder="Pregúntale al mapa">
+                    </div>
+                    
                     <div id="input-area-container" class="flex justify-between items-center w-full"> 
                         
                         <div id="bottom-left-actions">
@@ -935,10 +939,6 @@ padding-top:0px;
                                 <span id="toggle-icon" class="text-xl">💬</span> 
                                 <span id="toggle-text">Modo SPS</span>
                             </button>
-                        </div>
-                        
-                        <div id="map-search-bar" class="map-search-bar">
-                            <input type="text" id="user-input" class="map-input" placeholder="Pregúntale al mapa">
                         </div>
 
                         <button id="send-message-button" class="transition disabled:opacity-50" disabled>
@@ -1140,7 +1140,7 @@ padding-top:0px;
             btnReview: "Reseñas ⭐",
             btnWebsite: "Sitio Web/Redes 🌐", 
             // 🛑 NUEVO: Textos para el Action Chip de Modo
-            spsMode: "Modo SPS ●Activo ⚡️",
+            spsMode: "Modo Pro ●Activado 🦾",
             chatMode: "Modo Chat 💬" 
         },
         en: {
@@ -1165,7 +1165,7 @@ padding-top:0px;
             btnReview: "Reviews ⭐",
             btnWebsite: "Website/Social 🌐", 
             // 🛑 NUEVO: Textos para el Action Chip de Modo
-            spsMode: "SPS Mode ●Active ⚡️",
+            spsMode: "Pro Mode ●Active 🦾",
             chatMode: "Chat Mode 💬"
         }
     };
@@ -1591,7 +1591,7 @@ padding-top:0px;
         // Nota: El link de los ToS de Google Maps Platform es obligatorio.
         attributionChip.innerHTML = `
             Powered by Google 
-            <a href="http://googleusercontent.com/mapsterms" target="_blank" rel="noopener noreferrer" 
+            <a href="https://cloud.google.com/maps-platform/terms" target="_blank" rel="noopener noreferrer" 
                style="color: #007bff; margin-left: 5px;">
                 Términos
             </a>
