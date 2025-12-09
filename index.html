@@ -2509,7 +2509,7 @@ padding-top:0px;
         // 6. Mensaje de bienvenida inicial (solo si el historial está vacío)
         if (chatHistory.length === 0) {
              const welcomeMessage = currentLanguage === 'es'
-                ? "¡Hola! Soy tu **PROGRESO TOUR GUIDE**. Estoy listo para ayudarte. Usa el chip **Modo Chat 💬** para el modo de chat normal o **tócalo** para activar la **Búsqueda Geográfica Directa (SPS)** ⚡️."
+                ? "¡Hola! Soy tu guía turístico de confianza. Estoy listo para ayudarte. Usa el chip **Modo Chat 💬** para el modo de chat normal o **tócalo** para activar la **Búsqueda Geográfica Directa (SPS)** ⚡️."
                 : "Hello! I'm your **PROGRESO TOUR GUIDE**. I'm ready to help. Use the **Chat Mode 💬** chip for normal chat mode or **tap it** to activate **Direct Geographic Search (SPS)** ⚡️.";
              
              chatHistory.push({ role: 'model', text: welcomeMessage, timestamp: new Date(), isStructured: false });
