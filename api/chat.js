@@ -1,6 +1,6 @@
 // ====================================================================
-// Archivo: chat.js (Versión 9.2 - Fix de ReferenceError)
-// ⭐️ CORREGIDO: Inconsistencia en la declaración y uso de recMatch/match.
+// Archivo: chat.js (Versión 9.3 - Patrón de Recomendación Flexible)
+// ⭐️ CORREGIDO: Regex de recomendación simplificado y más permisivo para garantizar Action Chips.
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -472,10 +472,18 @@ export default async function handler(req, res) {
         
         let promptToSend = userPrompt;
         
-        // ⭐️ PATRÓN DE RECOMENDACIÓN AMPLIO (Incluye 'categoria' y simplifica la estructura)
-        const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra|categoria).*\\s*(taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias|clinica|farmacia|dental|optica|peluqueria|estetica|compras|shopping|stores|comer)s?`, 'i');
+        // ⭐️ PATRÓN DE RECOMENDACIÓN MEJORADO (V9.3: Un solo grupo de captura para la categoría)
+        // Permite cualquier cosa antes de la categoría, lo que lo hace muy flexible.
+        const recommendationPattern = new RegExp(
+            // El (?:...) es un grupo que no se captura, haciendo que el índice 1 sea la categoría.
+            // Acepta cualquier cosa antes (.*) que contenga una palabra clave de recomendación (dime, categoria, etc.)
+            `(?:.*(?:dime|recomienda|sugiere|dame|busca|quiero|lista|muestra|categoria|que opciones de)\\s)?` + 
+            // Capturamos solo la palabra clave de la categoría:
+            `((taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias|clinica|farmacia|dental|optica|peluqueria|estetica|compras|shopping|stores|comer)s?)`, 
+            'i'
+        );
         
-        // 🎯 DECLARACIÓN DE recMatch (Ahora es consistente)
+        // 🎯 DECLARACIÓN DE recMatch (Solo para el console.log, no afecta la lógica central)
         const recMatch = userPrompt.match(recommendationPattern);
         
         if (recMatch) {
@@ -629,12 +637,13 @@ export default async function handler(req, res) {
                 
                 // 🛑 LÓGICA: Revisa si la pregunta original es una recomendación para ADJUNTAR la ficha y los chips
                 const originalUserPrompt = req.body.userPrompt;
-                // 🎯 RE-DECLARACIÓN DE recMatch (¡La misma que arriba!)
-                const recMatch = originalUserPrompt.match(recommendationPattern);
                 
-                if (recMatch) {
-                    // La última palabra del match es la que contiene la clave (ej. 'compras', 'stores')
-                    let categoryKeyRaw = recMatch[recMatch.length - 1] ? recMatch[recMatch.length - 1].toLowerCase() : 'lugar';
+                // 🎯 RE-DECLARACIÓN/Uso de recMatch (Usamos la misma declaración para consistencia)
+                const recMatchFinal = originalUserPrompt.match(recommendationPattern);
+                
+                if (recMatchFinal) {
+                    // CRÍTICO: El índice 1 es ahora la palabra clave de la categoría, gracias al nuevo regex.
+                    let categoryKeyRaw = recMatchFinal[1] ? recMatchFinal[1].toLowerCase() : 'lugar';
                     let categoryName = "Lugares y Negocios"; // Default
 
                     // ⭐️ Mapeo robusto de categorías para la generación de chips y el structuredOptionData
