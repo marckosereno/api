@@ -378,7 +378,7 @@ font-family:Spline Sans Light;
         /* 🛑 NUEVO ESTILO: EFECTO DE IMAGEN APILADA (STACKED PHOTO) */
         .stacked-photo {
           /* Propiedades de la foto real */
-          width: 100%; /* Ajustamos al 100% para que se vea bien en el contenedor */
+          width: 260px; /* Ajustamos al 100% para que se vea bien en el contenedor */
           max-width: 120px; /* Limite el ancho */
           height: auto; 
           object-fit: cover; /* Asegura que la imagen cubra el área */
@@ -423,14 +423,14 @@ font-family:Spline Sans Light;
         /* Opcional: Quitar la rotación y el apilamiento en pantallas pequeñas */
         @media (max-width: 640px) {
           .stacked-photo {
-            transform: rotate(0deg) !important;
+            transform: rotate(358deg) !important;
             box-shadow: none;
-            width: 100%;
-            height: auto;
-            max-width: 90vw; /* Limita el ancho para que no ocupe todo */
+            width: 260px;
+            height: 150px;
+            max-width: 80vw; /* Limita el ancho para que no ocupe todo */
             margin-right: 0; /* Quitar margen derecho en móvil */
-            margin-left: 0;
-            border: none;
+            margin-left: 6;
+            border: 2px solid #333;
           }
         }
         
