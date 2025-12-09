@@ -705,6 +705,21 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             transform: none; 
             margin-right: 6px; /* Espacio entre el ícono y el texto */
         }
+        
+        /* 🛑 NUEVO ESTILO: MODO SPS (BOTÓN DE ENVÍO COMO CHIP DE IDIOMA) */
+        .sps-mode-lang-chip {
+            background-color: #fff !important; 
+            border: 1px solid #10b981 !important; /* Verde esmeralda */
+            color: #059669 !important;
+            padding: 10px 14px;
+            font-weight: 600;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+        
+        .sps-mode-lang-chip:hover {
+            background-color: #f0fff4 !important;
+            border-color: #059669 !important;
+        }
 
 
         /* 🛑 CRÍTICO: Contenedor para la Barra de Escritura, Action Chip y Botón de Enviar */
@@ -1048,6 +1063,8 @@ padding-top:0px;
     const languageChips = document.querySelectorAll('#language-chips-group .language-chip');
     const menuActionChips = document.querySelectorAll('#menu-actions .menu-action-chip');
     const btnClearTop = document.getElementById('btn-clear-top'); 
+    // 🛑 NUEVA REFERENCIA: Contenedor de las acciones del menú principal
+    const menuActionsContainer = document.getElementById('menu-actions');
     
     // NUEVAS REFERENCIAS A ELEMENTOS DEL DOM para el panel de notificaciones
     const btnNotifications = document.getElementById('btn-notifications');
@@ -1141,7 +1158,9 @@ padding-top:0px;
             btnWebsite: "Sitio Web/Redes 🌐", 
             // 🛑 NUEVO: Textos para el Action Chip de Modo
             spsMode: "Modo Pro ●Activado 🦾",
-            chatMode: "Modo Chat 💬" 
+            chatMode: "Modo Chat 💬",
+            langChipEs: "🇲🇽 Español", // 🛑 NUEVO: Chip de idioma ES
+            langChipEn: "🇺🇸 English" // 🛑 NUEVO: Chip de idioma EN
         },
         en: {
             header: "PROGRESO TOUR GUIDE",
@@ -1166,7 +1185,9 @@ padding-top:0px;
             btnWebsite: "Website/Social 🌐", 
             // 🛑 NUEVO: Textos para el Action Chip de Modo
             spsMode: "Pro Mode ●Active 🦾",
-            chatMode: "Chat Mode 💬"
+            chatMode: "Chat Mode 💬",
+            langChipEs: "🇲🇽 Español", // 🛑 NUEVO: Chip de idioma ES
+            langChipEn: "🇺🇸 English" // 🛑 NUEVO: Chip de idioma EN
         }
     };
 
@@ -1475,7 +1496,40 @@ padding-top:0px;
         }
     }
     
-    // --- NUEVAS FUNCIONES PARA EL MODO BÚSQUEDA DIRECTA (SPS MODE) ---
+    // 🛑 NUEVA FUNCIÓN: Envía el saludo para cambiar el contexto del idioma del bot
+    function sendLanguageContextMessage(lang) {
+        const query = lang === 'es' 
+            ? "Por favor, mantén todas tus respuestas, fichas y texto de ahora en adelante en español de México."
+            : "Please maintain all your responses, cards, and text from now on in English.";
+            
+        // 1. Mostrar la acción del usuario (cambio de idioma)
+        chatHistory.push({ 
+            role: 'user', 
+            text: lang === 'es' ? 'Se ha cambiado el idioma a: Español 🇲🇽' : 'Language changed to: English 🇺🇸',
+            timestamp: new Date() 
+        });
+        if (typeof renderChat === 'function') renderChat();
+        
+        // 2. Disparar el envío al backend con el mensaje de contexto
+        handleSend(query);
+    }
+    
+    // 🛑 NUEVA FUNCIÓN: Alterna el idioma entre 'es' y 'en' y actualiza la interfaz y el contexto.
+    function toggleLanguageAndSendContext() {
+        vibrateDevice();
+        
+        // 1. Determinar el nuevo idioma
+        const newLang = currentLanguage === 'es' ? 'en' : 'es';
+
+        // 2. Cambiar la interfaz al nuevo idioma
+        setInterfaceLanguage(newLang); // Esto actualiza `currentLanguage` y el botón
+
+        // 3. Enviar el mensaje de contexto al bot
+        sendLanguageContextMessage(newLang);
+        
+        // El resto de la lógica de SPS/Chat se mantiene igual después de esto.
+    }
+    
     
     /**
      * Alterna entre el modo Chat (normal) y el modo Búsqueda SPS (Places API).
@@ -1487,14 +1541,29 @@ padding-top:0px;
             // Activar Modo SPS (Búsqueda)
             inputElement.classList.add('sps-mode'); // 🛑 CAMBIO DE CLASE
             toggleButton.classList.add('active');
-            // 🛑 CRÍTICO: Actualizar texto del chip
+            
+            // 🛑 CRÍTICO 1: Ocultar #menu-actions (Categorías, Idioma, Info)
+            menuActionsContainer.classList.add('hidden');
+            // 🛑 CRÍTICO 2: Mostrar #autocomplete-chips-group-container
+            autocompleteChipsGroupContainer.classList.remove('hidden'); // Se oculta en handleAutocompleteInput si no hay resultados.
+            
+            // 🛑 CRÍTICO 3: Convertir #send-message-button en chip de Idioma
+            const langChipText = currentLanguage === 'es' ? UI_STRINGS.es.langChipEs : UI_STRINGS.en.langChipEn;
+            sendButton.innerHTML = `<span id="go-text">${langChipText}</span>`; 
+            sendButton.classList.add('sps-mode-lang-chip');
+            
+            // 🛑 CRÍTICO 4: Añadir listener de alternancia de idioma al botón de envío (y remover el viejo)
+            sendButton.removeEventListener('click', handleSend); // Remueve el listener de Send
+            sendButton.addEventListener('click', toggleLanguageAndSendContext); // Añade el listener de Idioma
+
+            // Actualizar interfaz
             toggleText.innerHTML = UI_STRINGS[currentLanguage].spsMode; 
             inputElement.placeholder = UI_STRINGS[currentLanguage].searchPlaceholder;
             
-            // 🛑 CRÍTICO: El botón de enviar debe estar SIEMPRE DESHABILITADO en Modo SPS.
-            sendButton.disabled = true; 
+            // El botón de envío debe estar SIEMPRE HABILITADO en Modo SPS para cambiar el idioma
+            sendButton.disabled = false; 
             
-            // 🛑 CRÍTICO: Añadir el listener de input para el AutocompleteService
+            // Añadir el listener de input para el AutocompleteService
             if (inputElement && !inputElement.hasAutocompleteListener) {
                  inputElement.addEventListener('input', handleAutocompleteInput);
                  inputElement.hasAutocompleteListener = true;
@@ -1505,16 +1574,33 @@ padding-top:0px;
             // Activar Modo Chat (Normal)
             inputElement.classList.remove('sps-mode'); // 🛑 CAMBIO DE CLASE
             toggleButton.classList.remove('active');
-            // 🛑 CRÍTICO: Actualizar texto del chip
+            
+            // 🛑 CRÍTICO 1: Mostrar #menu-actions
+            menuActionsContainer.classList.remove('hidden');
+            // 🛑 CRÍTICO 2: Ocultar y limpiar #autocomplete-chips-group-container
+            autocompleteChipsGroupContainer.classList.add('hidden');
+            autocompleteChipsGroupContainer.innerHTML = '';
+            
+            // 🛑 CRÍTICO 3: El botón de envío vuelve a ser el normal
+            sendButton.innerHTML = `<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 122.88 122.88" class="flex-shrink-0">
+                                <g>
+                                    <path class="st0" d="M62.43,122.88h-1.98c0-16.15-6.04-30.27-18.11-42.34C30.27,68.47,16.16,62.43,0,62.43v-1.98 c16.16,0,30.27-6.04,42.34-18.14C54.41,30.21,60.45,16.1,60.45,0h1.98c0,16.15,6.04,30.27,18.11,42.34 c12.07,12.07,26.18,18.11,42.34,18.11v1.98c-16.15,0-30.27,6.04-42.34,18.11C68.47,92.61,62.43,106.72,62.43,122.88L62.43,122.88z"/>
+                                </g>
+                            </svg>
+                            <span id="go-text">${UI_STRINGS[currentLanguage].goButton}</span>`;
+            sendButton.classList.remove('sps-mode-lang-chip');
+
+            // 🛑 CRÍTICO 4: Revertir listener del botón de envío
+            sendButton.removeEventListener('click', toggleLanguageAndSendContext); // Remueve el listener de Idioma
+            sendButton.addEventListener('click', () => handleSend()); // Añade el listener de Send (función anónima para evitar problemas de contexto)
+
+
+            // Actualizar interfaz
             toggleText.innerHTML = UI_STRINGS[currentLanguage].chatMode; 
             inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
             
-            // Habilitar el botón de enviar solo si hay texto (aunque esté oculto, por si se usa ENTER)
+            // Habilitar el botón de enviar solo si hay texto
             sendButton.disabled = inputElement.value.trim() === ''; 
-            
-            // Ocultar chips de autocompletado
-            autocompleteChipsGroupContainer.classList.add('hidden');
-            autocompleteChipsGroupContainer.innerHTML = '';
         }
         inputElement.value = '';
         inputElement.focus();
@@ -1555,6 +1641,7 @@ padding-top:0px;
     function renderAutocompleteChips(predictions, status) {
         autocompleteChipsGroupContainer.innerHTML = '';
         
+        // 🛑 CRÍTICO: Si no está en modo SPS o no hay resultados, ocultar
         if (!isSPSMode || status !== google.maps.places.PlacesServiceStatus.OK || !predictions || predictions.length === 0) {
             autocompleteChipsGroupContainer.classList.add('hidden');
             return;
@@ -1680,7 +1767,13 @@ padding-top:0px;
         inputElement.placeholder = isSPSMode ? strings.searchPlaceholder : strings.placeholder;
         toggleText.textContent = isSPSMode ? strings.spsMode : strings.chatMode; 
 
-        document.getElementById('go-text').textContent = strings.goButton; 
+        // 🛑 CRÍTICO: Actualizar el texto del botón de envío según el modo
+        if (isSPSMode) {
+             sendButton.querySelector('#go-text').textContent = lang === 'es' ? strings.langChipEs : strings.langChipEn;
+        } else {
+             sendButton.querySelector('#go-text').textContent = strings.goButton; 
+        }
+
 
         document.getElementById('btn-categorias').textContent = strings.categories;
         document.getElementById('btn-lenguaje').textContent = strings.language;
@@ -2115,6 +2208,7 @@ padding-top:0px;
         // 🛑 CRÍTICO: Si está en modo SPS y se dispara un Enter, lo ignoramos (debe usar onPlaceSelected)
         if (isSPSMode && placeId === null) return; // 🛑 CAMBIO DE VARIABLE
         
+        // Ocultar cualquier menú desplegable al enviar un mensaje
         hideChipGroup(categoryChipsGroup, categoryChips);
         categoriesVisible = false;
         hideChipGroup(languageChipsGroup, languageChips);
@@ -2324,10 +2418,8 @@ padding-top:0px;
     // --- Event Listeners e Inicio (ACTUALIZADO) ---
     
     // 🛑 Listener del Botón de Enviar (Solo modo Chat)
-    if (sendButton) sendButton.addEventListener('click', () => {
-        if (!isSPSMode) handleSend(); 
-    });
-    
+    // NOTA: Se añade en initChatUI / toggleSPSMode
+
     // 🛑 Listener de la Tecla Enter (Solo modo Chat)
     if (inputElement) inputElement.addEventListener('keypress', function(e) { 
         if (e.key === 'Enter' && !isSPSMode) { 
@@ -2347,7 +2439,11 @@ padding-top:0px;
 
         inputElement.addEventListener('input', () => {
             // Habilitar/Deshabilitar el botón de envío (solo si NO está en modo SPS)
-            sendButton.disabled = isSPSMode || inputElement.value.trim() === ''; 
+            // En modo SPS, el botón de envío SIEMPRE está habilitado para cambiar el idioma
+            if (!isSPSMode) {
+                 sendButton.disabled = inputElement.value.trim() === ''; 
+            }
+            
             // Manejar la burbuja de escritura del usuario (solo si NO está en modo SPS)
             if (!isSPSMode) { // 🛑 CAMBIO DE VARIABLE
                 handleTypingIndicator();
