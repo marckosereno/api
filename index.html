@@ -11,1078 +11,1926 @@
          <link href="https://db.onlinewebfonts.com/c/ddadf4e5d67469bf2fb13ca47ac078ba?family=FH+Oscar+Test+Medium" rel="stylesheet">       
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
-        /* Estilos base */
         html, body { 
             font-family:FH Oscar Test Medium; 
             height: 100%; 
             margin: 0; 
             padding: 0; 
-            /* Fondo sutil para que el Glassmorphim se vea bien */
-            background-image: radial-gradient(circle at 100% 100%, #ffffff, #f0f0f0);
+            background: linear-gradient(179deg, rgb(224 235 251 / 4%) 0%, #eff6ff 100% 60%);
         }
-
-        /* Contenedor principal del chat */
-        #chat-container {
-            height: 100vh;
-            max-width: 500px;
-            margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-
-        /* Estilo para el Glassmorphism */
-        .glass-container {
-            background-color: rgba(255, 255, 255, 0.7); /* Semitransparente */
-            backdrop-filter: blur(10px); /* Desenfoque */
-            -webkit-backdrop-filter: blur(10px); /* Soporte para Safari */
-            border-radius: 1rem; /* Borde redondeado */
-            border: 1px solid rgba(255, 255, 255, 0.3); /* Borde sutil */
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Sombra suave */
-        }
-
-        /* Header con Glassmorphism y sticky */
-        #chat-header {
-            position: sticky;
-            top: 0;
-            z-index: 20;
-            padding: 1rem;
-            /* Aplicar el estilo de Glassmorphism al header */
-            background-color: rgba(255, 255, 255, 0.85); 
-            backdrop-filter: blur(15px); 
-            -webkit-backdrop-filter: blur(15px);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-        }
-        
-        /* Contenedor de mensajes */
-        #chat-messages {
-            flex-grow: 1;
-            overflow-y: auto;
-            padding: 0.5rem 1rem 1rem 1rem; /* Ajuste para dejar espacio para la barra de control */
-            scroll-behavior: smooth;
-        }
-
-        /* Burbuja del mensaje del usuario */
-        .user-message {
-            background-color: #3b82f6; /* Azul brillante */
-            color: white;
-            border-radius: 1.5rem 1.5rem 0.5rem 1.5rem;
-            max-width: 80%;
-            padding: 0.75rem 1rem;
-            margin-bottom: 0.75rem;
-            align-self: flex-end;
-            margin-left: auto; /* Empujar a la derecha */
-        }
-
-        /* Burbuja del mensaje del modelo */
-        .model-message {
-            background-color: #ffffff; /* Blanco */
-            color: #374151; /* Gris oscuro */
-            border-radius: 1.5rem 1.5rem 1.5rem 0.5rem;
-            max-width: 90%;
-            padding: 0.75rem 1rem;
-            margin-bottom: 0.75rem;
-            align-self: flex-start;
-            margin-right: auto; /* Empujar a la izquierda */
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-            border: 1px solid #e5e7eb;
-        }
-        
-        /* Estilo para el icono de acción de la burbuja */
-        .message-icon {
-            font-size: 1.25rem;
-            margin-right: 0.5rem;
-            min-width: 20px; /* Asegura que el ícono tenga espacio */
-            min-height: 20px;
-        }
-
-        /* Ficha de Lugar (Place Card) */
-        .place-card {
-            background-color: #f3f4f6;
-            border-radius: 1rem;
-            padding: 0.75rem;
-            margin-top: 0.5rem;
-            margin-bottom: 0.75rem;
-            max-width: 90%;
-            border: 1px solid #e5e7eb;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        /* Imagen de la ficha */
-        .place-image {
-            width: 100%;
-            height: 150px;
-            object-fit: cover;
-            border-radius: 0.75rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        /* Controles de chat con Glassmorphism y sticky */
-        #chat-controls-container {
-            position: sticky;
-            bottom: 0;
-            z-index: 20;
-            padding: 0.75rem 1rem;
-            /* Aplicar el estilo de Glassmorphism a los controles */
-            background-color: rgba(255, 255, 255, 0.85); 
-            backdrop-filter: blur(15px); 
-            -webkit-backdrop-filter: blur(15px);
-            border-top: 1px solid rgba(0, 0, 0, 0.05);
-            /* Sombra en la parte superior para separarla visualmente */
-            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
-            display: flex;
-            flex-direction: column;
-            gap: 8px; /* Espacio entre la barra de búsqueda y los chips */
-        }
-        
-        /* Input de chat */
-        #chat-input {
-            border-radius: 1.5rem;
-            padding: 0.75rem 1rem;
-            border: 1px solid #d1d5db;
-            transition: all 0.2s;
-            /* Asegura que no tenga estilos de enfoque raros */
-            outline: none;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-        }
-        
-        #chat-input:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
-        }
-        
-        /* Botón de enviar */
-        #send-button {
-            transition: transform 0.1s;
-        }
-
-        #send-button:active {
-            transform: scale(0.95);
-        }
-
-        /* Indicador de carga */
-        #loading-indicator {
-            align-self: center;
-            margin: 1rem 0;
-            display: none;
-            color: #4b5563;
-        }
-
-        /* Burbuja de "escribiendo" del modelo */
-        #model-typing-bubble {
-            background-color: #e5e7eb;
-            color: #6b7280;
-            border-radius: 1.5rem 1.5rem 1.5rem 0.5rem;
-            max-width: 90px;
-            padding: 0.75rem 1rem;
-            margin-bottom: 0.75rem;
-            align-self: flex-start;
-            margin-right: auto;
-            display: none;
-            /* Estilos para los puntos del "escribiendo" */
-            line-height: 0;
-            height: 40px; /* Altura para evitar que se redimensione */
+        .chat-window { 
+            height: 100%; 
+            width: 100vw; 
+            display: flex; 
+            flex-direction: column; 
+            background-color: transparent; 
             overflow: hidden;
-            transition: height 0.3s ease;
+font-weight:200;
+line-height:0.5cm;
+font-family:FH Oscar Test Medium;
+        }
+        .user-bubble { border-radius: 18px 18px 0 18px; max-width: 90% }
+        .model-bubble { border-radius: 18px 18px 18px 0; max-width: 90%; padding-left:8px; backgroud-color: transparent;font-size:16px; line-height:16px;}
+        
+        .model-bubble-wrapper {
+            background: linear-gradient(127deg, #ffffff85, #fff); 
+            color: #373737; 
+            border-radius: 18px 18px 18px 0;
+            padding: 12px; 
+            box-sha: 0 4px 6px rgba(0, 0, 0, 0.6);
+            max-width: 91%;
+            width: fit-content;
+        }
+
+        .action-bar-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 10px; padding-bottom: 5px }
+        .action-btn { 
+            white-space: nowrap;
+            border-radius: 23px; 
+            font-weight: 500;   
+            
+            background: rgba(255, 255, 255, 0.1); 
+            border: 1px solid rgba(255, 255, 255, 0.3); 
+            backdrop-filter: blur(8px); 
+            -webkit-backdrop-filter: blur(8px); 
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
+            color: #FFFFFF !important; 
+            
+            transition: all 0.3s ease; 
+        }
+
+        .action-bar-container .action-btn.bg-green-500 {
+            background-color: #000 !important; 
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            border: none;
+        }
+        .action-bar-container .action-btn.bg-blue-500 {
+            background-color: #3B82F6 !important; 
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            border: none;
+        }
+        .action-bar-container .action-btn.bg-yellow-400 {
+            background-color:!important; 
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            border: none;
+            color: #1F2937 !important; 
+        }
+        .action-bar-container .action-btn.bg-gray-600 {
+            background: rgba(75, 85, 99, 0.75) !important;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #FFFFFF !important;
+        }
+
+        .chip-group-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 0px; padding-bottom: 5px }
+        
+        .map-search-bar {
+            background: rgba(255, 255, 255, 0.4); 
+            backdrop-filter: blur(12px); 
+            -webkit-backdrop-filter: blur(12px); 
+            border-radius: 20px;
+            box-sha: 1px 2px 2px 2px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.06); 
+            border: 1px solid rgba(255, 255, 255, 0.6); 
+            display: flex;
+            align-items: center;
+            padding: 4px; 
+            width: 100%; 
+            box-sizing: border-box; 
         }
         
-        /* Puntos de animación */
-        .typing-dot {
+        .map-input {
+            flex-grow: 1;
+            padding: 0.75rem 0.75rem; 
+            color: #1f2937; 
+            font-size: 1.125rem;
+            background: transparent;
+            border: none;
+            min-width: 0; 
+            outline: none !important;
+            box-shadow: none !important;
+height:44px;
+        }
+
+
+        
+        /* 1. Para navegadores basados en Webkit (Chrome, Safari, Android) */
+        * {
+            -webkit-tap-highlight-color: transparent !important; 
+        }
+        
+        /* 2. Asegura la eliminación del outline/ring en estados focus/active */
+        .action-chip, .category-chip, .language-chip, .map-input, .dynamic-chip, #toggle-mode-button, .autocomplete-chip, .attribution-chip { 
+            outline: none !important;
+            box-shadow: none !important;
+            --tw-ring-color: transparent !important;
+        }
+        .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active, .dynamic-chip:focus, .dynamic-chip:active, #toggle-mode-button:focus, #toggle-mode-button:active, .autocomplete-chip:focus, .autocomplete-chip:active, .attribution-chip:focus, .attribution-chip:active { 
+            outline: none !important;
+            box-shadow: none !important;
+            --tw-ring-color: transparent !important;
+        }
+        .hover\:bg-gray-300:active {
+            background-color: #d1d5db; 
+        }
+        
+        .category-chip, .language-chip, .dynamic-chip {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+        }
+        .visible-chip {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .timestamp {
+            font-size: 0.7rem; 
+            color: #9ca3af; 
+            margin-top: 2px;
+        }
+        .user-timestamp-container { 
+            align-self: flex-end; 
+            margin-right: 4px; 
+        }
+        .model-timestamp-container { 
+            align-self: flex-start; 
+            margin-left: 4px; 
+        }
+
+        #message-container {
+            padding-top: 6rem; 
+        }
+        #btn-clear-top {
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+            outline: none !important;
+        }
+
+        .notification-card {
+            background-color: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.05);
+            color: #1f2937; 
+            padding: 12px 16px;
+            max-width: 90%;
+            min-width: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 10px; 
+            transform: translateY(-100%);
+            transition: transform 0.4s ease-out, opacity 0.4s ease-out;
+            opacity: 0;
+        }
+
+        .notification-card.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .notification-card .message-content {
+            flex-grow: 1;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            line-height:16px;
+        }
+
+        .notification-card .close-btn {
+            background: none;
+            border: none;
+            color: #9ca3af; 
+            font-size: 1.2rem;
+            cursor: pointer;
+            margin-left: 15px;
+            padding: 0;
+            outline: none;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+        
+        .notification-card .close-btn:active {
+            color: #4b5563; 
+        }
+
+        #btn-notifications {
+            background-color: white;
+            color: #4b5563; 
+            border: 1px solid #d1d5db; 
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+            outline: none !important;
+            padding: 8px 12px; 
+            border-radius: 9999px; 
+            font-size: 1.1rem; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+        }
+        #btn-notifications:hover {
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        #btn-notifications:active {
+            background-color: #e5e7eb;
+            color: #000;
+        }
+
+        .notification-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100; 
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+        }
+
+        .notification-modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .notification-panel {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2), 0 5px 10px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 400px; 
+            transform: translateY(20px); 
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+            opacity: 0;
+            padding: 20px;
+            pointer-events: auto; 
+        }
+
+        .notification-modal-overlay.show .notification-panel {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toggle-switch {
+            position: relative;
             display: inline-block;
+            width: 40px; 
+            height: 20px; 
+            flex-shrink: 0;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc; 
+            transition: .4s;
+            border-radius: 20px; 
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px; 
+            width: 16px; 
+            left: 2px; 
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2); 
+        }
+
+        input:checked + .slider {
+            background-color: #2563eb; 
+        }
+
+        input:focus + .slider {
+            box-shadow: 0 0 1px #2563eb;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px); 
+        }
+
+        .info-card-panel {
+            background-color: #eff6ff; 
+            color: #1e40af; 
+            border-left: 4px solid #3b82f6; 
+            border-radius: 4px;
+            padding: 12px;
+            font-size: 0.9rem;
+            display: none;
+            align-items: flex-start;
+            margin-top: 20px;
+        }
+        .info-card-panel span {
+            margin-right: 8px;
+            font-size: 1.1rem;
+        }
+        
+        .stacked-photo {
+          width: 260px; 
+          max-width: 120px; 
+          height: auto; 
+          object-fit: cover; 
+          border-radius: 12px; 
+          position: relative;
+          
+          box-shadow: 
+            6px -4px 0 0 rgba(0, 0, 0, 0.15),
+            3px -5px 0 0 rgba(0, 0, 0, 0.08);
+
+          transform: rotate(356deg); 
+          transition: transform 0.15s ease-out;
+          margin-bottom: 12px; 
+          border: 4px solid white; 
+          
+          margin-left: 10px;
+          margin-right: 32px; 
+        }
+        
+        .image-link {
+            display: block; 
+            width: fit-content; 
+        }
+        
+        .stacked-photo.clickable-effect:active {
+            transform: scale(0.98) translateY(2px) rotate(356deg); 
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); 
+            cursor: grabbing;
+        }
+
+
+        @media (max-width: 640px) {
+          .stacked-photo {
+            transform: rotate(358deg) !important;
+            box-shadow: none;
+            width: 260px;
+            height: 150px;
+            max-width: 80vw; 
+            margin-right: 0; 
+            margin-left:2px;
+            border: 2px solid #333;
+          }
+        }
+        
+        .bottom-action-area {
+            border-top: none;
+            box-shadow: none; 
+            z-index: 10;
+            padding-bottom: 0; 
+        }
+
+        #bottom-bar-search-wrapper {
+          padding-top:22px;  
+ border-radius: 20px 20px 0 0; 
+             background-color: white !important;
+             box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05), 0 -2px 4px -2px rgba(0, 0, 0, 0.04);
+             z-index: 10;
+        }
+        
+        #quick-replies-container {
+            border-top: none; 
+            background: transparent; 
+            padding: 0.5rem; 
+            box-shadow: none; 
+            z-index: 10;
+        }
+
+
+        .glass-chip {
+            background: linear-gradient(167deg, #93c5fd 0%, #3e6bff 90%) !important; 
+            
+            backdrop-filter: blur(8px); 
+            -webkit-backdrop-filter: blur(8px);
+            
+            border: 1px solid rgba(255, 255, 255, 0.8) !important; 
+            
+            box-shadow: 
+                inset 0 1px 0 rgba(255, 255, 255, 0.9),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+            
+            color: #fefefe !important; 
+            
+            transition: all 0.2s ease-in-out;
+            
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            border-radius: 9999px; 
+            padding: 8px 12px;
+        }
+
+        .glass-chip:hover {
+            background: linear-gradient(177deg, #2563eb 0%, #3b82f6 100%) !important;
+            box-shadow: 
+                0 2px 4px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 1),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        .glass-chip:active {
+            background: rgb(226 246 255 / 80%) !important;
+            box-shadow: none !important; 
+        }
+
+        .blue-glass-chip {
+            background: linear-gradient(90deg, rgb(215 236 255 / 50%) 0%, rgb(230 245 255 / 80%) 90%) !important;
+            
+            backdrop-filter: blur(8px); 
+            -webkit-backdrop-filter: blur(8px);
+            
+            border: 1px solid rgba(130, 180, 255, 0.8) !important; 
+            color: #1e40af !important; 
+            font-weight: 600; 
+            
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            border-radius: 9999px; 
+            padding: 8px 12px;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .blue-glass-chip:hover {
+            background: linear-gradient(90deg, rgb(190 220 255 / 70%) 0%, rgb(210 235 255 / 90%) 100%) !important;
+            box-shadow: 
+                0 2px 4px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 1),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        .blue-glass-chip:active {
+            background: rgb(180 210 255 / 90%) !important;
+            box-shadow: none !important; 
+        }
+
+
+        #menu-actions .menu-action-chip {
+            background-color: transparent !important;
+        }
+        
+        #user-typing-bubble, #model-typing-bubble {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease-out, visibility 0.2s ease-out, height 0.2s ease-out, margin-bottom 0.2s ease-out;
+            margin-bottom: 0 !important; 
+            height: 0; 
+            overflow: hidden; 
+        }
+        
+        #user-typing-bubble.show, #model-typing-bubble.show {
+            opacity: 1;
+            visibility: visible;
+            height: auto; 
+padding-bottom:40px; 
+            margin-bottom: 18px !important; 
+        }
+        
+        .typing-dots {
+            display: flex;
+            align-items: center;
+            height:8px;
+        }
+        .typing-dots .dot {
             width: 8px;
-            height: 8px;
-            background-color: #9ca3af;
+            height: 6px;
             border-radius: 50%;
             margin: 0 2px;
             animation: bounce 1.4s infinite ease-in-out both;
         }
+        #model-typing-bubble .dot { background-color: black; }
+        #user-typing-bubble .dot { background-color: white; }
 
-        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-        .typing-dot:nth-child(3) { animation-delay: 0s; }
+        .typing-dots .dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dots .dot:nth-child(2) { animation-delay: -0.16s; }
+        .typing-dots .dot:nth-child(3) { animation-delay: 0s; }
 
         @keyframes bounce {
-          0%, 80%, 100% { transform: scale(0); }
-          40% { transform: scale(1); }
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
         }
         
-        /* Estilos de los chips de acción del menú (los 4 botones de abajo) */
-        .menu-action-chip {
-            padding: 0.5rem 0.75rem;
-            border-radius: 9999px; /* Fully rounded */
-            background-color: #f3f4f6; /* Light gray background */
-            color: #4b5563; /* Darker gray text */
-            font-size: 0.875rem; /* text-sm */
-            cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .menu-action-chip:hover {
-            background-color: #e5e7eb; /* Slightly darker on hover */
+        #user-input.sps-mode { 
+            border-color: #f59e0b; 
+            background-color: #fffef2; 
+            font-weight: bold;
+            color: #2563eb; 
         }
         
-        /* Estilo para los chips flotantes de respuesta rápida y categorías */
-        .quick-reply-chip, .category-chip {
-            padding: 0.5rem 1rem;
-            border-radius: 9999px; /* Fully rounded */
-            background-color: #ffffff; /* White background */
-            color: #1f2937; /* Very dark gray text */
-            border: 1px solid #d1d5db; /* Light border */
-            cursor: pointer;
-            transition: background-color 0.2s, box-shadow 0.2s;
-            margin: 0.25rem;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-            /* Flex para alinear el ícono si lo hay */
+        #toggle-mode-button {
+            background: linear-gradient(90deg, rgb(215 236 255 / 50%) 0%, rgb(230 245 255 / 80%) 90%) !important;
+            backdrop-filter: blur(8px); 
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(130, 180, 255, 0.8) !important; 
+            color: #1e40af !important; 
+            font-weight: 600; 
+            
+            white-space: nowrap;
             display: inline-flex;
             align-items: center;
-            gap: 4px; /* Espacio entre ícono y texto */
+            border-radius: 9999px; 
+            
+            padding: 8px 12px;
+            height: auto; 
+            width: auto;
+            
+            margin-left: 0; 
+            margin-right: 0; 
+            
+            flex-shrink: 0;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            transition: all 0.2s ease-in-out;
         }
 
-        .quick-reply-chip:hover, .category-chip:hover {
-            background-color: #f3f4f6;
+        #toggle-mode-button:hover {
+            background: linear-gradient(90deg, rgb(190 220 255 / 70%) 0%, rgb(210 235 255 / 90%) 100%) !important;
+            box-shadow: 
+                0 2px 4px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 1),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        #toggle-mode-button.active {
+            background: linear-gradient(154deg, #fff 0%, #eff6ff 90%) !important; 
+            border: 1px solid rgba(255, 165, 0, 0.8) !important; 
+            color: #1f2937 !important; 
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         
-        /* Contenedor de chips, diseñado para el efecto de "ola" */
-        #quick-replies-container, #category-chips-container, #language-chips-container {
-            display: flex;
-            flex-wrap: wrap;
-            padding-top: 0.25rem;
-            max-height: 0; /* Inicialmente colapsado */
-            overflow: hidden;
-            transition: max-height 0.5s ease-out, padding 0.5s ease-out;
-            justify-content: center;
+        #toggle-mode-button:active {
+            transform: scale(0.98); 
         }
 
-        .chips-visible {
-            max-height: 300px !important; /* Altura suficiente para mostrar los chips */
-            padding-bottom: 0.5rem;
-        }
-
-        /* Estilo para el token de mención en el chat */
-        .place-name-tag {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 12px;
-            background-color: #3b82f6; /* Azul de Tailwind 500 */
-            color: white;
-            font-weight: bold;
-            font-size: 0.875rem; /* text-sm */
-            line-height: 1;
-            margin: 0 4px;
-            white-space: nowrap;
+        #toggle-icon {
+            display: none !important;
         }
         
-    </style>
-    
-    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
-    
+        #send-message-button {
+            background-color: #3b82f6 !important; 
+            color: white;
+            border-radius: 9999px; 
+            width: auto; 
+            height: auto;
+            padding: 10px 14px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-left: 8px; 
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        #send-message-button:hover:not(:disabled) {
+            background-color: #2563eb !important;
+        }
+
+        #send-message-button:active:not(:disabled) {
+            transform: scale(0.95);
+        }
+
+        #send-message-button:disabled {
+            background-color: #d1d5db !important; 
+            cursor: not-allowed;
+            color: #6b7280;
+        }
+
+        #go-text {
+            display: inline !important; 
+            font-weight: 600;
+        }
+        
+        #send-message-button svg {
+            fill: currentColor; 
+            height: 18px; 
+            width: 18px;
+            transform: none; 
+            margin-right: 6px; 
+        }
+
+
+        #input-area-container {
+            border-top: 1px solid #e5e7eb; 
+            display: flex;
+            align-items: center; 
+            padding: 4px; 
+            width: 100%;
+        }
+
+        .map-search-bar {
+            display: block; 
+            flex-grow: 1; 
+            margin-left: 8px; 
+            margin-right: 8px; 
+            padding: 0; 
+            
+            background: rgba(255, 255, 255, 0.4); 
+            backdrop-filter: blur(12px); 
+            -webkit-backdrop-filter: blur(12px); 
+            border-radius: 20px;
+            box: 1px 2px 2px 2px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.06); 
+            border: 1px solid rgba(255, 255, 255, 0.6); 
+        }
+
+        #user-input {
+            width: 100%; 
+            padding: 0.75rem 1rem; 
+            background: transparent !important; 
+            color: #1f2937;
+        }
+
+        #bottom-left-actions {
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+            padding: 4px; 
+        }
+        
+        .bottom-bar-wrapper {
+             display: flex;
+             flex-direction: column; 
+             align-items: center; 
+             flex-shrink: 0;
+             width: 100%;
+             
+             padding: 0 1rem 0.5rem 1rem; 
+        }
+
+        #go-button {
+            display: none !important;
+        }
+
+
+        .pac-container {
+            display: none !important;
+            visibility: hidden !important;
+        }
+
+        .autocomplete-chips-group-container {
+            width: 100%; 
+            overflow-x: auto; 
+            -webkit-overflow-scrolling: touch; 
+            padding: 0.5rem 1rem; 
+            display: flex;
+            flex-wrap: nowrap; 
+            align-items: center;
+padding-top:0px;
+        }
+
+        .autocomplete-chip {
+            background: rgba(255, 255, 255, 0.7); 
+            border: 1px solid rgba(0, 123, 255, 0.5); 
+            color: #007bff; 
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(5px); 
+            -webkit-backdrop-filter: blur(5px);
+            
+            padding: 6px 12px;
+            margin-right: 8px;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap; 
+            flex-shrink: 0;
+        }
+
+        .autocomplete-chip:hover {
+            background: rgba(0, 123, 255, 0.1);
+        }
+
+        .attribution-chip {
+            background-color: #f0f0f0;
+            color: #6...
+...
+...
+...
+.chat-box { width: 100%; max-width: 600px; height: 100%; display: flex; flex-direction: column; } .header-bar { position: fixed; top: 0; left: 0; right: 0; width: 100%; max-width: 600px; margin: 0 auto; z-index: 20; background: linear-gradient(179deg, rgb(239 246 255 / 99%) 0%, #eff6ff 100% 60%); padding: 10px 16px; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); display: flex; justify-content: space-between; align-items: center; } .chat-title { font-weight: 800; font-size: 1.125rem; color: #1f2937; } #app-alert-container { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; z-index: 30; display: flex; flex-direction: column; align-items: center; } #message-container { flex-grow: 1; overflow-y: auto; padding: 1rem; scroll-behavior: smooth; } #message-container::-webkit-scrollbar { width: 0; } #message-container { -ms-overflow-style: none; scrollbar-width: none; } .bottom-action-area { flex-shrink: 0; padding: 0; width: 100%; max-width: 600px; margin: 0 auto; z-index: 10; } .action-chip { background-color: #d1d5db; color: #1f2937; font-weight: 500; padding: 8px 12px; border-radius: 9999px; transition: background-color 0.2s; white-space: nowrap; flex-shrink: 0; cursor: pointer; display: inline-flex; align-items: center; } .action-chip:hover { background-color: #9ca3af; } .menu-action-chip { background-color: #3b82f6; color: white; } .menu-action-chip:hover { background-color: #2563eb; } .menu-action-chip:active { background-color: #1d4ed8; } .category-chip, .language-chip { background-color: #e5e7eb; color: #1f2937; padding: 6px 10px; border-radius: 9999px; transition: background-color 0.2s, transform 0.1s; font-size: 0.875rem; cursor: pointer; margin-right: 8px; margin-bottom: 8px; flex-shrink: 0; } .category-chip:hover, .language-chip:hover { background-color: #d1d5db; transform: scale(1.02); } .category-chip:active, .language-chip:active { background-color: #9ca3af; transform: scale(0.98); } .model-bubble-wrapper.structured { background: white; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); color: #1f2937; } .notification-modal-overlay { pointer-events: none; } #btn-clear-top { background-color: white; color: #4b5563; border: 1px solid #d1d5db; padding: 8px 12px; border-radius: 9999px; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s, color 0.2s, border-color 0.2s; } #btn-clear-top:hover { background-color: #f3f4f6; color: #1f2937; } #btn-clear-top:active { background-color: #e5e7eb; color: #000; } </style>
 </head>
-<body>
+<body class="bg-gray-50 h-full w-full">
 
-    <div id="chat-container">
-        <div id="chat-header" class="flex justify-between items-center">
-            <h1 class="text-xl font-bold text-gray-800">Progreso Tour Guide</h1>
-            
-            <div id="language-selector" class="flex items-center space-x-2 text-sm text-gray-500">
-                <lottie-player 
-                    id="lang-globe-lottie"
-                    src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f30d/lottie.json" 
-                    background="transparent" 
-                    speed="1" 
-                    style="width: 24px; height: 24px; cursor: pointer;"
-                    hover
-                    onclick="changeLanguage(currentLanguage === 'es' ? 'en' : 'es');"
-                ></lottie-player>
+    <div class="chat-window flex flex-col items-center">
+        <div class="header-bar">
+            <button id="btn-notifications" class="text-sm">
+                ⚙️ Preferencias
+            </button>
+            <div class="chat-title" id="chat-title">PROGRESO TOUR GUIDE</div>
+            <button id="btn-clear-top" title="Limpiar Historial">
+                🗑️
+            </button>
+        </div>
+        
+        <div id="app-alert-container"></div> 
+
+        <div class="chat-box">
+            <div id="message-container" class="flex flex-col w-full">
+                <div id="user-typing-bubble" class="flex justify-end mb-2">
+                    <div class="user-bubble bg-black text-white p-3 shadow-md w-fit">
+                        <div class="typing-dots">
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="model-typing-bubble" class="flex justify-start mb-2">
+                    <div class="model-bubble-wrapper w-fit">
+                        <div class="model-bubble bg-white text-gray-800 w-fit">
+                            <div class="typing-dots">
+                                <div class="dot"></div>
+                                <div class="dot"></div>
+                                <div class="dot"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-action-area">
+                <div id="autocomplete-chips-group-container" class="autocomplete-chips-group-container hidden">
+                </div>
+                
+                <div id="quick-replies-container" class="chip-group-scroll p-2 flex space-x-2">
+                    <div id="menu-actions" class="flex space-x-2 flex-shrink-0">
+                        <div id="categories-menu-chip" class="action-chip menu-action-chip flex items-center p-3 rounded-full text-sm font-semibold cursor-pointer" data-action="CATEGORIES">
+                            ✨️ Categorías
+                        </div>
+                        <div id="language-menu-chip" class="action-chip menu-action-chip flex items-center p-3 rounded-full text-sm font-semibold cursor-pointer" data-action="LANGUAGE">
+                            🧢 Idioma
+                        </div>
+                        <div id="clear-history-chip" class="action-chip menu-action-chip flex items-center p-3 rounded-full text-sm font-semibold cursor-pointer" data-action="CLEAR_HISTORY">
+                            🗑️ Limpiar
+                        </div>
+                    </div>
+
+                    <div id="category-chips-group" class="hidden flex space-x-2 flex-shrink-0">
+                        <div class="category-chip" data-query="Categoría Salud y Belleza en Nuevo Progreso" data-query-en="Health & Beauty category in Nuevo Progreso">🏥 Salud & Belleza</div>
+                        <div class="category-chip" data-query="Categoría Compras en Nuevo Progreso" data-query-en="Shopping category in Nuevo Progreso">🛍️ Compras</div>
+                        <div class="category-chip" data-query="Categoría Entretenimiento en Nuevo Progreso" data-query-en="Entertainment category in Nuevo Progreso">🎺 Entretenimiento</div>
+                        <div class="category-chip" data-query="Top 10 Clínicas Dentales en Nuevo Progreso" data-query-en="Top 10 Dental Clinics in Nuevo Progreso">🦷 Top 10 Dental</div>
+                    </div>
+                    
+                    <div id="language-chips-group" class="hidden flex space-x-2 flex-shrink-0">
+                        <div class="language-chip" data-language="es">🇪🇸 Español</div>
+                        <div class="language-chip" data-language="en">🇺🇸 English</div>
+                    </div>
+
+                    <div id="dynamic-chips-group" class="hidden flex space-x-2 flex-shrink-0">
+                        <div id="dynamic-chips-list" class="flex space-x-2">
+                        </div>
+                        <div id="dynamic-chip-info" class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="INFO" data-query="Información general sobre Nuevo Progreso." data-query-en="General information about Nuevo Progreso.">ℹ️ Info</div>
+                    </div>
+
+                </div>
+                
+                <div id="bottom-bar-search-wrapper" class="w-full">
+                    <div class="bottom-bar-wrapper">
+                        <div id="map-search-bar" class="map-search-bar mb-2 w-full">
+                            <input type="text" id="user-input" class="map-input" placeholder="Pregúntale al mapa" autocomplete="off" inputmode="text">
+                        </div>
+                        <div id="input-area-container" class="flex justify-between items-center w-full">
+                            <div id="bottom-left-actions">
+                                <button id="toggle-mode-button" title="Alternar Modo Búsqueda Geográfica">
+                                    <span id="toggle-icon" class="text-xl">💬</span>
+                                    <span id="toggle-text">Modo SPS</span>
+                                </button>
+                            </div>
+                            <button id="send-message-button" class="transition disabled:opacity-50" disabled>
+                                <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 122.88 122.88" class="flex-shrink-0">
+                                    <g>
+                                        <path class="st0" d="M62.43,122.88h-1.98c0-16.15-6.04-30.27-18.11-42.34C30.27,68.47,16.16,62.43,0,62.43v-1.98 c16.16,0,30.27-6.04,42.34-18.14C54.41,30.21,60.45,16.1,60.45,0h1.98c0,16.15,6.04,30.27,18.11,42.34 c12.07,12.07,26.18,18.11,42.34,18.11v1.98c-16.15,0-30.27,6.04-42.34,18.11C68.47,92.61,62.43,106.72,62.43,122.88L62.43,122.88z"/>
+                                    </g>
+                                </svg>
+                                <span id="go-text">Enviar</span>
+                            </button>
+                        </div>
+                        <button id="go-button" class="hidden"></button>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div id="chat-messages" class="flex flex-col">
-            <div id="model-typing-bubble">
-                <span class="typing-dot"></span>
-                <span class="typing-dot"></span>
-                <span class="typing-dot"></span>
-            </div>
-            <div id="quick-replies-container"></div>
-            <div id="category-chips-container"></div>
-            <div id="language-chips-container"></div>
-        </div>
-
-        <div id="chat-controls-container">
-            <div id="menu-actions" class="flex justify-around">
+        <div id="notification-modal" class="notification-modal-overlay">
+            <div class="notification-panel">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Configuración de Alertas</h3>
                 
-                <div id="action-categories" class="menu-action-chip" data-action="categories" onclick="handleMenuAction('categories');">
-                    <lottie-player 
-                        id="lottie-categories"
-                        src="https://fonts.gstatic.com/s/e/notoemoji/latest/2728/lottie.json" 
-                        background="transparent" 
-                        speed="1" 
-                        style="width: 20px; height: 20px;"
-                    ></lottie-player>
-                    <span data-lang-key="CATEGORIES">CATEGORIES</span>
-                </div>
-                
-                <div id="action-language" class="menu-action-chip" data-action="language" onclick="handleMenuAction('language');">
-                     <lottie-player 
-                        id="lottie-language"
-                        src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f30e/lottie.json" 
-                        background="transparent" 
-                        speed="1" 
-                        style="width: 20px; height: 20px;"
-                    ></lottie-player>
-                    <span data-lang-key="LANGUAGE">LANGUAGE</span>
-                </div>
-                
-                <div id="action-get-there" class="menu-action-chip" data-action="get_there" onclick="handleMenuAction('get_there');">
-                    <lottie-player 
-                        id="lottie-get-there"
-                        src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f5fa/lottie.json" 
-                        background="transparent" 
-                        speed="1" 
-                        style="width: 20px; height: 20px;"
-                    ></lottie-player>
-                    <span data-lang-key="GET_THERE">GET THERE</span>
-                </div>
-                
-                <div id="action-info" class="menu-action-chip" data-action="info" onclick="handleMenuAction('info');">
-                    <lottie-player 
-                        id="lottie-info"
-                        src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f4a1/lottie.json" 
-                        background="transparent" 
-                        speed="1" 
-                        style="width: 20px; height: 20px;"
-                    ></lottie-player>
-                    <span data-lang-key="INFO">INFO</span>
+                <div class="mb-4 flex items-center justify-between">
+                    <label for="toggle-news" class="text-gray-700 text-base">Alertas de Interfaz (Noticias/Historial)</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-news" checked>
+                        <span class="slider"></span>
+                    </label>
                 </div>
 
-            </div>
-            
-            <div class="flex items-center space-x-2">
-                
-                <div id="action-toggle-button" class="action-button-toggle p-2 rounded-full cursor-pointer transition duration-300 transform hover:scale-105 active:scale-95 shadow-lg bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center" onclick="toggleSPSMode(true);">
-                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path id="toggle-icon-chat" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 4v-4z" />
-                        <path id="toggle-icon-sps" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
+                <div class="mb-4 flex items-center justify-between">
+                    <label for="toggle-reminders" class="text-gray-700 text-base">Tarjetas de Lugar/Categoría (Fichas)</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-reminders" checked>
+                        <span class="slider"></span>
+                    </label>
                 </div>
                 
-                <input type="text" id="chat-input" placeholder="Escribe un mensaje..." class="flex-grow glass-container" inputmode="text">
+                <div class="mb-4 flex items-center justify-between">
+                    <label for="toggle-promotions" class="text-gray-700 text-base">Ofertas y Promociones</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-promotions" disabled>
+                        <span class="slider"></span>
+                    </label>
+                </div>
                 
-                <button id="send-button" onclick="handleSend();" class="p-2 rounded-full bg-blue-500 text-white shadow-lg transition duration-150 ease-in-out hover:bg-blue-600">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                    </svg>
+                <div id="info-card-panel" class="info-card-panel">
+                    <span>💡</span>
+                    <p class="mt-0">Recuerda que estas alertas solo son notificaciones temporales que aparecen en la parte superior de la pantalla.</p>
+                </div>
+
+                <button id="close-modal-btn" class="mt-6 w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-150">
+                    Cerrar y Guardar
                 </button>
             </div>
-            <div id="loading-indicator">Cargando respuesta...</div>
         </div>
-
     </div>
-
+    
     <script>
-    
-    // ====================================================================
-    // 1. CONFIGURACIÓN Y ESTADO INICIAL
-    // ====================================================================
+        const BACKEND_URL = 'http://localhost:5000/api/gemini';
+        let chatHistory = [];
+        let isBotTyping = false;
+        let currentLanguage = 'es';
+        let categoriesVisible = false;
+        let languageMenuVisible = false;
+        let placeIdForDirectSearch = null;
 
-    // Datos de lenguaje y traducciones
-    const translations = {
-        es: {
-            placeholder_chat: "Escribe un mensaje...",
-            placeholder_sps: "Ingresa el lugar que buscas, ej: @Parque La Loma",
-            CATEGORIES: "CATEGORÍAS",
-            LANGUAGE: "IDIOMA",
-            GET_THERE: "CÓMO LLEGAR",
-            INFO: "INFO/AYUDA",
-            LOADING: "Cargando respuesta...",
-            MODEL_TYPING: "Escribiendo...",
-            ERROR_GENERAL: "Lo siento, hubo un error al obtener la respuesta. Por favor, inténtalo de nuevo.",
-            PLACE_CARD_DIRECTIONS: "Ver Ruta",
-            PLACE_CARD_SHARE: "Compartir",
-            PLACE_CARD_CALL: "Llamar",
-            PLACE_CARD_WEBSITE: "Sitio Web",
-            MENTION_HINT: "Menciona un lugar con @ para activarlo."
-        },
-        en: {
-            placeholder_chat: "Type a message...",
-            placeholder_sps: "Enter the place you're looking for, e.g: @La Loma Park",
-            CATEGORIES: "CATEGORIES",
-            LANGUAGE: "LANGUAGE",
-            GET_THERE: "GET THERE",
-            INFO: "INFO/HELP",
-            LOADING: "Loading response...",
-            MODEL_TYPING: "Typing...",
-            ERROR_GENERAL: "Sorry, there was an error getting the response. Please try again.",
-            PLACE_CARD_DIRECTIONS: "Get Directions",
-            PLACE_CARD_SHARE: "Share",
-            PLACE_CARD_CALL: "Call",
-            PLACE_CARD_WEBSITE: "Website",
-            MENTION_HINT: "Mention a place with @ to activate it."
-        }
-    };
-    
-    // Historial de chat (simulado)
-    let chatHistory = []; 
-    // Idioma actual
-    let currentLanguage = 'es'; 
-    // Bandera para el modo SPS (Geographic Search)
-    let isSPSMode = false;
-    // Bandera para el estado de carga
-    let isLoading = false;
-    // Bandera para la visibilidad de los chips de categorías/idioma
-    let isMenuOpen = null; // 'categories', 'language', or null
-
-    // Variable para almacenar el lugar mencionado para el siguiente turno
-    let currentMentionPlace = { 
-        isMentioning: false,
-        textName: null, // Nombre del lugar para el chip visual
-        placeId: null, // ID del lugar para el backend
-        mentionInput: "" // Texto del input después de @
-    };
-
-    // ====================================================================
-    // 2. UTILIDADES Y MANIPULACIÓN DEL DOM
-    // ====================================================================
-
-    // Obtener elementos del DOM
-    const chatInput = document.getElementById('chat-input');
-    const chatMessagesContainer = document.getElementById('chat-messages');
-    const loadingIndicator = document.getElementById('loading-indicator');
-    const modelTypingBubble = document.getElementById('model-typing-bubble');
-    const toggleIconChat = document.getElementById('toggle-icon-chat');
-    const toggleIconSPS = document.getElementById('toggle-icon-sps');
-    const actionToggleButton = document.getElementById('action-toggle-button');
-    const quickRepliesContainer = document.getElementById('quick-replies-container');
-    const categoryChipsContainer = document.getElementById('category-chips-container');
-    const languageChipsContainer = document.getElementById('language-chips-container');
-    
-    // Referencias a los Lottie Players de los chips de acción
-    const menuActions = {
-        categories: document.getElementById('lottie-categories'),
-        language: document.getElementById('lottie-language'),
-        get_there: document.getElementById('lottie-get-there'),
-        info: document.getElementById('lottie-info')
-    };
-    
-    // Desplazar al final del chat
-    function scrollToBottom() {
-        chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
-    }
-
-    // Mostrar/Ocultar el indicador de carga
-    function showLoadingIndicator() {
-        isLoading = true;
-        loadingIndicator.style.display = 'block';
-        modelTypingBubble.style.display = 'flex';
-        scrollToBottom();
-    }
-
-    function hideLoadingIndicator() {
-        isLoading = false;
-        loadingIndicator.style.display = 'none';
-        modelTypingBubble.style.display = 'none';
-    }
-
-    // Aplicar la traducción al DOM
-    function applyTranslations() {
-        const t = translations[currentLanguage];
-        chatInput.placeholder = isSPSMode ? t.placeholder_sps : t.placeholder_chat;
-        loadingIndicator.textContent = t.LOADING;
+        let map;
+        let googleMapsLoaded = false;
+        let autocompleteService; 
+        let lastTotalCount = 0; 
+        let lastApiQuery = null; 
+        let isMentionMode = false; 
+        let currentMentionPlace = null; 
+        const MENTION_TOKEN = "[[PLACE_MENTION]]"; 
         
-        // Traducir los chips de acción del menú
-        document.querySelectorAll('[data-lang-key]').forEach(el => {
-            const key = el.getAttribute('data-lang-key');
-            if (t[key]) {
-                el.textContent = t[key];
-            }
-        });
-        
-        // El resto se traduce al renderizar
-        renderChat();
-        
-        // Actualizar el inputmode
-        chatInput.setAttribute('inputmode', isSPSMode ? 'text' : 'text');
-    }
-    
-    // ====================================================================
-    // 3. LÓGICA DE MODOS Y CHIPS
-    // ====================================================================
+        const inputElement = document.getElementById('user-input'); 
+        const sendButton = document.getElementById('send-message-button');
+        const messageContainer = document.getElementById('message-container');
+        const appAlertContainer = document.getElementById('app-alert-container');
+        const categoryChipsGroup = document.getElementById('category-chips-group');
+        const languageChipsGroup = document.getElementById('language-chips-group');
+        const categoryChips = document.querySelectorAll('#category-chips-group .category-chip');
+        const languageChips = document.querySelectorAll('#language-chips-group .language-chip');
+        const menuActionChips = document.querySelectorAll('#menu-actions .menu-action-chip');
+        const toggleButton = document.getElementById('toggle-mode-button');
+        const toggleText = document.getElementById('toggle-text');
+        const toggleIcon = document.getElementById('toggle-icon');
+        const userTypingBubble = document.getElementById('user-typing-bubble');
+        const modelTypingBubble = document.getElementById('model-typing-bubble');
+        const quickActionFullList = document.getElementById('quick-replies-container');
+        const dynamicChipsGroup = document.getElementById('dynamic-chips-group');
+        const dynamicChipsList = document.getElementById('dynamic-chips-list');
+        const autocompleteChipsGroupContainer = document.getElementById('autocomplete-chips-group-container');
+        const clearHistoryChip = document.getElementById('clear-history-chip');
+        const btnClearTop = document.getElementById('btn-clear-top');
+        const btnNotifications = document.getElementById('btn-notifications');
+        const notificationModal = document.getElementById('notification-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const toggleNews = document.getElementById('toggle-news');
+        const toggleReminders = document.getElementById('toggle-reminders');
+        const infoCardPanel = document.getElementById('info-card-panel');
+        const bottomBarWrapper = document.querySelector('.bottom-bar-wrapper');
+        const infoChip = document.getElementById('dynamic-chip-info');
 
-    // Resetear el modo Mención
-    function resetMentionMode() {
-        currentMentionPlace = {
-            isMentioning: false,
-            textName: null,
-            placeId: null,
-            mentionInput: ""
+        let isSPSMode = true; 
+
+        const SUBCATEGORIES_MAP = {
+            'Categoría Salud y Belleza en Nuevo Progreso': 'SALUD',
+            'Categoría Compras en Nuevo Progreso': 'COMPRAS',
+            'Categoría Entretenimiento en Nuevo Progreso': 'ENTRETENIMIENTO',
+            'Top 10 Clínicas Dentales en Nuevo Progreso': 'DENTAL'
         };
-        updateInputModeVisuals();
-    }
-    
-    // Actualizar los elementos visuales del input
-    function updateInputModeVisuals() {
-        const t = translations[currentLanguage];
-        
-        if (isSPSMode) {
-            chatInput.placeholder = t.placeholder_sps;
-            actionToggleButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
-            actionToggleButton.classList.add('bg-green-500', 'hover:bg-green-600');
-            toggleIconChat.classList.add('hidden');
-            toggleIconSPS.classList.remove('hidden');
-            chatInput.setAttribute('inputmode', 'text');
-        } else {
-             // Lógica de Mención (@)
-            if (currentMentionPlace.isMentioning) {
-                 chatInput.placeholder = `... ${currentMentionPlace.mentionInput}`;
-                 actionToggleButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
-                 actionToggleButton.classList.add('bg-orange-500', 'hover:bg-orange-600');
-            } else {
-                 chatInput.placeholder = t.placeholder_chat;
-                 actionToggleButton.classList.remove('bg-green-500', 'hover:bg-green-600', 'bg-orange-500');
-                 actionToggleButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
+
+        const UI_STRINGS = {
+            es: {
+                header: "PROGRESO TOUR GUIDE",
+                placeholder: "Pregúntale al mapa o escribe 'hola'",
+                searchPlaceholder: "Escribe un negocio o un lugar...",
+                goButton: "Enviar",
+                loadingStatus: "Procesando tu petición...",
+                categories: "✨️ Categorías",
+                language: "🧢 Idioma",
+                getThere: "🚀 Cómo llegar",
+                info: "ℹ️ Info",
+                alertStructured: (name) => `¡Ficha verificada para ${name}!`,
+                alertCategory: (name) => `Resumen para la categoría ${name}.`,
+                chipHealth: "🏥 Salud & Belleza",
+                chipShopping: "🛍️ Compras",
+                chipEntertainment: "🎺 Entretenimiento",
+                chipDental: "🦷 Top 10 Dental",
+                btnMap: "Ver en el Mapa 🧭",
+                btnSearch: "Resultados en Google 🔍",
+                btnPhone: "Llamar Ahora 📞",
+                btnReview: "Reseñas ⭐",
+                btnWebsite: "Sitio Web/Redes 🌐",
+                spsMode: "Modo Pro ●Activado 🦾",
+                chatMode: "Modo Chat 💬",
+                mentionPlaceholder: (name) => `Conversando sobre ${name}...`
+            },
+            en: {
+                header: "PROGRESO TOUR GUIDE",
+                placeholder: "Ask the map or type 'hello'",
+                searchPlaceholder: "Enter the business name...",
+                goButton: "Send",
+                loadingStatus: "Processing your request...",
+                categories: "✨️ Categories",
+                language: "🧢 Language",
+                getThere: "🚀 How to get there",
+                info: "ℹ️ Info",
+                alertStructured: (name) => `Verified card for ${name}!`,
+                alertCategory: (name) => `Summary for ${name} category.`,
+                chipHealth: "🏥 Health & Beauty",
+                chipShopping: "🛍️ Shopping",
+                chipEntertainment: "🎺 Entertainment",
+                chipDental: "🦷 Top 10 Dental",
+                btnMap: "View on Map 🧭",
+                btnSearch: "Search Results on Google 🔍",
+                btnPhone: "Call Now 📞",
+                btnReview: "Reviews ⭐",
+                btnWebsite: "Website/Social 🌐",
+                spsMode: "Pro Mode ●Active 🦾",
+                chatMode: "Chat Mode 💬",
+                mentionPlaceholder: (name) => `Conversing about ${name}...`
             }
-            toggleIconChat.classList.remove('hidden');
-            toggleIconSPS.classList.add('hidden');
-            chatInput.setAttribute('inputmode', 'text');
-        }
-        
-        chatInput.placeholder = isSPSMode 
-            ? t.placeholder_sps 
-            : (currentMentionPlace.isMentioning ? `... ${currentMentionPlace.mentionInput}` : t.placeholder_chat);
-    }
+        };
+        let notificationPreferences = {
+            news: true, 
+            reminders: true, 
+            promotions: false
+        };
+        if (inputElement) inputElement.disabled = false;
+        if (sendButton) sendButton.disabled = false;
 
-
-    // Cambiar entre Chat Mode y SPS Mode
-    function toggleSPSMode(shouldToggle = false) {
-        if (shouldToggle) {
-            isSPSMode = !isSPSMode;
-        } else {
-            isSPSMode = false; // Por defecto a chat mode al inicializar
-        }
-        
-        // Si sale de SPS, también resetea la mención
-        if (!isSPSMode) {
-            resetMentionMode();
+        function saveHistory() {
+            try {
+                localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+                if (chatHistory.length > 0) {
+                    alertUser('Historial guardado. ✅', 'i', 'news');
+                }
+            } catch (e) {
+                console.error("Error al guardar el historial en localStorage", e);
+            }
         }
 
-        updateInputModeVisuals();
-        
-        // Ocultar cualquier menú activo
-        closeMenuChips(null); 
-    }
-    
-    // Mostrar/Ocultar los chips (general)
-    function toggleMenuChips(container, menuName) {
-        // Cierra el que estaba abierto si no es el mismo
-        if (isMenuOpen !== menuName) {
-            closeMenuChips(menuName);
-            // Abre el nuevo
-            container.classList.add('chips-visible');
-            isMenuOpen = menuName;
-        } else {
-            // Si es el mismo, ciérralo
-            container.classList.remove('chips-visible');
-            isMenuOpen = null;
+        function clearChatHistory() {
+            chatHistory = [];
+            localStorage.removeItem('chatHistory');
+            if (messageContainer) messageContainer.innerHTML = '';
+            alertUser('Historial de chat limpiado. 🗑️', 'i', 'news');
+            saveHistory(); 
+            location.reload(); 
         }
-    }
-    
-    // Cerrar chips activos
-    function closeMenuChips(excludeMenu = null) {
-        if (excludeMenu !== 'categories' && categoryChipsContainer.classList.contains('chips-visible')) {
-            categoryChipsContainer.classList.remove('chips-visible');
-        }
-        if (excludeMenu !== 'language' && languageChipsContainer.classList.contains('chips-visible')) {
-            languageChipsContainer.classList.remove('chips-visible');
-        }
-        // No tocar quick-replies, se manejan con renderQuickReplies
-        
-        if (excludeMenu === null) {
-            isMenuOpen = null;
-        }
-    }
 
+        function loadHistory() {
+            let loaded = false;
+            try {
+                const savedHistory = localStorage.getItem('chatHistory');
+                if (savedHistory) {
+                    const loadedHistory = JSON.parse(savedHistory);
+                    if (Array.isArray(loadedHistory) && loadedHistory.length > 0) {
+                        chatHistory = loadedHistory;
+                        renderChat();
+                        scrollToBottom();
+                        loaded = true;
+                    }
+                }
+            } catch (e) {
+                console.error("Error al cargar o parsear el historial de localStorage", e);
+                chatHistory = [];
+            }
+            if (!loaded) {
+                chatHistory = [];
+            }
+            return loaded;
+        }
 
-    // Lógica para manejar la acción de los 4 chips del menú inferior
-    function handleMenuAction(action) {
-        const t = translations[currentLanguage];
-        
-        // Reproducir la animación de un solo ciclo en el chip principal
-        const lottieElement = menuActions[action];
-        if (lottieElement) {
-            lottieElement.play();
+        function saveNotificationPreferences() {
+            try {
+                localStorage.setItem('notificationPreferences', JSON.stringify(notificationPreferences));
+                alertUser('Preferencias de notificaciones guardadas. ✅', 'i', 'news');
+            } catch (e) {
+                console.error("Error al guardar las preferencias de notificación:", e);
+            }
         }
-        
-        switch (action) {
-            case 'categories':
-                renderCategoryChips();
-                toggleMenuChips(categoryChipsContainer, 'categories');
-                break;
-            case 'language':
-                renderLanguageChips();
-                toggleMenuChips(languageChipsContainer, 'language');
-                break;
-            case 'get_there':
-                // Aquí iría la lógica para abrir Google Maps o una UI de "Cómo llegar"
-                alert(t.GET_THERE + ": Función no implementada, pero el chip funciona.");
-                closeMenuChips(null);
-                break;
-            case 'info':
-                // Aquí iría la lógica para mostrar información de ayuda/contacto
-                alert(t.INFO + ": Función no implementada, pero el chip funciona.");
-                closeMenuChips(null);
-                break;
-            default:
-                break;
+
+        function loadNotificationPreferences() {
+            try {
+                const savedPrefs = localStorage.getItem('notificationPreferences');
+                if (savedPrefs) {
+                    notificationPreferences = JSON.parse(savedPrefs);
+                }
+                if (toggleNews) toggleNews.checked = notificationPreferences.news;
+                if (toggleReminders) toggleReminders.checked = notificationPreferences.reminders;
+            } catch (e) {
+                console.error("Error al cargar las preferencias de notificación:", e);
+            }
         }
-    }
-    
-    // ====================================================================
-    // 4. LÓGICA DE RENDERIZADO DE CHIPS
-    // ====================================================================
-    
-    // Renderiza los chips de respuesta rápida (ejemplo)
-    function renderQuickReplies(replies) {
-        quickRepliesContainer.innerHTML = '';
-        if (replies && replies.length > 0) {
-            replies.forEach(reply => {
-                const chip = document.createElement('div');
-                chip.className = 'quick-reply-chip';
-                chip.textContent = reply;
-                chip.onclick = () => {
-                    chatInput.value = reply;
-                    handleSend();
-                    // Ocultar después de usar
-                    quickRepliesContainer.classList.remove('chips-visible');
-                };
-                quickRepliesContainer.appendChild(chip);
+
+        function formatTime(date) {
+            const d = new Date(date);
+            let hours = d.getHours();
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'pm' : 'am';
+            hours = hours % 12;
+            hours = hours ? hours : 12; 
+            return `${hours}:${minutes} ${ampm}`;
+        }
+
+        function isScrolledToBottom() {
+            if (!messageContainer) return true;
+            const scrollDifference = messageContainer.scrollHeight - messageContainer.scrollTop;
+            const viewportHeight = messageContainer.clientHeight;
+            const isNearBottom = scrollDifference <= viewportHeight + 200;
+            return isNearBottom;
+        }
+
+        function alertUser(m, t='i', preferenceType = 'news') {
+            if (t !== 'error' && !notificationPreferences[preferenceType]) {
+                console.log(`Notificación de tipo "${preferenceType}" deshabilitada por el usuario. Mensaje: ${m}`);
+                return;
+            }
+            if (appAlertContainer) {
+                const existingAlert = appAlertContainer.querySelector('.notification-card');
+                if (existingAlert) {
+                    existingAlert.remove();
+                }
+            }
+            const hideAlert = (alertElement) => {
+                if (!alertElement || !alertElement.parentNode) return;
+                alertElement.classList.remove('show');
+                alertElement.style.opacity = '0';
+                setTimeout(() => {
+                    if (alertElement.parentNode) alertElement.remove();
+                }, 400);
+            };
+            const a = document.createElement('div');
+            const icon = (t === 'error') ? '❌' : (t === 'i' ? 'ℹ️' : '✅');
+            a.className = 'notification-card opacity-0 pointer-events-auto';
+            a.innerHTML = `
+                <div class="message-content">
+                    <span class="mr-2">${icon}</span>
+                    <span>${m}</span>
+                </div>
+                <button class="close-btn" aria-label="Cerrar notificación">×</button>
+            `;
+            if (appAlertContainer) appAlertContainer.appendChild(a);
+            setTimeout(() => {
+                a.classList.add('show');
+                a.style.opacity = '1';
+            }, 10);
+            const closeButton = a.querySelector('.close-btn');
+            closeButton.addEventListener('click', () => {
+                hideAlert(a);
             });
-            quickRepliesContainer.classList.add('chips-visible');
-        } else {
-            quickRepliesContainer.classList.remove('chips-visible');
+            setTimeout(() => {
+                hideAlert(a);
+            }, 4000);
         }
-    }
 
-    // Renderiza los chips de categorías
-    function renderCategoryChips() {
-        const categories = [
-            { es: "Restaurantes", en: "Restaurants", icon: "🍜" },
-            { es: "Hoteles", en: "Hotels", icon: "🏨" },
-            { es: "Atracciones", en: "Attractions", icon: "🎡" },
-            { es: "Compras", en: "Shopping", icon: "🛍️" },
-            { es: "Transporte", en: "Transport", icon: "🚌" },
-            { es: "Tacos y Comida", en: "Tacos & Food", icon: "🌮" },
-        ];
-        
-        categoryChipsContainer.innerHTML = '';
-        categories.forEach(category => {
-            const text = category[currentLanguage];
-            const chip = document.createElement('div');
-            chip.className = 'category-chip';
-            chip.onclick = () => {
-                chatInput.value = text;
-                handleSend();
-                toggleMenuChips(categoryChipsContainer, 'categories');
-            };
-            
-            // Ícono animado para las categorías (Hamburguesa 🍔) - Constante
-            chip.innerHTML = `
-                <lottie-player 
-                    src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f354/lottie.json" 
-                    background="transparent" 
-                    speed="1" 
-                    style="width: 20px; height: 20px;"
-                    loop 
-                    autoplay
-                ></lottie-player>
-                <span>${text}</span>
-            `;
+        function scrollToBottom() {
+            if (messageContainer) messageContainer.scrollTop = messageContainer.scrollHeight;
+        }
 
-            categoryChipsContainer.appendChild(chip);
-        });
-    }
+        function toggleInput(d) {
+            if (inputElement) inputElement.disabled = d;
+            if (sendButton) sendButton.disabled = d;
+        }
 
-    // Renderiza los chips de idioma
-    function renderLanguageChips() {
-        const languages = [
-            { code: 'es', text: 'Español' },
-            { code: 'en', text: 'English' }
-        ];
+        function resetMentionMode() {
+            isMentionMode = false;
+            currentMentionPlace = null;
+            inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
+        }
 
-        languageChipsContainer.innerHTML = '';
-        languages.forEach(lang => {
-            const isActive = lang.code === currentLanguage;
-            const chip = document.createElement('div');
-            chip.className = `category-chip ${isActive ? 'bg-blue-200 font-bold' : ''}`;
-            chip.onclick = () => {
-                if (!isActive) {
-                    changeLanguage(lang.code);
-                    toggleMenuChips(languageChipsContainer, 'language');
+        function vibrateDevice() {
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        }
+
+        function handleInputFocus() {
+            const shouldScroll = isScrolledToBottom();
+            if (shouldScroll) {
+                scrollChatAndInput();
+            }
+        }
+
+        function scrollChatAndInput() {
+            setTimeout(() => {
+                messageContainer.scrollTop = messageContainer.scrollHeight;
+                bottomBarWrapper.scrollIntoView({ behavior: 'instant', block: 'end' });
+            }, 150);
+        }
+
+        function hideModelTypingBubble() {
+            modelTypingBubble.classList.remove('show');
+        }
+
+        function showLoadingIndicator() {
+            isBotTyping = true;
+            hideUserTypingBubble();
+            modelTypingBubble.classList.add('show');
+            inputElement.placeholder = UI_STRINGS[currentLanguage].loadingStatus;
+            inputElement.disabled = true;
+            sendButton.disabled = true;
+            toggleButton.disabled = true;
+            scrollToBottom();
+        }
+
+        function hideLoadingIndicator() {
+            isBotTyping = false;
+            hideModelTypingBubble();
+            if (isSPSMode) {
+                inputElement.placeholder = UI_STRINGS[currentLanguage].searchPlaceholder;
+            } else if (currentMentionPlace) {
+                inputElement.placeholder = UI_STRINGS[currentLanguage].mentionPlaceholder(currentMentionPlace.textName);
+            } else {
+                inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
+            }
+            inputElement.disabled = false;
+            toggleButton.disabled = false;
+            sendButton.disabled = isSPSMode || inputElement.value.trim() === '';
+        }
+
+        function showUserTypingBubble() {
+            if (!isBotTyping) {
+                userTypingBubble.classList.add('show');
+                scrollChatAndInput();
+            }
+        }
+
+        function hideUserTypingBubble() {
+            userTypingBubble.classList.remove('show');
+        }
+
+        function toggleSPSMode() {
+            vibrateDevice();
+            isSPSMode = !isSPSMode;
+            if (isSPSMode) {
+                inputElement.classList.add('sps-mode');
+                toggleButton.classList.add('active');
+                toggleText.innerHTML = UI_STRINGS[currentLanguage].spsMode;
+                inputElement.placeholder = UI_STRINGS[currentLanguage].searchPlaceholder;
+                sendButton.disabled = true;
+                resetMentionMode();
+                if (inputElement && !inputElement.hasAutocompleteListener) {
+                    inputElement.addEventListener('input', handleAutocompleteInput);
+                    inputElement.hasAutocompleteListener = true;
                 }
-            };
-            
-            // Ícono animado para los idiomas (Globo Terráqueo 🌍) - Constante
-            chip.innerHTML = `
-                <lottie-player 
-                    src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f30d/lottie.json" 
-                    background="transparent" 
-                    speed="1" 
-                    style="width: 20px; height: 20px;"
-                    loop 
-                    autoplay
-                ></lottie-player>
-                <span>${lang.text}</span>
-            `;
-            
-            languageChipsContainer.appendChild(chip);
-        });
-    }
-
-    // Cambiar idioma
-    function changeLanguage(langCode) {
-        currentLanguage = langCode;
-        applyTranslations();
-        // Cierra los chips si estaban abiertos
-        closeMenuChips(null);
-    }
-    
-    // ====================================================================
-    // 5. LÓGICA DE CHAT Y RENDERIZADO DE MENSAJES
-    // ====================================================================
-
-    // Función principal para renderizar el chat
-    function renderChat() {
-        chatMessagesContainer.querySelectorAll('.message-wrapper').forEach(e => e.remove());
-
-        chatHistory.forEach(message => {
-            const isUser = message.role === 'user';
-            const wrapper = document.createElement('div');
-            wrapper.className = 'message-wrapper flex flex-col ' + (isUser ? 'items-end' : 'items-start');
-
-            if (message.isStructured && message.content && message.content.type === 'place') {
-                // Renderizar la ficha de lugar
-                wrapper.appendChild(renderPlaceCard(message.content, message.placeName));
-            } else if (message.text) {
-                // Renderizar un mensaje de texto normal
-                wrapper.appendChild(renderTextMessage(message, isUser));
+            } else {
+                inputElement.classList.remove('sps-mode');
+                toggleButton.classList.remove('active');
+                toggleText.innerHTML = UI_STRINGS[currentLanguage].chatMode;
+                inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
+                sendButton.disabled = inputElement.value.trim() === '';
+                autocompleteChipsGroupContainer.classList.add('hidden');
+                autocompleteChipsGroupContainer.innerHTML = '';
             }
-            
-            chatMessagesContainer.appendChild(wrapper);
-        });
-        
-        scrollToBottom();
-    }
-    
-    // Renderizar una burbuja de mensaje de texto
-    function renderTextMessage(message, isUser) {
-        const bubble = document.createElement('div');
-        const t = translations[currentLanguage];
-        bubble.className = isUser ? 'user-message' : 'model-message flex items-start';
-        
-        // Si es un mensaje del modelo, añadir el icono
-        if (!isUser) {
-            const icon = document.createElement('div');
-            icon.className = 'message-icon';
-            // Usa el icono del robot 🤖
-            icon.textContent = '🤖'; 
-            bubble.appendChild(icon);
+            inputElement.value = '';
         }
-        
-        const textContent = document.createElement('span');
-        
-        // Implementación del token de mención en la respuesta del modelo
-        let displayText = message.text;
 
-        if (!isUser && displayText.includes('[[PLACE_MENTION]]')) {
-             // Buscar el mensaje de usuario inmediatamente anterior
-            const lastUserMessage = chatHistory.slice().reverse().find(msg => msg.role === 'user');
-            
-            let mentionName = 'lugar'; // Fallback
-            if (lastUserMessage && lastUserMessage.mentionPlaceName) {
-                mentionName = lastUserMessage.mentionPlaceName;
+        function hideChipGroup(group, chips) {
+            chips.forEach(chip => {
+                chip.classList.remove('visible-chip');
+            });
+            setTimeout(() => {
+                group.classList.add('hidden');
+            }, chips.length * 50); 
+        }
+
+        function showChipGroupWithWave(group, chips) {
+            group.classList.remove('hidden');
+            chips.forEach((chip, index) => {
+                chip.style.transition = 'none';
+                chip.style.opacity = '0';
+                chip.style.transform = 'translateY(20px)';
+                void chip.offsetWidth; 
+                setTimeout(() => {
+                    chip.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+                    chip.classList.add('visible-chip');
+                }, index * 100);
+            });
+            scrollToBottom();
+        }
+
+        function handleMenuAction(action, query) {
+            vibrateDevice();
+            if (categoriesVisible && action !== 'CATEGORIES') {
+                hideChipGroup(categoryChipsGroup, categoryChips);
+                categoriesVisible = false;
             }
-            
-            // Reemplazar el token con la etiqueta HTML
-            const tagHTML = `<span class="place-name-tag">${mentionName}</span>`;
-            displayText = displayText.replace('[[PLACE_MENTION]]', tagHTML);
-        }
-        
-        textContent.innerHTML = displayText;
-        bubble.appendChild(textContent);
-        
-        return bubble;
-    }
-
-    // Renderizar una ficha de lugar
-    function renderPlaceCard(content, placeName) {
-        const card = document.createElement('div');
-        const t = translations[currentLanguage];
-        card.className = 'place-card model-message'; 
-        
-        // Contenido de la ficha
-        const title = document.createElement('h3');
-        title.className = 'font-bold text-lg mb-1';
-        title.textContent = placeName || content.name;
-        card.appendChild(title);
-
-        const rating = document.createElement('p');
-        rating.className = 'text-sm text-gray-600 mb-2';
-        rating.textContent = `⭐ ${content.rating} (${content.ratingCount} reviews)`;
-        card.appendChild(rating);
-
-        // Si hay imagen
-        if (content.image) {
-            const img = document.createElement('img');
-            img.className = 'place-image';
-            img.src = content.image;
-            img.alt = content.name;
-            card.appendChild(img);
-        }
-
-        const address = document.createElement('p');
-        address.className = 'text-sm text-gray-700 mb-3';
-        address.textContent = content.address;
-        card.appendChild(address);
-
-        // Botones de acción
-        const actions = document.createElement('div');
-        actions.className = 'flex flex-wrap gap-2 text-xs';
-
-        // Botón 1: Direcciones
-        if (content.directionsUrl) {
-            const btn = document.createElement('a');
-            btn.className = 'py-2 px-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition';
-            btn.href = content.directionsUrl;
-            btn.target = '_blank';
-            btn.textContent = t.PLACE_CARD_DIRECTIONS;
-            actions.appendChild(btn);
-        }
-        
-        // Botón 2: Sitio Web
-        if (content.website) {
-            const btn = document.createElement('a');
-            btn.className = 'py-2 px-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition';
-            btn.href = content.website;
-            btn.target = '_blank';
-            btn.textContent = t.PLACE_CARD_WEBSITE;
-            actions.appendChild(btn);
-        }
-
-        card.appendChild(actions);
-
-        return card;
-    }
-    
-    // ====================================================================
-    // 6. LÓGICA DE ENVÍO Y MANEJO DE INPUT
-    // ====================================================================
-    
-    // Manejar el evento de teclear (@)
-    function handleInput() {
-        const value = chatInput.value.trim();
-        const t = translations[currentLanguage];
-
-        // Lógica de Mención (@)
-        if (!isSPSMode && value.startsWith('@')) {
-            const mentionInput = value.substring(1).trim();
-            if (mentionInput.length > 0) {
-                // 1. Entrar en modo mención
-                currentMentionPlace.isMentioning = true;
-                currentMentionPlace.mentionInput = mentionInput;
-                
-                // 2. Aquí iría la llamada a Google Places Autocomplete
-                // (Simulación de resultados)
-                const mockResults = [
-                    { name: "Parque La Loma", placeId: "abc1" },
-                    { name: "Café La Parroquia", placeId: "abc2" }
-                ].filter(p => p.name.toLowerCase().includes(mentionInput.toLowerCase()));
-
-                if (mockResults.length > 0) {
-                     // 3. Mostrar sugerencias (Quick Replies)
-                    const replies = mockResults.map(p => `${p.name} (mencionar)`);
-                    renderQuickReplies(replies);
+            if (languageMenuVisible && action !== 'LANGUAGE') {
+                hideChipGroup(languageChipsGroup, languageChips);
+                languageMenuVisible = false;
+            }
+            if (notificationModal.classList.contains('show')) {
+                notificationModal.classList.remove('show');
+            }
+            if (action === 'CATEGORIES') {
+                if (categoriesVisible) {
+                    hideChipGroup(categoryChipsGroup, categoryChips);
+                    categoriesVisible = false;
                 } else {
-                     // 4. Si no hay resultados, limpiar quick replies
-                     renderQuickReplies([]);
+                    showChipGroupWithWave(categoryChipsGroup, categoryChips);
+                    categoriesVisible = true;
                 }
-                
-                // 5. Actualizar el placeholder y el icono
-                updateInputModeVisuals();
-                
+            } else if (action === 'LANGUAGE') {
+                if (languageMenuVisible) {
+                    hideChipGroup(languageChipsGroup, languageChips);
+                    languageMenuVisible = false;
+                } else {
+                    showChipGroupWithWave(languageChipsGroup, languageChips);
+                    languageMenuVisible = true;
+                }
+            } else if (action === 'CLEAR_HISTORY') {
+                clearChatHistory();
+                return;
             } else {
-                // Si solo tiene @, mantiene el estado de mención pero sin input
-                currentMentionPlace.isMentioning = true;
-                currentMentionPlace.mentionInput = "";
-                updateInputModeVisuals();
+                if (query) {
+                    handleSend(query);
+                    if (categoriesVisible) {
+                        hideChipGroup(categoryChipsGroup, categoryChips);
+                        categoriesVisible = false;
+                    }
+                    if (languageMenuVisible) {
+                        hideChipGroup(languageChipsGroup, languageMenuVisible);
+                        languageMenuVisible = false;
+                    }
+                }
             }
-            return;
         }
 
-        // Si sale del modo @
-        if (currentMentionPlace.isMentioning && !value.startsWith('@')) {
+        function createMessageBubble(m) {
+            const w = document.createElement('div');
+            const timeStr = m.timestamp ? formatTime(m.timestamp) : '';
+            let timeSpan = '';
+            if (m.role === 'user') {
+                w.className = 'flex justify-end mb-2';
+                timeSpan = timeStr ? `<div class="user-timestamp-container"><span class="timestamp">${timeStr}</span></div>` : '';
+                w.innerHTML = `
+                    <div class="flex flex-col items-end">
+                        <div class="user-bubble bg-black text-white p-3 shadow-md">${m.text}</div>
+                        ${timeSpan}
+                    </div>
+                `;
+            } else if (m.role === 'model') {
+                w.className = 'flex flex-col justify-start w-full mb-2';
+                timeSpan = timeStr ? `<div class="model-timestamp-container"><span class="timestamp">${timeStr}</span></div>` : '';
+                let content = '';
+                let actionsBar = '';
+                let imageHTML = '';
+                const strings = UI_STRINGS[currentLanguage];
+                if (m.isStructured) {
+                    const isPlaceOrCategory = (m.type === 'place' || m.type === 'category');
+                    if (isPlaceOrCategory && m.imageUrl) {
+                        const imageLink = m.placeUrl || '#';
+                        const clickableClass = m.placeUrl ? 'clickable-effect' : ''; 
+                        imageHTML = `
+                            <a href="${imageLink}" target="_blank" class="image-link" ${m.placeUrl ? '' : 'onclick="return false;"'}>
+                                <img src="${m.imageUrl}" alt="${m.placeName || m.categoryName || 'Imagen'}" class="stacked-photo">
+                            </a>
+                        `;
+                    }
+                    content = `
+                        ${imageHTML}
+                        <h4 class="text-lg font-bold mb-1">${m.placeName || m.categoryName || strings.info}</h4>
+                        <p class="text-sm text-gray-700 mb-3">${m.description || 'Sin descripción.'}</p>
+                    `;
+
+                    const isPlace = m.type === 'place';
+                    const isHealthPlace = m.isHealthPlace === true; 
+                    const entityName = isPlace ? (m.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) : (m.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
+                    let actionsHTML = ''; 
+                    if (isPlace && m.websiteUrl) {
+                        actionsHTML += `
+                            <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="WEBSITE" data-website-url="${m.websiteUrl}">
+                                ${strings.btnWebsite}
+                            </div>
+                        `;
+                    }
+                    if (m.mapUrl) {
+                        actionsHTML += `
+                            <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="MAP" data-map-url="${m.mapUrl}">
+                                ${strings.btnMap}
+                            </div>
+                        `;
+                    }
+                    if (isPlace && m.gmapsUrl) {
+                        actionsHTML += `
+                            <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="SEARCH" data-gmaps-url="${m.gmapsUrl}">
+                                ${strings.btnSearch}
+                            </div>
+                        `;
+                    }
+                    if (isHealthPlace) {
+                        if (m.phone) {
+                            actionsHTML += `
+                                <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="PHONE" data-phone="${m.phone}">
+                                    ${strings.btnPhone}
+                                </div>
+                            `;
+                        }
+                        if (m.reviewUrl) {
+                            actionsHTML += `
+                                <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="REVIEW" data-review-url="${m.reviewUrl}">
+                                    ${strings.btnReview}
+                                </div>
+                            `;
+                        }
+                    } else if (isPlace && m.phone) {
+                        actionsHTML += `
+                            <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="PHONE" data-phone="${m.phone}">
+                                ${strings.btnPhone}
+                            </div>
+                        `;
+                    }
+                    
+                    if (actionsHTML.length > 0) {
+                        actionsBar = `
+                            <div class="flex flex-wrap gap-2 mt-3 pt-2 border-t border-gray-200">
+                                ${actionsHTML}
+                            </div>
+                        `;
+                    }
+
+                    w.innerHTML = `
+                        <div class="model-bubble-wrapper structured p-4 shadow-xl w-fit">
+                            <div class="flex flex-row items-start">
+                                <div class="flex flex-col">
+                                    ${content}
+                                    ${actionsBar}
+                                </div>
+                            </div>
+                        </div>
+                        ${timeSpan}
+                    `;
+
+                } else {
+                    content = `<div class="model-bubble text-gray-800">${m.text.replace(/\n/g, '<br>')}</div>`;
+                    w.innerHTML = `
+                        <div class="model-bubble-wrapper w-fit">
+                            ${content}
+                        </div>
+                        ${timeSpan}
+                    `;
+                }
+
+            } else {
+                return null;
+            }
+            return w;
+        }
+
+        function renderChat() {
+            if (!messageContainer) return;
+            const wasScrolledToBottom = isScrolledToBottom();
+            messageContainer.innerHTML = ''; 
+            chatHistory.forEach(m => {
+                const bubble = createMessageBubble(m);
+                if (bubble) {
+                    messageContainer.appendChild(bubble);
+                }
+            });
+            if (wasScrolledToBottom) {
+                scrollToBottom();
+            }
+            updateUIByLanguage();
+        }
+
+        function updateUIByLanguage() {
+            const strings = UI_STRINGS[currentLanguage];
+            if (document.getElementById('chat-title')) document.getElementById('chat-title').textContent = strings.header;
+            if (inputElement) inputElement.placeholder = isSPSMode ? strings.searchPlaceholder : strings.placeholder;
+            if (document.getElementById('categories-menu-chip')) document.getElementById('categories-menu-chip').innerHTML = strings.categories;
+            if (document.getElementById('language-menu-chip')) document.getElementById('language-menu-chip').innerHTML = strings.language;
+            if (document.getElementById('clear-history-chip')) document.getElementById('clear-history-chip').innerHTML = "🗑️ Limpiar"; 
+            if (toggleButton) toggleText.innerHTML = isSPSMode ? strings.spsMode : strings.chatMode;
+            if (sendButton) document.getElementById('go-text').textContent = strings.goButton;
+            if (infoChip) {
+                infoChip.textContent = strings.info;
+                infoChip.setAttribute('data-query', currentLanguage === 'es' ? "Información general sobre Nuevo Progreso." : "General information about Nuevo Progreso.");
+                infoChip.setAttribute('data-query-en', currentLanguage === 'en' ? "General information about Nuevo Progreso." : "Información general sobre Nuevo Progreso.");
+            }
+            
+            if (languageChipsGroup) {
+                languageChipsGroup.querySelectorAll('.language-chip').forEach(chip => {
+                    if (chip.getAttribute('data-language') === currentLanguage) {
+                        chip.style.fontWeight = 'bold';
+                        chip.style.border = '2px solid #2563eb';
+                    } else {
+                        chip.style.fontWeight = 'normal';
+                        chip.style.border = '1px solid #e5e7eb';
+                    }
+                });
+            }
+
+            const categoryLabels = [strings.chipHealth, strings.chipShopping, strings.chipEntertainment, strings.chipDental];
+            categoryChips.forEach((chip, index) => {
+                chip.textContent = categoryLabels[index];
+            });
+
+        }
+
+        function changeLanguage(lang) {
+            currentLanguage = lang;
+            localStorage.setItem('language', lang);
+            updateUIByLanguage();
+            hideChipGroup(languageChipsGroup, languageChips);
+            languageMenuVisible = false;
+            alertUser('Idioma cambiado a ' + (lang === 'es' ? 'Español' : 'English') + '.', 'i', 'news');
+        }
+
+        function handlePlaceSelected(place) {
+            const placeName = place.name;
+            const placeId = place.place_id;
+            const address = place.formatted_address || '';
+            const userPromptInput = inputElement.value.trim();
+            
+            placeIdForDirectSearch = placeId; 
+            
+            const userHistoryText = userPromptInput;
+            chatHistory.push({ 
+                role: 'user', 
+                text: userHistoryText, 
+                timestamp: new Date(), 
+                isStructured: false 
+            });
+
+            handleSend(userPromptInput, true, placeId); 
+            
+            inputElement.value = '';
+            autocompleteChipsGroupContainer.classList.add('hidden');
+            autocompleteChipsGroupContainer.innerHTML = '';
+            
+            if (!isSPSMode) toggleSPSMode(); 
+        }
+
+        function handleAutocompleteInput() {
+            const query = inputElement.value;
+            autocompleteChipsGroupContainer.classList.add('hidden');
+            autocompleteChipsGroupContainer.innerHTML = ''; 
+
+            if (query.trim().length < 3) {
+                return;
+            }
+
+            if (isSPSMode && googleMapsLoaded) {
+                
+                if (!autocompleteService) {
+                    autocompleteService = new google.maps.places.AutocompleteService();
+                }
+
+                autocompleteService.getPlacePredictions({
+                    input: query,
+                    componentRestrictions: { country: 'mx' }, 
+                    types: ['establishment', 'geocode'] 
+                }, (predictions, status) => {
+                    if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+                        autocompleteChipsGroupContainer.classList.remove('hidden');
+                        predictions.slice(0, 5).forEach(prediction => {
+                            const chip = document.createElement('div');
+                            chip.className = 'autocomplete-chip';
+                            chip.textContent = prediction.description.replace(', Tamaulipas, México', '').replace(', México', '').trim();
+                            chip.setAttribute('data-place-id', prediction.place_id);
+                            
+                            chip.addEventListener('click', () => {
+                                vibrateDevice();
+                                handlePlaceSelected({
+                                    name: prediction.structured_formatting.main_text,
+                                    place_id: prediction.place_id,
+                                    formatted_address: prediction.description
+                                });
+                            });
+                            autocompleteChipsGroupContainer.appendChild(chip);
+                        });
+                        scrollToBottom();
+                    } else {
+                        autocompleteChipsGroupContainer.classList.add('hidden');
+                    }
+                });
+            } else if (!isSPSMode && query.startsWith('@')) {
+                const mentionQuery = query.substring(1).trim(); 
+                if (mentionQuery.length < 3) return;
+
+                if (!autocompleteService) {
+                    autocompleteService = new google.maps.places.AutocompleteService();
+                }
+
+                autocompleteService.getPlacePredictions({
+                    input: mentionQuery,
+                    componentRestrictions: { country: 'mx' }, 
+                    types: ['establishment']
+                }, (predictions, status) => {
+                    if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+                        autocompleteChipsGroupContainer.classList.remove('hidden');
+                        predictions.slice(0, 5).forEach(prediction => {
+                            const chip = document.createElement('div');
+                            chip.className = 'autocomplete-chip';
+                            chip.textContent = '@' + prediction.structured_formatting.main_text;
+                            chip.setAttribute('data-place-id', prediction.place_id);
+                            
+                            chip.addEventListener('click', () => {
+                                vibrateDevice();
+                                isMentionMode = true;
+                                currentMentionPlace = {
+                                    placeId: prediction.place_id,
+                                    textName: prediction.structured_formatting.main_text,
+                                    query: prediction.description
+                                };
+                                inputElement.value = `@${currentMentionPlace.textName} `;
+                                inputElement.placeholder = UI_STRINGS[currentLanguage].mentionPlaceholder(currentMentionPlace.textName);
+                                autocompleteChipsGroupContainer.classList.add('hidden');
+                                inputElement.focus(); 
+                            });
+                            autocompleteChipsGroupContainer.appendChild(chip);
+                        });
+                        scrollToBottom();
+                    } else {
+                        autocompleteChipsGroupContainer.classList.add('hidden');
+                    }
+                });
+            }
+
+            if (!isSPSMode) {
+                sendButton.disabled = query.trim() === '';
+                if (query.trim().length > 0) {
+                    showUserTypingBubble();
+                } else {
+                    hideUserTypingBubble();
+                }
+            }
+        }
+
+        function renderDynamicChips(chips) {
+            if (!chips || chips.length === 0) {
+                dynamicChipsGroup.classList.add('hidden');
+                return;
+            }
+            quickActionFullList.classList.add('hidden');
+            hideChipGroup(categoryChipsGroup, categoryChips);
+            categoriesVisible = false;
+            hideChipGroup(languageChipsGroup, languageChips);
+            languageMenuVisible = false;
             resetMentionMode();
-            renderQuickReplies([]);
-            // Si el texto ya está completo, se envía en handleSend
+            dynamicChipsGroup.classList.remove('hidden');
+            chips.forEach((chipData, index) => {
+                const chip = document.createElement('div');
+                chip.className = 'dynamic-chip action-chip glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer';
+                chip.textContent = chipData.label;
+                chip.setAttribute('data-query', chipData.query);
+                chip.addEventListener('click', function() {
+                    vibrateDevice();
+                    const query = this.getAttribute('data-query');
+                    handleSend(query);
+                    dynamicChipsGroup.classList.add('hidden');
+                });
+                chip.style.opacity = '0';
+                chip.style.transform = 'translateY(20px)';
+                chip.style.transition = 'none';
+                void chip.offsetWidth;
+                setTimeout(() => {
+                    chip.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+                    chip.style.opacity = '1';
+                    chip.style.transform = 'translateY(0)';
+                }, index * 100);
+                dynamicChipsList.appendChild(chip);
+            });
+            scrollToBottom();
         }
-        
-        // Si se cambia de modo SPS
-        if (isSPSMode) {
-             // En modo SPS, se puede usar @ pero la lógica es diferente (búsqueda directa)
-             // No hacemos nada especial aquí, solo se envía.
-        }
-        
-        updateInputModeVisuals();
-    }
-    
-    // Manejar el envío de mensajes
-    async function handleSend() {
-        if (isLoading) return;
 
-        let messageText = chatInput.value.trim();
-        if (messageText === "") return;
+        async function getGeminiResponse(userPrompt, chatHistoryForAPI, placeId = null) {
+            const historyForAPI = chatHistoryForAPI.map(m => {
+                const textContent = m.isStructured && m.description ? m.description : m.text;
+                return { role: m.role, parts: [{ text: textContent }] };
+            });
+            try {
+                const response = await fetch(BACKEND_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt: userPrompt,
+                        history: historyForAPI,
+                        language: currentLanguage,
+                        placeId: placeId 
+                    })
+                });
 
-        // 1. Preparar el mensaje del usuario
-        let userMessage = { 
-            role: 'user', 
-            text: messageText, 
-            timestamp: new Date(),
-            isSPS: isSPSMode,
-            mentionPlaceName: null 
-        };
-        
-        // 2. Lógica para el modo Mención
-        if (currentMentionPlace.isMentioning && !isSPSMode) {
-            userMessage.mentionPlaceId = currentMentionPlace.placeId || 'PLACE_ID_SIMULADO';
-            userMessage.mentionPlaceName = currentMentionPlace.textName || messageText.substring(1).trim(); 
-            userMessage.text = messageText; 
-            
-            // Aseguramos que se envíe el comando especial para el backend
-            userMessage.text = `!mention ${userMessage.mentionPlaceName}: ${messageText.replace('@', '').trim()}`;
-        }
-        
-        chatHistory.push(userMessage);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
 
-        // 3. Limpiar y resetear el input
-        chatInput.value = '';
-        renderQuickReplies([]);
-        resetMentionMode();
-        updateInputModeVisuals();
+                const data = await response.json();
+                return data.response;
 
-        // 4. Mostrar el mensaje del usuario y el indicador de carga
-        renderChat();
-        showLoadingIndicator();
-        
-        // 5. SIMULACIÓN de la respuesta del modelo (API Call)
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        hideLoadingIndicator();
-        
-        // 6. Generar la respuesta simulada
-        let response = generateMockResponse(userMessage);
-
-        chatHistory.push(response);
-        renderChat();
-    }
-    
-    // Función de simulación de respuesta del backend
-    function generateMockResponse(userMessage) {
-        const t = translations[currentLanguage];
-        let responseText = "";
-        let isStructured = false;
-        let content = null;
-        let placeName = null;
-        
-        const textLower = userMessage.text.toLowerCase();
-
-        // Simulación de respuesta estructurada (Ficha de Lugar)
-        if (userMessage.isSPS || textLower.includes('parque la loma')) {
-            responseText = t.LOADING; // El texto es irrelevante si es estructurado, pero debe existir
-            isStructured = true;
-            placeName = "Parque La Loma";
-            content = {
-                type: 'place',
-                name: placeName,
-                address: 'Calle Juárez s/n, Progreso, Tamaulipas.',
-                rating: 4.5,
-                ratingCount: 128,
-                image: 'https://via.placeholder.com/400x150?text=Imagen+Parque+La+Loma',
-                directionsUrl: 'https://maps.google.com/...'
-            };
-            
-        } 
-        // Simulación de respuesta conversacional con token de mención
-        else if (userMessage.mentionPlaceName) {
-            placeName = userMessage.mentionPlaceName;
-             responseText = `¡Excelente elección! La información sobre [[PLACE_MENTION]] ya está disponible. ¿Te gustaría saber sobre su horario o su menú?`;
-        }
-        // Simulación de respuesta normal
-        else {
-            responseText = t.LOADING;
-            if (textLower.includes(t.CATEGORIES.toLowerCase()) || textLower.includes('menu') || textLower.includes('chips')) {
-                 responseText = "¿Qué tipo de lugar te gustaría encontrar? ¡Explora nuestras categorías!";
-            } else if (textLower.includes(t.LANGUAGE.toLowerCase()) || textLower.includes('idioma')) {
-                 responseText = "Puedes cambiar el idioma usando el icono del globo terráqueo en la esquina superior derecha o pulsando el chip de Idioma abajo.";
-            } else {
-                 responseText = "Parece que estamos en modo conversacional. ¿En qué te puedo ayudar hoy? ¿Buscas un lugar en específico o necesitas información general?";
-                 renderQuickReplies([t.CATEGORIES, t.LANGUAGE, t.INFO]);
+            } catch (error) {
+                console.error("Error al obtener respuesta de Gemini:", error);
+                alertUser('Error de conexión con el servidor. Por favor, inténtalo de nuevo.', 'error');
+                return "Lo siento, hubo un problema al procesar tu solicitud. Por favor, inténtalo de nuevo.";
             }
         }
-        
-        return { 
-            role: 'model', 
-            text: responseText, 
-            timestamp: new Date(), 
-            isStructured: isStructured, 
-            content: content,
-            placeName: placeName // Solo para usarlo en la ficha si aplica
-        };
-    }
-    
-    // ====================================================================
-    // 7. INICIALIZACIÓN
-    // ====================================================================
 
-    // Inicialización al cargar la página
-    window.initChatUI = () => {
-        // Eventos de Input
-        chatInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
+        async function handleSend(userPromptInput = null, isSPSorDirect = false, placeIdForDirectSearch = null) {
+            vibrateDevice();
+            let userPrompt = userPromptInput || inputElement.value.trim();
+            if (userPrompt === '' && !isSPSorDirect) return;
+            
+            let placeIdForAPI = placeIdForDirectSearch; 
+            if (currentMentionPlace && !isSPSorDirect) {
+                placeIdForAPI = currentMentionPlace.placeId;
+                const mentionText = '@' + currentMentionPlace.textName;
+                const regex = new RegExp(mentionText.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'i');
+                userPrompt = userPrompt.replace(regex, MENTION_TOKEN);
+                resetMentionMode();
+            }
+            hideChipGroup(categoryChipsGroup, categoryChips);
+            categoriesVisible = false;
+            hideChipGroup(languageChipsGroup, languageChips);
+            languageMenuVisible = false;
+            quickActionFullList.classList.add('hidden');
+            dynamicChipsGroup.classList.add('hidden');
+            autocompleteChipsGroupContainer.classList.add('hidden');
+            autocompleteChipsGroupContainer.innerHTML = '';
+            showLoadingIndicator(); 
+            if (!isSPSorDirect) {
+                let userHistoryText = userPromptInput || inputElement.value.trim();
+                if (placeIdForAPI && !isSPSorDirect) {
+                    userHistoryText = inputElement.value.trim();
+                }
+                chatHistory.push({ role: 'user', text: userHistoryText, timestamp: new Date() });
+            }
+            if (typeof renderChat === 'function') renderChat();
+            inputElement.value = '';
+            sendButton.disabled = true;
+
+            const modelResponseText = await getGeminiResponse(userPrompt, chatHistory, placeIdForAPI);
+            hideLoadingIndicator(); 
+            
+            let finalMessage = { 
+                role: 'model', 
+                text: modelResponseText, 
+                timestamp: new Date(), 
+                isStructured: false 
+            };
+            let dynamicChipsData = null;
+            let totalCount = 0;
+            let apiQuery = null;
+
+            try {
+                const jsonStart = modelResponseText.indexOf('{');
+                const jsonEnd = modelResponseText.lastIndexOf('}');
+                if (jsonStart !== -1 && jsonEnd > jsonStart) {
+                    const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
+                    const parsedJson = JSON.parse(jsonString);
+
+                    let fichasParaMostrar = []; 
+                    let conversationText = modelResponseText.replace(jsonString, '').trim(); 
+
+                    if (parsedJson.isMultiStructured === true && Array.isArray(parsedJson.response)) {
+                        fichasParaMostrar = parsedJson.response;
+                        if (parsedJson.conversationText) conversationText = parsedJson.conversationText;
+                    } 
+                    else if (parsedJson.isStructured === true) {
+                        fichasParaMostrar = [parsedJson];
+                    } 
+                    else if (parsedJson.isLocalRecommendation === true) {
+                        totalCount = parsedJson.totalCount || 0;
+                        apiQuery = parsedJson.apiQueryForChip || null;
+                        finalMessage.text = conversationText;
+                        if (finalMessage.text.length < 5) finalMessage.text = modelResponseText;
+                    }
+                    else if (parsedJson.isDynamicChips === true) {
+                        dynamicChipsData = parsedJson.chips;
+                        finalMessage.text = conversationText;
+                        if (finalMessage.text.length < 5) finalMessage.text = modelResponseText;
+                    }
+
+                    let shouldAddMenuKey = SUBCATEGORIES_MAP[userPrompt]; 
+
+                    if (fichasParaMostrar.length > 0) {
+                        if (conversationText.length > 0) {
+                            chatHistory.push({ 
+                                role: 'model', 
+                                text: conversationText, 
+                                timestamp: new Date(), 
+                                isStructured: false 
+                            });
+                        }
+
+                        fichasParaMostrar.forEach(ficha => {
+                            if (shouldAddMenuKey && ficha.type === 'category') {
+                                ficha.menuKey = shouldAddMenuKey;
+                            }
+                            chatHistory.push({ 
+                                role: 'model', 
+                                text: ficha.description || '', 
+                                timestamp: new Date(), 
+                                isStructured: true,
+                                ...ficha
+                            });
+                            
+                            if (fichasParaMostrar.indexOf(ficha) === 0) {
+                                const isPlace = ficha.type === 'place';
+                                const entityName = isPlace ? (ficha.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) : (ficha.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
+                                const alertText = isPlace ? UI_STRINGS[currentLanguage].alertStructured(entityName) : UI_STRINGS[currentLanguage].alertCategory(entityName);
+                                if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
+                            }
+                        });
+                        saveHistory();
+                        if (typeof renderChat === 'function') renderChat();
+                        return; 
+                    }
+                }
+            } catch (e) {
+                console.error("Error al parsear JSON estructurado, de chip o array:", e);
+                finalMessage.text = modelResponseText;
+            }
+            chatHistory.push(finalMessage); 
+            lastTotalCount = 0;
+            lastApiQuery = null;
+            if (dynamicChipsData && dynamicChipsData.length > 0) {
+                renderDynamicChips(dynamicChipsData);
+                quickActionFullList.classList.add('hidden');
+            } else if (finalMessage.isStructured) {
+                quickActionFullList.classList.add('hidden');
+            } else {
+                quickActionFullList.classList.remove('hidden');
+            }
+            saveHistory();
+            if (typeof renderChat === 'function') renderChat();
+        }
+
+        if (sendButton) sendButton.addEventListener('click', () => {
+            if (!isSPSMode) handleSend();
+        });
+
+        if (inputElement) inputElement.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !isSPSMode) {
                 handleSend();
             }
         });
-        chatInput.addEventListener('input', handleInput);
 
-        // Inicializar
-        applyTranslations(); 
-        
-        // Inicializa el modo Chat y asegura que el icono correcto se muestre
-        isSPSMode = true; 
-        toggleSPSMode(); 
-        hideLoadingIndicator(); 
-        
-        // Resetear el modo Mención
-        resetMentionMode();
+        if (toggleButton) toggleButton.addEventListener('click', toggleSPSMode);
 
-        // 6. Mensaje de bienvenida inicial (solo si el historial está vacío)
-        if (chatHistory.length === 0) {
-             const welcomeMessage = currentLanguage === 'es'
-                ? "¡Hola! Soy tu guía turístico de confianza, listo para acompañarte en cada paso. Activa el chip Modo Chat 💬 para conversar normalmente o tócalo para usar la potente Búsqueda Geográfica Directa (SPS) ⚡️ y encontrar lo que buscas al instante."
-                : "Hi! I am your trusted tour guide, ready to accompany you at every step. Activate the Chat Mode chip 💬 to chat normally or touch it to use the powerful Direct Geographic Search (SPS) ⚡️ and find what you are looking for instantly.";
-             
-             chatHistory.push({ role: 'model', text: welcomeMessage, timestamp: new Date(), isStructured: false });
-             renderChat();
+        if (inputElement) {
+            inputElement.addEventListener('focus', handleInputFocus);
+            inputElement.addEventListener('input', function() {
+                if (!isSPSMode) {
+                    sendButton.disabled = this.value.trim() === '';
+                    if (this.value.trim().length > 0) {
+                        showUserTypingBubble();
+                    } else {
+                        hideUserTypingBubble();
+                    }
+                } else {
+                    sendButton.disabled = true; 
+                    handleAutocompleteInput();
+                }
+            });
         }
-    };
 
-    document.addEventListener('DOMContentLoaded', () => {
-        // Fallback si Google Maps no carga (para desarrollo local sin clave)
-        if (typeof window.google === 'undefined' || typeof window.google.maps === 'undefined') {
-            console.warn("Advertencia: Google Maps API no cargada. Inicializando UI en modo básico.");
-            window.initChatUI();
-        }
-    });
-    </script>
+        if (btnClearTop) btnClearTop.addEventListener('click', clearChatHistory);
+
+        btnNotifications.addEventListener('click', () => {
+            vibrateDevice();
+            notificationModal.classList.add('show');
+            infoCardPanel.style.display = 'flex'; 
+        });
+
+        closeModalBtn.addEventListener('click', () => {
+            vibrateDevice();
+            notificationModal.classList.remove('show');
+            infoCardPanel.style.display = 'none'; 
+            
+            notificationPreferences.news = toggleNews.checked;
+            notificationPreferences.reminders = toggleReminders.checked;
+            saveNotificationPreferences();
+        });
+
+        const actionBubbles = [messageContainer, dynamicChipsList, autocompleteChipsGroupContainer];
+        actionBubbles.forEach(container => {
+            container.addEventListener('click', function(e) {
+                const target = e.target.closest('.action-chip, .menu-action-chip, .category-chip, .language-chip');
+                if (!target) return;
+                
+                vibrateDevice();
+
+                const action = target.getAttribute('data-action');
+                const query = target.getAttribute('data-query');
+                const language = target.getAttribute('data-language');
+                const mapUrl = target.getAttribute('data-map-url');
+                const gmapsUrl = target.getAttribute('data-gmaps-url');
+                const phone = target.getAttribute('data-phone');
+                const reviewUrl = target.getAttribute('data-review-url');
+                const websiteUrl = target.getAttribute('data-website-url');
+                
+                if (language) {
+                    changeLanguage(language);
+                    return;
+                }
+
+                if (action === 'MAP' && mapUrl) {
+                    window.open(mapUrl, '_blank');
+                    return;
+                }
+                if (action === 'SEARCH' && gmapsUrl) {
+                    window.open(gmapsUrl, '_blank');
+                    return;
+                }
+                if (action === 'REVIEW' && reviewUrl) {
+                    window.open(reviewUrl, '_blank');
+                    return;
+                }
+                if (action === 'WEBSITE' && websiteUrl) {
+                    window.open(websiteUrl, '_blank');
+                    return;
+                }
+                if (action === 'PHONE' && phone) {
+                    window.location.href = `tel:${phone}`;
+                    return;
+                }
+
+                if (action === 'INFO') {
+                    const infoQuery = currentLanguage === 'es' ? "Información general sobre Nuevo Progreso." : "General information about Nuevo Progreso.";
+                    handleSend(infoQuery);
+                    dynamicChipsGroup.classList.add('hidden');
+                    return;
+                }
+
+                if (action) {
+                    handleMenuAction(action, query);
+                } else if (query) {
+                    handleSend(query);
+                    dynamicChipsGroup.classList.add('hidden');
+                }
+            });
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && notificationModal.classList.contains('show')) {
+                closeModalBtn.click(); 
+            }
+        });
+
+        window.initChatUI = function() {
+            googleMapsLoaded = typeof window.google !== 'undefined' && typeof window.google.maps !== 'undefined';
+
+            const savedLang = localStorage.getItem('language');
+            if (savedLang) {
+                currentLanguage = savedLang;
+            }
+            
+            loadHistory();
+            loadNotificationPreferences();
+            updateUIByLanguage();
+            
+            isSPSMode = false;
+            toggleSPSMode(); 
+            hideLoadingIndicator(); 
+            
+            resetMentionMode();
+
+            if (chatHistory.length === 0) {
+                 const welcomeMessage = currentLanguage === 'es'
+                    ? "¡Hola! Soy tu guía turístico de confianza, listo para acompañarte en cada paso. Activa el chip Modo Chat 💬 para conversar normalmente o tócalo para usar la potente Búsqueda Geográfica Directa (SPS) ⚡️ y encontrar lo que buscas al instante."
+                    : "Hi! I am your trusted tour guide, ready to accompany you at every step. Activate the Chat Mode chip 💬 to chat normally or touch it to use the powerful Direct Geographic Search (SPS) ⚡️ and find what you are looking for instantly.";
+                 
+                 chatHistory.push({ role: 'model', text: welcomeMessage, timestamp: new Date(), isStructured: false });
+                 renderChat();
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof window.google === 'undefined' || typeof window.google.maps === 'undefined') {
+                console.warn("Advertencia: Google Maps API no cargada. Inicializando UI en modo básico.");
+                window.initChatUI();
+            }
+        });
+        </script>
 </body>
 </html>
