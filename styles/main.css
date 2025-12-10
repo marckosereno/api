@@ -1,339 +1,107 @@
 /*
  * Archivo: styles/main.css
- * Contiene todos los estilos personalizados (CSS puro) para el diseño Glassmorphism,
- * las burbujas de chat, y la optimización móvil.
+ * Contiene estilos base para la interfaz de chat.
  */
 
 /* --- Estilos de Fuente y Base --- */
 html, body { 
-    /* Las fuentes se cargan en el HTML, solo se definen aquí */
-    font-family:FH Oscar Test Medium; 
+    font-family: 'Spline Sans Medium', 'FH Oscar Test Medium', sans-serif; 
     height: 100%; 
     margin: 0; 
     padding: 0; 
-    /* Fondo sutil para que el Glassmorphim funcione */
-    background: linear-gradient(179deg, rgb(224 235 251 / 4%) 0%, #eff6ff 100% 60%);
 }
 .chat-window { 
     height: 100%; 
-    width: 100vw; 
     display: flex; 
     flex-direction: column; 
-    background-color: transparent; 
     overflow: hidden;
-    font-weight:200;
-    line-height:0.5cm;
-    font-family:FH Oscar Test Medium;
 }
 
-/* --- Burbujas de Chat y Marcas de Tiempo --- */
-.user-bubble { border-radius: 18px 18px 0 18px; max-width: 90% }
-.model-bubble { border-radius: 18px 18px 18px 0; max-width: 90%; padding-left:8px; backgroud-color: transparent;font-size:16px; line-height:16px;}
+/* Ocultar la barra de scroll de chips para navegadores webkit */
+.chip-group-scroll {
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+}
+.chip-group-scroll::-webkit-scrollbar {
+    display: none;
+}
+.chip-group-scroll {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+}
 
+/* --- Burbujas de Chat y Estilos --- */
+.user-bubble { 
+    border-radius: 18px 18px 0 18px; 
+    max-width: 80%;
+    word-wrap: break-word;
+}
 .model-bubble-wrapper {
-    background: linear-gradient(127deg, #ffffff85, #fff); 
-    color: #373737; 
+    background-color: #f3f4f6;
     border-radius: 18px 18px 18px 0;
-    padding: 12px; 
-    box-sha: 0 4px 6px rgba(0, 0, 0, 0.6);
-    max-width: 91%;
-    width: fit-content;
+    max-width: 80%;
+    word-wrap: break-word;
+    padding: 12px;
 }
-.timestamp {
-    font-size: 0.7rem; 
-    color: #9ca3af; 
-    margin-top: 2px;
+.model-bubble {
+    color: #1f2937;
+    font-size: 16px;
+    line-height: 1.4;
 }
-.user-timestamp-container { align-self: flex-end; margin-right: 4px; }
-.model-timestamp-container { align-self: flex-start; margin-left: 4px; }
-
-
-/* --- Estilos de Botones Glassmorphism y Acciones --- */
-.action-btn { 
-    white-space: nowrap;
-    border-radius: 23px;
-    font-weight: 500;
-    background: rgba(255, 255, 255, 0.1); 
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    backdrop-filter: blur(8px); 
-    -webkit-backdrop-filter: blur(8px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
-    color: #FFFFFF !important;
-    transition: all 0.3s ease; 
-}
-.action-bar-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 10px; padding-bottom: 5px }
-.action-bar-container .action-btn.bg-green-500 { background-color: #000 !important; backdrop-filter: none; -webkit-backdrop-filter: none; border: none; }
-.action-bar-container .action-btn.bg-blue-500 { background-color: #3B82F6 !important; backdrop-filter: none; -webkit-backdrop-filter: none; border: none; }
-.action-bar-container .action-btn.bg-yellow-400 { background-color:!important; backdrop-filter: none; -webkit-backdrop-filter: none; border: none; color: #1F2937 !important; }
-.action-bar-container .action-btn.bg-gray-600 { background: rgba(75, 85, 99, 0.75) !important; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.3); color: #FFFFFF !important; }
-
-/* Chip Glassmorphism Azul/Blanco (Menú de Acción Principal/Secundario) */
-.glass-chip {
-    background: linear-gradient(167deg, #93c5fd 0%, #3e6bff 90%) !important; 
-    backdrop-filter: blur(8px); 
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.8) !important; 
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -1px 0 rgba(0, 0, 0, 0.1);
-    color: #fefefe !important; 
-    transition: all 0.2s ease-in-out;
-    white-space: nowrap;
-    display: inline-flex;
-    align-items: center;
-    border-radius: 9999px; 
-    padding: 8px 12px;
-}
-.blue-glass-chip {
-    background: linear-gradient(90deg, rgb(215 236 255 / 50%) 0%, rgb(230 245 255 / 80%) 90%) !important;
-    backdrop-filter: blur(8px); 
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(130, 180, 255, 0.8) !important; 
-    color: #1e40af !important; 
-    font-weight: 600; 
-    white-space: nowrap;
-    display: inline-flex;
-    align-items: center;
-    border-radius: 9999px; 
-    padding: 8px 12px;
-    transition: all 0.2s ease-in-out;
-}
-.blue-glass-chip:active {
-    background: rgb(180 210 255 / 90%) !important;
-    box-shadow: none !important; 
-}
-
-/* --- Barra de Input y Diseño Inferior (CRÍTICO) --- */
-.bottom-action-area {
-    border-top: none;
-    box-shadow: none; 
-    z-index: 10;
-    padding-bottom: 0; 
-}
-#bottom-bar-search-wrapper {
-    padding-top:22px;  
-    border-radius: 20px 20px 0 0; 
-    background-color: white !important;
-    box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05), 0 -2px 4px -2px rgba(0, 0, 0, 0.04);
-    z-index: 10;
-}
-.bottom-bar-wrapper {
-    display: flex;
-    flex-direction: column; 
-    align-items: center; 
-    flex-shrink: 0;
-    width: 100%;
-    padding: 0 1rem 0.5rem 1rem; 
-}
-#input-area-container {
-    border-top: 1px solid #e5e7eb; 
-    display: flex;
-    align-items: center;
-    padding: 4px; 
-    width: 100%;
-}
-#bottom-left-actions {
-    display: flex;
-    align-items: center;
-    flex-shrink: 0;
-    padding: 4px;
-}
-
-/* Estilo del Input (Glassmorphism + Transparencia) */
-.map-search-bar {
-    background: rgba(255, 255, 255, 0.4); 
-    backdrop-filter: blur(12px); 
-    -webkit-backdrop-filter: blur(12px); 
-    border-radius: 20px;
-    box: 1px 2px 2px 2px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.06); 
-    border: 1px solid rgba(255, 255, 255, 0.6); 
-    display: block; 
-    flex-grow: 1; 
-    margin-left: 8px; 
-    margin-right: 8px; 
-    padding: 0; 
-}
-#user-input {
-    width: 100%; 
-    padding: 0.75rem 1rem; 
-    color: #1f2937; 
-    font-size: 1.125rem;
-    background: transparent !important;
-    border: none;
-    outline: none !important;
-    box-shadow: none !important;
-    height:44px;
-}
-#user-input.sps-mode { 
-    border-color: #f59e0b; 
-    background-color: #fffef2; 
-    font-weight: bold;
-    color: #2563eb; 
-}
-
-/* Botón de Enviar */
-#send-message-button {
-    background-color: #3b82f6 !important; 
-    color: white;
-    border-radius: 9999px; 
-    width: auto; 
-    height: auto;
-    padding: 10px 14px; 
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    margin-left: 8px; 
-    transition: background-color 0.2s, transform 0.1s;
-}
-#send-message-button svg {
-    fill: currentColor; 
-    height: 18px; 
-    width: 18px;
-    transform: none; 
-    margin-right: 6px; 
-}
-#go-text { display: inline !important; font-weight: 600; }
-#send-message-button:disabled { background-color: #d1d5db !important; cursor: not-allowed; color: #6b7280; }
-
-/* Toggle de Modo SPS */
-#toggle-mode-button {
-    background: linear-gradient(90deg, rgb(215 236 255 / 50%) 0%, rgb(230 245 255 / 80%) 90%) !important;
-    backdrop-filter: blur(8px); 
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(130, 180, 255, 0.8) !important; 
-    color: #1e40af !important; 
-    font-weight: 600; 
-    white-space: nowrap;
-    display: inline-flex;
-    align-items: center;
-    border-radius: 9999px; 
-    padding: 8px 12px;
-    height: auto; 
-    width: auto;
-    margin-left: 0; 
-    margin-right: 0; 
-    flex-shrink: 0;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-    transition: all 0.2s ease-in-out;
-}
-#toggle-mode-button.active {
-    background: linear-gradient(154deg, #fff 0%, #eff6ff 90%) !important; 
-    border: 1px solid rgba(255, 165, 0, 0.8) !important; 
-    color: #1f2937 !important; 
-}
-#toggle-icon { display: none !important; }
-
-/* --- Chips de Autocompletado --- */
-.autocomplete-chips-group-container {
-    width: 100%; 
-    overflow-x: auto; 
-    -webkit-overflow-scrolling: touch; 
-    padding: 0.5rem 1rem; 
-    display: flex;
-    flex-wrap: nowrap; 
-    align-items: center;
-    padding-top:0px;
-}
-.autocomplete-chip {
-    background: rgba(255, 255, 255, 0.7); 
-    border: 1px solid rgba(0, 123, 255, 0.5); 
-    color: #007bff; 
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(5px); 
-    -webkit-backdrop-filter: blur(5px);
-    padding: 6px 12px;
-    margin-right: 8px;
-    border-radius: 20px;
-    font-size: 0.875rem;
-    cursor: pointer;
-    white-space: nowrap; 
-    flex-shrink: 0;
-}
-.attribution-chip {
-    background-color: #f0f0f0;
-    color: #666;
-    font-size: 0.75rem;
-    padding: 4px 8px;
-    border-radius: 15px;
-    display: inline-flex;
-    align-items: center;
-    margin-right: 8px;
-    flex-shrink: 0;
-    white-space: nowrap;
+.user-bubble.bg-black {
+    background-color: #1f2937 !important;
 }
 
 /* --- Animación de Escritura (Typing) --- */
-#user-typing-bubble, #model-typing-bubble {
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.2s ease-out, visibility 0.2s ease-out, height 0.2s ease-out, margin-bottom 0.2s ease-out;
-    margin-bottom: 0 !important;
-    height: 0;
-    overflow: hidden;
+.typing-dots { 
+    display: flex; 
+    align-items: center; 
+    height: 18px; 
 }
-#user-typing-bubble.show, #model-typing-bubble.show {
-    opacity: 1;
-    visibility: visible;
-    height: auto; 
-    padding-bottom:40px; 
-    margin-bottom: 18px !important;
-}
-.typing-dots { display: flex; align-items: center; height:8px; }
 .typing-dots .dot {
     width: 8px;
-    height: 6px;
+    height: 8px;
     border-radius: 50%;
+    background-color: #6b7280;
     margin: 0 2px;
     animation: bounce 1.4s infinite ease-in-out both;
 }
-#model-typing-bubble .dot { background-color: black; }
-#user-typing-bubble .dot { background-color: white; }
+.typing-dots .dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-dots .dot:nth-child(2) { animation-delay: -0.16s; }
+.typing-dots .dot:nth-child(3) { animation-delay: 0s; }
+
 @keyframes bounce {
     0%, 80%, 100% { transform: scale(0); }
     40% { transform: scale(1); }
 }
 
-/* --- Foto Apilada (Stacked Photo) --- */
-.stacked-photo {
-    width: 260px; 
-    max-width: 120px; 
-    height: auto; 
-    object-fit: cover; 
-    border-radius: 12px; 
-    position: relative;
-    box-shadow: 
-        6px -4px 0 0 rgba(0, 0, 0, 0.15),
-        3px -5px 0 0 rgba(0, 0, 0, 0.08);
-    transform: rotate(356deg); 
-    transition: transform 0.15s ease-out;
-    margin-bottom: 12px; 
-    border: 4px solid white; 
-    margin-left: 10px;
-    margin-right: 32px; 
-}
-.stacked-photo.clickable-effect:active {
-    transform: scale(0.98) translateY(2px) rotate(356deg); 
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); 
-    cursor: grabbing;
-}
-/* Media Query para móviles */
-@media (max-width: 640px) {
-  .stacked-photo {
-    transform: rotate(358deg) !important;
-    box-shadow: none;
-    width: 260px;
-    height: 150px;
-    max-width: 80vw;
-    margin-right: 0;
-    margin-left:2px;
-    border: 2px solid #333;
-  }
+/* Estilos de la barra inferior y fijación */
+#bottom-bar-wrapper {
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 10;
 }
 
-/* --- Ocultar el 'ring' de focus en todos los elementos interactivos --- */
-* { -webkit-tap-highlight-color: transparent !important; }
-.action-chip, .category-chip, .language-chip, .map-input, .dynamic-chip, #toggle-mode-button, .autocomplete-chip, .attribution-chip { 
-    outline: none !important;
-    box-shadow: none !important;
-    --tw-ring-color: transparent !important;
+/* Asegurar que el contenedor de mensajes respete el espacio del header y el footer */
+#message-container {
+    padding-top: 5rem; /* Espacio para el header fijo */
+    padding-bottom: 7rem; /* Espacio para la barra de entrada fija */
 }
-.pac-container { display: none !important; visibility: hidden !important; }
+
+/* Estilo para los chips de categoría */
+.category-chip {
+    flex-shrink: 0; /* Evita que los chips se encojan */
+    transition: background-color 0.2s;
+}
+.category-chip:active {
+    opacity: 0.8;
+}
+
+/* Estilo de la imagen dentro de la burbuja (si tu JS la inyecta) */
+.model-bubble-wrapper img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    display: block;
+}
