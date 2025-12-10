@@ -189,6 +189,8 @@ height:44px;
         /* AJUSTE CRÍTICO PARA EL NUEVO HEADER FLOTANTE */
         #message-container {
             padding-top: 6rem; 
+            /* 🛑 CAMBIO CRÍTICO: Espacio extra en la parte inferior para la barra FIJA. */
+            padding-bottom: 250px; /* Asegura que no se superpongan los últimos mensajes */
         }
         #btn-clear-top {
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
@@ -447,23 +449,30 @@ height:44px;
             padding-bottom: 0; 
         }
 
-        /* 🛑 NUEVO: Wrapper para aplicar los bordes redondeados y el fondo flotante (white) */
+        /* 🛑 CAMBIO CRÍTICO: HACEMOS FIJO EL CONTENEDOR DE LA BARRA DE BÚSQUEDA */
         #bottom-bar-search-wrapper {
-          padding-top:22px;  
- border-radius: 20px 20px 0 0; /* Bordes superiores redondeados */
+             /* 🛑 CRÍTICO: Aplicamos la posición fija para que no se mueva con el scroll/teclado */
+             position: fixed;
+             bottom: 0;
+             width: 100%;
+             z-index: 50; /* Mismo z-index que el header flotante, pero más alto que el teclado virtual */
+             
+             padding-top:22px;  
+             border-radius: 20px 20px 0 0; /* Bordes superiores redondeados */
              background-color: white !important;
              /* 🛑 CRÍTICO: El sombreado simula que el container "flota" */
              box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05), 0 -2px 4px -2px rgba(0, 0, 0, 0.04);
-             z-index: 10;
         }
         
         /* 1. 🎨 FONDO PARA EL QUICK REPLIES CONTAINER (Adaptado para usar el fondo del padre) */
+        /* Nota: Estos chips ahora flotarán *por encima* de la barra de búsqueda si se activan */
         #quick-replies-container {
             border-top: none; /* El padre (bottom-action-area) ya tiene un borde superior */
             background: transparent; /* Fondo transparente para que use el del padre */
             padding: 0.5rem; 
             box-shadow: none; /* La sombra la maneja el padre */
-            z-index: 10;
+            z-index: 51; /* Ligeramente más alto para los chips de la barra fija */
+            position: relative; /* Necesario para que el z-index funcione en algunos contextos */
         }
 
 
@@ -723,7 +732,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         /* Usaremos la clase map-search-bar solo para el estilo del INPUT, pero el contenedor es input-area-container */
         
         .map-search-bar {
-            /* 🛑 La clase map-search-bar se reutiliza para el estilo del Input */
+            /* 🛑 La clase map-search-bar se reutiliza para el estilo del INPUT */
             /* Quitamos el flex/display:flex porque ahora es solo para el INPUT */
             display: block; 
             flex-grow: 1; /* Ocupa el espacio restante */
@@ -926,7 +935,7 @@ padding-top:0px;
                 </div>
             </div>
             
-            <div id="bottom-bar-search-wrapper" class="w-full"> 
+            <div id="bottom-bar-search-wrapper"> 
                 <div class="bottom-bar-wrapper"> 
                     
                     <div id="map-search-bar" class="map-search-bar mb-2 w-full">
