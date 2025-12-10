@@ -686,8 +686,9 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         }
 
         #send-message-button:disabled {
-            background-color: #000 !important; /* Azul claro cuando está deshabilitado */
+            background-color: #d1d5db !important; /* Azul claro cuando está deshabilitado */
             cursor: not-allowed;
+            color: #6b7280;
         }
 
         /* 🛑 CRÍTICO: Ocultar el texto del botón (para que solo se vea el ícono) */
@@ -1036,6 +1037,14 @@ padding-top:0px;
     let lastTotalCount = 0; // Para guardar el conteo total de la última recomendación
     let lastApiQuery = null; // Para guardar el query de Places para el chip
 
+    // ----------------------------------------------------
+    // 🛑 VARIABLES GLOBALES PARA LA CARACTERÍSTICA MENTION (@)
+    // ----------------------------------------------------
+    let isMentionMode = false; // Bandera para saber si el usuario acaba de escribir '@'
+    let currentMentionPlace = null; // { placeId: string, textName: string, query: string }
+    const MENTION_TOKEN = "[[PLACE_MENTION]]"; // Token a enviar al backend
+    // ----------------------------------------------------
+
 
     // Referencias a Elementos del DOM
     const inputElement = document.getElementById('user-input');
@@ -1142,7 +1151,8 @@ padding-top:0px;
             btnWebsite: "Sitio Web/Redes 🌐", 
             // 🛑 NUEVO: Textos para el Action Chip de Modo
             spsMode: "Modo Pro ●Activado 🦾",
-            chatMode: "Modo Chat 💬" 
+            chatMode: "Modo Chat 💬",
+            mentionPlaceholder: (name) => `Conversando sobre ${name}...`
         },
         en: {
             header: "PROGRESO TOUR GUIDE",
@@ -1167,7 +1177,8 @@ padding-top:0px;
             btnWebsite: "Website/Social 🌐", 
             // 🛑 NUEVO: Textos para el Action Chip de Modo
             spsMode: "Pro Mode ●Active 🦾",
-            chatMode: "Chat Mode 💬"
+            chatMode: "Chat Mode 💬",
+            mentionPlaceholder: (name) => `Conversing about ${name}...`
         }
     };
 
@@ -1232,6 +1243,10 @@ padding-top:0px;
         
         // 🛑 NUEVO: Si está en modo SPS, volver a modo chat
         if (isSPSMode) toggleSPSMode();
+        
+        // 🛑 NUEVO: Resetear estado de Mención
+        resetMentionMode();
+        
         // Aseguramos que el placeholder se restablezca
         inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
     }
@@ -1376,6 +1391,19 @@ padding-top:0px;
         if (inputElement) inputElement.disabled = d;
         if (sendButton) sendButton.disabled = d;
     }
+    
+    // ----------------------------------------------------
+    // 🛑 NUEVA FUNCIÓN: Resetear el modo de Mención (@)
+    // ----------------------------------------------------
+    function resetMentionMode() {
+        isMentionMode = false;
+        currentMentionPlace = null;
+        if (!isSPSMode) {
+             inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
+        }
+        autocompleteChipsGroupContainer.classList.add('hidden');
+        autocompleteChipsGroupContainer.innerHTML = '';
+    }
 
     // --- Funciones de INTERFAZ CORE MODIFICADAS PARA EL PROBLEMA DEL TECLADO ---
 
@@ -1439,8 +1467,11 @@ padding-top:0px;
         hideModelTypingBubble(); 
         
         // Revertir el input a su estado normal (según el modo actual)
-        if (isSPSMode) { // 🛑 CAMBIO DE VARIABLE
+        if (isSPSMode) { 
             inputElement.placeholder = UI_STRINGS[currentLanguage].searchPlaceholder;
+        } else if (currentMentionPlace) {
+             // 🛑 NUEVO: Si estamos en modo Mención, restaurar el placeholder de Mención
+             inputElement.placeholder = UI_STRINGS[currentLanguage].mentionPlaceholder(currentMentionPlace.textName);
         } else {
             inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
         }
@@ -1472,7 +1503,7 @@ padding-top:0px;
         const inputValue = inputElement.value.trim();
         
         // Si el usuario empieza a escribir Y el bot no está respondiendo Y NO está en modo SPS
-        if (inputValue.length > 0 && !isBotTyping && !isSPSMode) { // 🛑 CAMBIO DE VARIABLE
+        if (inputValue.length > 0 && !isBotTyping && !isSPSMode) { 
             showUserTypingBubble();
         } else {
             hideUserTypingBubble();
@@ -1484,21 +1515,23 @@ padding-top:0px;
     /**
      * Alterna entre el modo Chat (normal) y el modo Búsqueda SPS (Places API).
      */
-    function toggleSPSMode() { // 🛑 CAMBIO DE NOMBRE DE FUNCIÓN
+    function toggleSPSMode() { 
         isSPSMode = !isSPSMode;
 
         if (isSPSMode) {
             // Activar Modo SPS (Búsqueda)
-            inputElement.classList.add('sps-mode'); // 🛑 CAMBIO DE CLASE
+            inputElement.classList.add('sps-mode'); 
             toggleButton.classList.add('active');
-            // 🛑 CRÍTICO: Actualizar texto del chip
             toggleText.innerHTML = UI_STRINGS[currentLanguage].spsMode; 
             inputElement.placeholder = UI_STRINGS[currentLanguage].searchPlaceholder;
             
-            // 🛑 CRÍTICO: El botón de enviar debe estar SIEMPRE DESHABILITADO en Modo SPS.
+            // CRÍTICO: El botón de enviar debe estar SIEMPRE DESHABILITADO en Modo SPS.
             sendButton.disabled = true; 
             
-            // 🛑 CRÍTICO: Añadir el listener de input para el AutocompleteService
+            // Desactivar Modo Mención si estaba activo
+            resetMentionMode();
+            
+            // Añadir el listener de input (manejará solo el autocompletado SPS)
             if (inputElement && !inputElement.hasAutocompleteListener) {
                  inputElement.addEventListener('input', handleAutocompleteInput);
                  inputElement.hasAutocompleteListener = true;
@@ -1507,39 +1540,58 @@ padding-top:0px;
 
         } else {
             // Activar Modo Chat (Normal)
-            inputElement.classList.remove('sps-mode'); // 🛑 CAMBIO DE CLASE
+            inputElement.classList.remove('sps-mode'); 
             toggleButton.classList.remove('active');
-            // 🛑 CRÍTICO: Actualizar texto del chip
             toggleText.innerHTML = UI_STRINGS[currentLanguage].chatMode; 
             inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
             
-            // Habilitar el botón de enviar solo si hay texto (aunque esté oculto, por si se usa ENTER)
+            // Habilitar el botón de enviar solo si hay texto 
             sendButton.disabled = inputElement.value.trim() === ''; 
             
             // Ocultar chips de autocompletado
             autocompleteChipsGroupContainer.classList.add('hidden');
             autocompleteChipsGroupContainer.innerHTML = '';
             
-            // 🛑 CORRECCIÓN: Remover el listener del autocompletado si existe
-            if (inputElement && inputElement.hasAutocompleteListener) {
-                 inputElement.removeEventListener('input', handleAutocompleteInput);
-                 inputElement.hasAutocompleteListener = false;
-            }
+            // 🛑 CRÍTICO: El listener DEBE QUEDARSE, pero su lógica se vuelve dual (SPS/Mention)
+            // No lo removemos para que la lógica de Mención lo use.
         }
         inputElement.value = '';
         inputElement.focus();
     }
     
-    // 🛑 NUEVA FUNCIÓN: Se dispara cuando el usuario teclea en modo SPS.
+    // 🛑 FUNCIÓN MODIFICADA: Ahora maneja la lógica dual de SPS y Mención (@).
     function handleAutocompleteInput(e) {
-        const input = e.target.value.trim();
+        const input = e.target.value;
+        const inputTrimmed = input.trim();
         
-        if (!isSPSMode || !autocompleteService) {
-            autocompleteChipsGroupContainer.classList.add('hidden');
-            return;
+        let query = inputTrimmed;
+        
+        // 1. Lógica de Detección de Modo Mención (@)
+        // Solo aplica si NO estamos en Modo SPS.
+        if (!isSPSMode) {
+            const mentionIndex = input.lastIndexOf('@');
+            
+            // Comprobación de activación de Mención: Si encuentra '@' Y no hay un lugar ya seleccionado
+            if (mentionIndex !== -1 && !currentMentionPlace) {
+                isMentionMode = true;
+                // La query de autocompletado es el texto después del '@'
+                query = input.substring(mentionIndex + 1).trim(); 
+            } else if (currentMentionPlace) {
+                // Si ya hay un lugar seleccionado, salimos de autocompletado, pero mantenemos el Modo Mención
+                autocompleteChipsGroupContainer.classList.add('hidden');
+                return;
+            } else {
+                // Si no hay '@' y no estamos en modo Mención, volvemos al modo normal de input
+                isMentionMode = false;
+                autocompleteChipsGroupContainer.classList.add('hidden');
+                return;
+            }
         }
+        
+        // 2. Lógica de Autocompletado (Común para SPS y Mención)
+        if (!autocompleteService) return;
 
-        if (input.length > 2) {
+        if (query.length > 2) {
             // Definir la zona de búsqueda (Progreso)
             const progressoBounds = new google.maps.LatLngBounds(
                 new google.maps.LatLng(26.0, -98.1), // SW
@@ -1547,7 +1599,7 @@ padding-top:0px;
             );
 
             autocompleteService.getPlacePredictions({ 
-                input: input,
+                input: query, // La query es el texto limpio (SPS) o el texto después de '@' (Mention)
                 bounds: progressoBounds,
                 strictBounds: true,
                 types: ['establishment', 'geocode'],
@@ -1555,7 +1607,7 @@ padding-top:0px;
             }, renderAutocompleteChips);
             
         } else {
-            // Limpiar si el modo no es 'search' o el input es muy corto
+            // Limpiar si la query es muy corta
             autocompleteChipsGroupContainer.classList.add('hidden');
             autocompleteChipsGroupContainer.innerHTML = '';
         }
@@ -1565,7 +1617,8 @@ padding-top:0px;
     function renderAutocompleteChips(predictions, status) {
         autocompleteChipsGroupContainer.innerHTML = '';
         
-        if (!isSPSMode || status !== google.maps.places.PlacesServiceStatus.OK || !predictions || predictions.length === 0) {
+        // Si no hay resultados o estamos en un estado de error
+        if (status !== google.maps.places.PlacesServiceStatus.OK || !predictions || predictions.length === 0) {
             autocompleteChipsGroupContainer.classList.add('hidden');
             return;
         }
@@ -1587,6 +1640,8 @@ padding-top:0px;
             chip.textContent = chipText;
             chip.dataset.placeId = prediction.place_id;
             chip.dataset.description = prediction.description; // Guardamos la descripción completa
+            
+            // 🛑 CRÍTICO: El handler de click es onPlaceSelected
             chip.onclick = () => onPlaceSelected({ 
                 name: chipText, // Usamos el texto visible del chip
                 place_id: prediction.place_id,
@@ -1614,34 +1669,66 @@ padding-top:0px;
     
     /**
      * CRÍTICO: Se dispara cuando se selecciona un chip de lugar.
+     * La lógica se bifurca para SPS o Mención (@).
      */
     function onPlaceSelected(prediction) {
-        if (!isSPSMode) return; // 🛑 CAMBIO DE VARIABLE
-        
-        const query = prediction.name;
         const placeId = prediction.place_id;
+        const placeName = prediction.name;
+        const placeDescription = prediction.description;
         
-        // 1. Mostrar la acción del usuario
-        chatHistory.push({ 
-            role: 'user', 
-            text: currentLanguage === 'es' 
-                ? `⚡️ Búsqueda SPS del lugar: **${prediction.description}**`
-                : `⚡️ SPS Search for place: **${prediction.description}**`,
-            timestamp: new Date() 
-        });
-        if (typeof renderChat === 'function') renderChat();
-        
-        // 2. Limpiar la interfaz de búsqueda
-        inputElement.value = '';
+        // 1. Limpiar el autocompletado visible
         autocompleteChipsGroupContainer.classList.add('hidden');
         autocompleteChipsGroupContainer.innerHTML = '';
-        
-        // 3. Disparar el envío al backend con el PLACE ID
-        handleSend(`Búsqueda directa del lugar ${query}`, placeId);
-        
-        // 4. Mantenemos el estado visual de SPS
-        toggleButton.disabled = true; 
-        showLoadingIndicator(); 
+
+        if (isSPSMode) { 
+            // 🛑 MODO SPS (BÚSQUEDA DIRECTA)
+            
+            // a. Mostrar la acción del usuario
+            chatHistory.push({ 
+                role: 'user', 
+                text: currentLanguage === 'es' 
+                    ? `⚡️ Búsqueda SPS del lugar: **${placeDescription}**`
+                    : `⚡️ SPS Search for place: **${placeDescription}**`,
+                timestamp: new Date() 
+            });
+            if (typeof renderChat === 'function') renderChat();
+            
+            // b. Limpiar la interfaz de búsqueda
+            inputElement.value = '';
+            
+            // c. Disparar el envío al backend con el PLACE ID
+            handleSend(`Búsqueda directa del lugar ${placeName}`, placeId);
+            
+            // d. Mantenemos el estado visual de SPS
+            toggleButton.disabled = true; 
+            showLoadingIndicator(); 
+            
+        } else if (isMentionMode) {
+            // 🛑 MODO MENCION (@)
+            
+            // a. Guardar el objeto del lugar
+            currentMentionPlace = { 
+                placeId: placeId, 
+                textName: placeName,
+                query: inputElement.value.substring(inputElement.value.lastIndexOf('@') + 1).trim()
+            };
+            
+            // b. Reemplazar el texto @query con el nombre del lugar para el usuario
+            const mentionIndex = inputElement.value.lastIndexOf('@');
+            if (mentionIndex !== -1) {
+                // Reemplazamos todo, desde el '@' hasta el final, con el nombre
+                inputElement.value = inputElement.value.substring(0, mentionIndex) + '@' + placeName;
+            }
+            
+            // c. Establecer el placeholder visual
+            inputElement.placeholder = UI_STRINGS[currentLanguage].mentionPlaceholder(placeName);
+            
+            // d. Volver a habilitar el botón de envío
+            sendButton.disabled = inputElement.value.trim() === '';
+            
+            // e. Desactivar la bandera de autocompletado, pero mantenemos currentMentionPlace
+            isMentionMode = false;
+        }
     }
 
     // --- Funciones de INTERACCIÓN (SIN CAMBIOS EN LÓGICA) ---
@@ -1687,7 +1774,14 @@ padding-top:0px;
         languageMenuVisible = false;
         
         // 🛑 CRÍTICO: Actualizar el placeholder y el texto del Action Chip
-        inputElement.placeholder = isSPSMode ? strings.searchPlaceholder : strings.placeholder;
+        if (isSPSMode) {
+             inputElement.placeholder = strings.searchPlaceholder;
+        } else if (currentMentionPlace) {
+             inputElement.placeholder = strings.mentionPlaceholder(currentMentionPlace.textName);
+        } else {
+             inputElement.placeholder = strings.placeholder;
+        }
+        
         toggleText.textContent = isSPSMode ? strings.spsMode : strings.chatMode; 
 
         document.getElementById('go-text').textContent = strings.goButton; 
@@ -1717,10 +1811,10 @@ padding-top:0px;
         // Siempre ocultar los botones de acción rápida
         quickActionFullList.classList.add('hidden');
         dynamicChipsGroup.classList.add('hidden'); // Ocultar chips dinámicos
-        // 🛑 NUEVO: Ocultar chips de autocompletado si no estamos en modo SPS
+        
+        // Ocultar chips de autocompletado y resetear mención si no estamos en modo SPS
         if (!isSPSMode) {
-             autocompleteChipsGroupContainer.classList.add('hidden');
-             autocompleteChipsGroupContainer.innerHTML = '';
+            resetMentionMode(); // 🛑 NUEVO
         }
        
         lastTotalCount = 0;
@@ -1764,7 +1858,7 @@ padding-top:0px;
             if (query) {
                 handleSend(query); 
                 if (categoriesVisible) { hideChipGroup(categoryChipsGroup, categoryChips); categoriesVisible = false; }
-                if (languageMenuVisible) { hideChipGroup(languageChipsGroup, languageChips); languageMenuVisible = false; }
+                if (languageMenuVisible) { hideChipGroup(languageChipsGroup, languageMenuVisible); languageMenuVisible = false; }
             }
         }
     }
@@ -2032,9 +2126,9 @@ padding-top:0px;
         categoriesVisible = false;
         hideChipGroup(languageChipsGroup, languageChips);
         languageMenuVisible = false;
-        // 🛑 NUEVO: Ocultar chips de autocompletado
-        autocompleteChipsGroupContainer.classList.add('hidden');
-        autocompleteChipsGroupContainer.innerHTML = '';
+        
+        // Ocultar chips de autocompletado y resetear mención
+        resetMentionMode();
 
 
         dynamicChipsGroup.classList.remove('hidden');
@@ -2118,15 +2212,38 @@ padding-top:0px;
     }
 
     // --- Lógica Principal del Chatbot (handleSend) ---
-    async function handleSend(userPromptInput = null, placeId = null) { // 🛑 NUEVO: placeId como argumento
+    async function handleSend(userPromptInput = null, placeIdForDirectSearch = null) { // 🛑 NUEVO: placeIdForDirectSearch
         
-        // 🛑 Lógica para usar el Place ID: Si placeId es null, usa el input normal.
-        const userPrompt = userPromptInput || inputElement.value.trim();
+        const isSPSorDirect = placeIdForDirectSearch !== null;
+        
+        let userPrompt = userPromptInput || inputElement.value.trim();
         if (!userPrompt) return;
         
         // 🛑 CRÍTICO: Si está en modo SPS y se dispara un Enter, lo ignoramos (debe usar onPlaceSelected)
-        if (isSPSMode && placeId === null) return; // 🛑 CAMBIO DE VARIABLE
+        if (isSPSMode && !isSPSorDirect) return; 
         
+        // ----------------------------------------------------
+        // 🛑 LÓGICA DE ENVÍO DE MENTION (@)
+        // ----------------------------------------------------
+        let placeIdForAPI = placeIdForDirectSearch; // Por defecto, es el de SPS
+        
+        if (currentMentionPlace && !isSPSorDirect) {
+            // 1. Es un envío de Mención (Conversacional + Place ID)
+            placeIdForAPI = currentMentionPlace.placeId;
+            
+            // 2. Reemplazar el nombre del lugar en el prompt con el token (para que Gemini lo procese)
+            // Esto evita que Gemini piense que el nombre del lugar es parte de la pregunta.
+            const mentionText = '@' + currentMentionPlace.textName;
+            
+            // Reemplazamos SÓLO la primera aparición (aunque debería ser la única)
+            const regex = new RegExp(mentionText.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'i');
+            userPrompt = userPrompt.replace(regex, MENTION_TOKEN);
+            
+            // 3. Resetear el modo de mención después de enviar
+            resetMentionMode();
+        }
+        // ----------------------------------------------------
+
         hideChipGroup(categoryChipsGroup, categoryChips);
         categoriesVisible = false;
         hideChipGroup(languageChipsGroup, languageChips);
@@ -2134,17 +2251,24 @@ padding-top:0px;
 
         // Limpiar el estado de todos los chips de acción al iniciar el envío
         quickActionFullList.classList.add('hidden');
-        dynamicChipsGroup.classList.add('hidden'); // Ocultar chips dinámicos
-        // 🛑 NUEVO: Ocultar chips de autocompletado
+        dynamicChipsGroup.classList.add('hidden'); 
         autocompleteChipsGroupContainer.classList.add('hidden');
         autocompleteChipsGroupContainer.innerHTML = '';
 
         // Utilizamos showLoadingIndicator para el nuevo efecto de status/input
         showLoadingIndicator(); 
         
-        // Si el mensaje del usuario no se ha añadido por onPlaceSelected, lo añadimos ahora
-        if (!placeId) {
-            chatHistory.push({ role: 'user', text: userPrompt, timestamp: new Date() }); 
+        // Si el mensaje del usuario no se ha añadido por onPlaceSelected (i.e., NO es SPS), lo añadimos ahora
+        if (!isSPSorDirect) {
+            
+            // Si fue una mención, el texto que guardamos en el historial debe ser el texto visible
+            let userHistoryText = userPromptInput || inputElement.value.trim();
+            if (placeIdForAPI && !isSPSorDirect) {
+                 // Si fue Mención, el texto ya tiene el '@Nombre'
+                 userHistoryText = inputElement.value.trim();
+            }
+            
+            chatHistory.push({ role: 'user', text: userHistoryText, timestamp: new Date() }); 
         }
         
         if (typeof renderChat === 'function') renderChat();
@@ -2155,7 +2279,8 @@ padding-top:0px;
         const startIndex = Math.max(0, previousHistory.length - MAX_HISTORY_TO_SEND);
         const limitedHistory = previousHistory.slice(startIndex);
         
-        let modelResponseText = await getGeminiResponse(userPrompt, limitedHistory, placeId); // 🛑 NUEVO: Pasar placeId
+        // 🛑 CRÍTICO: Pasamos el Place ID, si existe (puede ser de SPS o de Mención)
+        let modelResponseText = await getGeminiResponse(userPrompt, limitedHistory, placeIdForAPI); 
         
         // **IMPORTANTE**: Ocultar el estado de carga tan pronto como recibimos la respuesta.
         hideLoadingIndicator(); 
@@ -2169,7 +2294,7 @@ padding-top:0px;
         let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date(), isStructured: false };
         let totalCount = 0; 
         let apiQuery = null; 
-        let dynamicChipsData = null; // Para guardar los datos de los chips
+        let dynamicChipsData = null; 
 
         try {
             const jsonStart = modelResponseText.indexOf('{');
@@ -2356,16 +2481,42 @@ padding-top:0px;
         
         // 🛑 CRÍTICO: ADICIÓN DEL LISTENER PARA EL FOCO DEL INPUT (SOLUCIÓN AL PROBLEMA DE SCROLL)
         inputElement.addEventListener('focus', handleInputFocus);
+        
+        // 🛑 CRÍTICO: ADICIÓN DEL LISTENER PARA EL MODO MENTION (@) Y SPS.
+        // El listener 'input' ahora se usa para: 
+        // 1. Detección de '@' y activación del Autocompletado/Mention.
+        // 2. Control de la burbuja de typing (solo si no es SPS/Mention).
+        // 3. Control del botón de envío (solo si no es SPS/Mention).
+        if (!inputElement.hasAutocompleteListener) {
+            inputElement.addEventListener('input', handleAutocompleteInput);
+            inputElement.hasAutocompleteListener = true;
+        }
 
         inputElement.addEventListener('input', () => {
+            
+            const inputValue = inputElement.value.trim();
+            
+            // Si el texto es modificado y ya existe un lugar en currentMentionPlace
+            if (currentMentionPlace) {
+                const mentionText = '@' + currentMentionPlace.textName;
+                if (!inputElement.value.includes(mentionText)) {
+                    // Si el usuario borró o cambió el texto de la mención, lo reseteamos.
+                    resetMentionMode();
+                    // Y disparamos una búsqueda normal si hay texto restante
+                    if (!isSPSMode) {
+                        handleAutocompleteInput({ target: inputElement }); 
+                    }
+                }
+            }
+            
             // Habilitar/Deshabilitar el botón de envío (solo si NO está en modo SPS)
-            sendButton.disabled = isSPSMode || inputElement.value.trim() === ''; 
-            // Manejar la burbuja de escritura del usuario (solo si NO está en modo SPS)
-            if (!isSPSMode) { // 🛑 CAMBIO DE VARIABLE
+            sendButton.disabled = isSPSMode || inputValue === ''; 
+            
+            // Manejar la burbuja de escritura del usuario (solo si NO está en modo SPS O MENTION)
+            if (!isSPSMode && !isMentionMode && !currentMentionPlace) { 
                 handleTypingIndicator();
             } else {
                 hideUserTypingBubble();
-                // En modo SPS, el listener específico handleAutocompleteInput se encarga de la lógica de búsqueda.
             }
         });
     }
@@ -2517,6 +2668,9 @@ padding-top:0px;
         isSPSMode = true; // Forzar a que la función lo ponga en FALSE
         toggleSPSMode(); // Se inicializa en modo normal (chat)
         hideLoadingIndicator(); 
+        
+        // 🛑 NUEVO: Resetear el modo Mención
+        resetMentionMode();
 
         // 6. Mensaje de bienvenida inicial (solo si el historial está vacío)
         if (chatHistory.length === 0) {
