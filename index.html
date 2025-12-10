@@ -51,7 +51,7 @@ font-family:FH Oscar Test Medium;
         /* 🛑 NUEVO CSS: ESTILO PARA LA ETIQUETA DE LUGAR (PILL) */
         /* ---------------------------------------------------- */
         .place-name-tag {
-            background-color: #4fc3f7; /* Un tono celeste vibrante */
+            background-color: #3b82f6; /* Un tono celeste vibrante */
             color: white;
             font-weight: bold;
             border-radius: 12px;
@@ -65,7 +65,7 @@ font-family:FH Oscar Test Medium;
         }
 
         .place-name-tag:hover {
-            background-color: #03a9f4;
+            background-color: #2563eb;
         }
         /* ---------------------------------------------------- */
         /* 🛑 FIN NUEVO CSS */
@@ -1225,7 +1225,16 @@ padding-top:0px;
                 // Burbuja del usuario
                 const bubble = document.createElement('div');
                 bubble.classList.add('user-bubble', 'bg-black', 'text-white', 'p-3', 'shadow-md', 'mb-1');
-                bubble.textContent = m.text;
+                
+                // Si el mensaje tiene un nombre de mención, lo inyectamos aquí (solo para consistencia, el chip lo usa el bot)
+                if (m.mentionPlaceName) {
+                    const placeTagHTML = `<span class="place-name-tag">${m.mentionPlaceName}</span>`;
+                    let userText = m.text.replace(MENTION_TOKEN, placeTagHTML);
+                    bubble.innerHTML = userText;
+                } else {
+                    bubble.textContent = m.text;
+                }
+                
                 contentWrapper.appendChild(bubble);
             } else {
                 // Burbuja del modelo (puede contener texto o fichas estructuradas)
@@ -1251,17 +1260,34 @@ padding-top:0px;
                         
                         // 🛑 LÓGICA DE RENDERIZADO PARA PLACE NAME TAG (Pill)
                         if (isPlace) {
-                            const placeNameTagHTML = `<span class="place-name-tag">${ficha.placeName}</span>`;
                             
+                            // Obtener el nombre del lugar mencionado desde el mensaje del usuario anterior
+                            let placeName = ficha.placeName;
+                            
+                            // Si el mensaje del bot no tiene un nombre (caso de mención)
+                            if (!placeName) {
+                                // Buscamos el mensaje del usuario inmediatamente anterior
+                                const lastUserMessage = chatHistory.findLast(h => h.role === 'user');
+                                if (lastUserMessage && lastUserMessage.mentionPlaceName) {
+                                    placeName = lastUserMessage.mentionPlaceName;
+                                }
+                            }
+                            
+                            // Si se encontró el nombre, creamos el tag
                             let description = ficha.description || (currentLanguage === 'es' ? 'Información detallada no disponible.' : 'Detailed information not available.');
 
-                            if (description.includes(MENTION_TOKEN)) {
-                                // Reemplaza el token si está presente
-                                description = description.replace(MENTION_TOKEN, placeNameTagHTML);
-                            } else {
-                                // Si no está el token, lo añade como título antes de la descripción
-                                // Usamos el tag envuelto en el párrafo de título
-                                description = `<p class="text-lg font-bold mb-2 flex items-center">📍 ${placeNameTagHTML}</p>` + description;
+                            if (placeName) {
+                                const placeNameTagHTML = `<span class="place-name-tag">${placeName}</span>`;
+                                
+                                if (description.includes(MENTION_TOKEN)) {
+                                    // Reemplaza el token si está presente
+                                    description = description.replace(MENTION_TOKEN, placeNameTagHTML);
+                                } else {
+                                    // Si no está el token, lo añade como título antes de la descripción (solo si no es un mensaje de mención)
+                                    if (ficha.placeName) { // Si placeName NO es nulo, significa que es una ficha normal, no una respuesta a una mención.
+                                        description = `<p class="text-lg font-bold mb-2 flex items-center">📍 ${placeNameTagHTML}</p>` + description;
+                                    }
+                                }
                             }
                             
                             // Lógica de la imagen apilada (Stacked Photo)
@@ -1269,7 +1295,7 @@ padding-top:0px;
                             if (ficha.imageUrl) {
                                 imageLinkHTML = `
                                     <a href="${ficha.mapUrl || '#'}" target="_blank" class="image-link clickable-effect" title="${strings.btnMap}">
-                                        <img src="${ficha.imageUrl}" alt="${ficha.placeName}" class="stacked-photo">
+                                        <img src="${ficha.imageUrl}" alt="${placeName || 'Lugar'}" class="stacked-photo">
                                     </a>
                                 `;
                             }
@@ -1310,7 +1336,17 @@ padding-top:0px;
 
                 } else {
                     // Texto plano o recomendación local (sin fichas renderizables)
-                    bubble.textContent = m.text;
+                    
+                    // Lógica para manejar menciones en texto plano (si ocurre)
+                    let textContent = m.text;
+                    const lastUserMessage = chatHistory.findLast(h => h.role === 'user');
+                    if (lastUserMessage && lastUserMessage.mentionPlaceName && textContent.includes(MENTION_TOKEN)) {
+                        const placeNameTagHTML = `<span class="place-name-tag">${lastUserMessage.mentionPlaceName}</span>`;
+                        textContent = textContent.replace(MENTION_TOKEN, placeNameTagHTML);
+                        bubble.innerHTML = textContent;
+                    } else {
+                        bubble.textContent = m.text;
+                    }
                 }
                 
                 contentWrapper.appendChild(bubble);
@@ -1344,38 +1380,165 @@ padding-top:0px;
         checkSendButtonState();
     }
     
-    // ... (El resto de funciones JS como handleSend, toggleSPSMode, etc., se mantienen intactas)
-    // Se asume que el resto del script está completo y funciona.
+    // ... (El resto de funciones JavaScript se mantienen intactas)
     
-    // El script debe terminar aquí, manteniendo la estructura original.
     
-    // ... (omito el resto de funciones JS que no cambiaron, pero se asume que están presentes en el archivo final)
-    
-    // FUNCIÓN renderActionButtons (Se mantiene la misma lógica, solo se aplica el nuevo CSS de los chips)
-    function renderActionButtons(m) {
-        const strings = UI_STRINGS[currentLanguage];
-        // ... (Lógica interna se mantiene usando las clases 'action-chip blue-glass-chip')
+    // ----------------------------------------------------
+    // 🛑 FUNCIÓN handleSend MODIFICADA (PARA GUARDAR LA MENCIÓN)
+    // ----------------------------------------------------
+    async function handleSend() {
+        // ... (resto de la función handleSend se mantiene igual hasta el punto de crear userMessage)
         
-        // El contenido de esta función no se altera en su lógica, solo depende de las variables UI_STRINGS y las clases CSS ya añadidas.
-        // ...
-        
-        // Ejemplo de generación de HTML para el botón Ver en Mapa:
-        /*
-        if (m.mapUrl) { 
-            actionsHTML += ` 
-                <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="MAP" data-map-url="${m.mapUrl}"> 
-                    ${strings.btnMap} 
-                </div> 
-            `; 
+        const prompt = inputElement.value.trim();
+        if (!prompt) return;
+
+        // Limpiar chips de autocompletado si están visibles
+        if (!autocompleteChipsGroupContainer.classList.contains('hidden')) {
+            hideAutocompleteChips();
         }
-        */
         
-        // ...
+        // Limpiar chips dinámicos si están visibles
+        if (!dynamicChipsGroup.classList.contains('hidden')) {
+            hideChipGroup(dynamicChipsGroup, dynamicChipsList.children);
+        }
         
-        // El resto de la implementación de renderActionButtons se mantiene.
+        // Limpiar el quick-action-full-list si estaba visible
+        quickActionFullList.classList.add('hidden');
+
+        // 1. Mostrar mensaje del usuario inmediatamente
+        // Necesitamos guardar la información de mención antes de limpiar el input
+        let mentionData = null;
+        let finalPrompt = prompt;
+
+        if (isMentionMode && currentMentionPlace) {
+             // 🛑 CRÍTICO: Reemplazar el nombre del lugar por el token en el prompt para el backend
+            finalPrompt = prompt.replace(`@${currentMentionPlace.textName}`, MENTION_TOKEN);
+            
+            // Guardar la data para inyectarla en el historial y luego en el renderChat
+            mentionData = currentMentionPlace.textName;
+
+            // 🛑 DESACTIVAR MODO MENCIÓN después de la acción
+            resetMentionMode(); 
+            // La función resetMentionMode() ya se encarga de reajustar el placeholder y las variables
+        }
+
+        // 2. Crear el objeto de mensaje del usuario para el historial
+        const userMessage = { 
+            role: "user", 
+            text: prompt, // El texto original (incluyendo @Nombre) se guarda para la visualización del usuario
+            timestamp: new Date(),
+            mentionPlaceName: mentionData // 🛑 NUEVO: Guarda el nombre del lugar mencionado
+        };
+        
+        chatHistory.push(userMessage);
+        
+        // Renderiza el historial, incluyendo el nuevo mensaje del usuario
+        renderChat(); 
+
+        // Limpiar input ANTES de enviar para efecto de inmediatez
+        inputElement.value = '';
+        checkSendButtonState();
+
+        // 3. Mostrar indicador de "escribiendo" del modelo
+        showTypingIndicator('model');
+        
+        // 4. Preparar el historial para el backend (usando el finalPrompt)
+        const historyToSend = chatHistory.slice(-6).map(m => ({
+            role: m.role,
+            parts: [{ text: m.role === 'user' && m.mentionPlaceName ? finalPrompt : m.text }] 
+        }));
+
+        try {
+            // ... (El resto de la llamada a la API y la gestión de la respuesta se mantienen igual)
+            
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    history: historyToSend, 
+                    userPrompt: finalPrompt, // 🛑 CRÍTICO: Enviar el prompt con el token [[PLACE_MENTION]]
+                    currentLanguage: currentLanguage
+                })
+            });
+
+            const data = await response.json();
+            
+            // 5. Ocultar indicador de "escribiendo"
+            hideTypingIndicator('model');
+            
+            if (data.error) {
+                const errorMessage = currentLanguage === 'es' 
+                    ? `[ERROR] Lo siento, hubo un problema al procesar tu solicitud: ${data.message}` 
+                    : `[ERROR] Sorry, there was an issue processing your request: ${data.message}`;
+                
+                chatHistory.push({ role: 'model', text: errorMessage, timestamp: new Date(), isStructured: false });
+                renderChat();
+            } else {
+                
+                // 6. Añadir la respuesta del bot al historial
+                const botResponse = { 
+                    role: 'model', 
+                    text: data.responseText, 
+                    timestamp: new Date(), 
+                    isStructured: data.isStructured || data.isMultiStructured,
+                    conversationText: data.conversationText,
+                    fichas: data.response, // Puede ser un array (isMultiStructured) o la ficha única
+                    // 🛑 NUEVO: Propiedades para el protocolo de recomendación local
+                    isLocalRecommendation: data.isLocalRecommendation || false,
+                    totalCount: data.totalCount || 0,
+                    apiQuery: data.apiQuery || null 
+                };
+                
+                chatHistory.push(botResponse);
+                renderChat();
+                
+                // 7. Lógica para el botón "Ver todos los resultados" (si aplica)
+                if (botResponse.isLocalRecommendation && botResponse.totalCount > 0) {
+                    lastTotalCount = botResponse.totalCount;
+                    lastApiQuery = botResponse.apiQuery;
+                    quickActionFullList.classList.remove('hidden');
+                }
+
+                // 8. Lógica para mostrar chips dinámicos (si aplica)
+                if (data.dynamicChips && data.dynamicChips.length > 0) {
+                    showDynamicChips(data.dynamicChips);
+                } else {
+                    // Si no hay chips dinámicos, ocultamos el contenedor por si acaso
+                    dynamicChipsGroup.classList.add('hidden');
+                }
+            }
+
+        } catch (error) {
+            hideTypingIndicator('model');
+            console.error('Error de red o servidor:', error);
+            const errorMessage = currentLanguage === 'es' 
+                ? 'Lo siento, hubo un problema de conexión. Intenta de nuevo. 😔' 
+                : 'Sorry, there was a connection issue. Please try again. 😔';
+            chatHistory.push({ role: 'model', text: errorMessage, timestamp: new Date(), isStructured: false });
+            renderChat();
+        }
+
+        inputElement.focus();
+    }
+    // ... (El resto de las funciones JavaScript)
+    
+    
+    // Esta función maneja la respuesta cuando se hace clic en un chip dinámico.
+    function handleDynamicChipClick(event) {
+        // ... (El resto de la función se mantiene igual)
+        const chip = event.currentTarget;
+        const query = chip.getAttribute('data-query');
+
+        if (query) {
+            // Ocultar los chips después de la acción
+            hideChipGroup(dynamicChipsGroup, dynamicChipsList.children);
+            // El query se establece como el nuevo prompt y se envía
+            inputElement.value = query;
+            handleSend();
+        }
     }
     
-    // ... (FIN DEL CÓDIGO JS QUE SE MANTIENE)
+    // ... (El resto de las funciones JavaScript)
     
     // Inicialización del UI
     window.initChatUI = function() {
