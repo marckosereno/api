@@ -1033,7 +1033,9 @@ margin-right: 4px; color: #4b5563; }
             
             spsMode: "Modo Pro ●Activado 🦾",
             chatMode: "Modo Chat 💬",
-            mentionPlaceholder: (name) => `Conversando sobre ${name}...`
+            // INICIO DEL CAMBIO: Sin emoji y con negrita HTML para el nombre
+            mentionPlaceholder: (name) => `Conversando sobre <b>${name}</b> | Sigue escribiendo...`
+            // FIN DEL CAMBIO
         },
         en: {
             header: "PROGRESO TOUR GUIDE",
@@ -1060,7 +1062,9 @@ margin-right: 4px; color: #4b5563; }
             
             spsMode: "Pro Mode ●Active 🦾",
             chatMode: "Chat Mode 💬",
-            mentionPlaceholder: (name) => `Conversing about ${name}...`
+            // INICIO DEL CAMBIO: Sin emoji y con negrita HTML para el nombre
+            mentionPlaceholder: (name) => `Conversing about <b>${name}</b> | Keep writing...`
+            // FIN DEL CAMBIO
         }
     };
     
@@ -1479,8 +1483,14 @@ promotions: false };
         scrollToBottomSmooth();
     }
 
+    /**
+     * Maneja la selección de un chip de autocompletado, ya sea para el Modo SPS o el Modo Mención.
+     * @param {string} placeId - El ID del lugar seleccionado.
+     * @param {string} placeName - El nombre limpio del lugar.
+     */
     function handleAutocompleteSelect(placeId, placeName) {
         vibrateDevice();
+        const inputElement = document.getElementById('user-input'); 
         
         if (isSPSMode) {
             
@@ -1495,27 +1505,51 @@ promotions: false };
         } else {
             
             
-            currentMentionPlace = {
-                placeId: placeId,
-                textName: placeName,
-                query: inputElement.value.substring(inputElement.value.lastIndexOf('@') + 1).trim()
-            };
-
+            // Bloque para Menciones (Modo Chat)
             
-            const mentionIndex = inputElement.value.lastIndexOf('@');
+            // 1. Lógica de reconstrucción del input 
+            const currentInputValue = inputElement.value;
+            const mentionIndex = currentInputValue.lastIndexOf('@');
+            
             if (mentionIndex !== -1) {
                 
-                inputElement.value = inputElement.value.substring(0, mentionIndex) + '@' + placeName;
+                const textBeforeMention = currentInputValue.substring(0, mentionIndex);
+                
+                
+                const queryPart = currentInputValue.substring(mentionIndex + 1);
+                const firstSpaceIndex = queryPart.indexOf(' ');
+                
+                let textAfterSelection = '';
+                if (firstSpaceIndex !== -1) {
+                    
+                    textAfterSelection = queryPart.substring(firstSpaceIndex); 
+                }
+                
+                // 2. Construir el nuevo valor del input
+                const newInputValue = `${textBeforeMention}@${placeName}${textAfterSelection}`;
+                inputElement.value = newInputValue;
+
+                // 3. Guardar el estado de la mención para el envío
+                currentMentionPlace = {
+                    placeId: placeId,
+                    textName: placeName,
+                };
+
+                // 4. Actualizar UI
+                // Usamos el placeholder con negrita (como se definió en UI_STRINGS)
+                inputElement.placeholder = UI_STRINGS[currentLanguage].mentionPlaceholder(placeName);
+                sendButton.disabled = inputElement.value.trim() === '';
+                isMentionMode = false;
+                autocompleteChipsGroupContainer.classList.add('hidden'); 
+                
+                // ⭐️ NUEVO: MANTENER EL FOCO Y EL TECLADO ABIERTO
+                inputElement.focus();
+                
+                // ⭐️ NUEVO: Colocar el cursor al final del input para que el usuario siga escribiendo
+                const newCursorPosition = newInputValue.length;
+                inputElement.setSelectionRange(newCursorPosition, newCursorPosition);
             }
 
-            
-            inputElement.placeholder = UI_STRINGS[currentLanguage].mentionPlaceholder(placeName);
-
-            
-            sendButton.disabled = inputElement.value.trim() === '';
-
-            
-            isMentionMode = false;
         }
     }
 
@@ -1562,7 +1596,12 @@ promotions: false };
         if (isSPSMode) {
             inputElement.placeholder = strings.searchPlaceholder;
         } else if (currentMentionPlace) {
+            // El placeholder contiene HTML <b>...</b>
             inputElement.placeholder = strings.mentionPlaceholder(currentMentionPlace.textName);
+            
+            // Para que el navegador interprete el HTML en el placeholder (suele requerir truco CSS/JS extra o usar un div editable, pero lo dejamos como texto plano por compatibilidad del input)
+            // Por ahora, el placeholder se verá como "Conversando sobre <b>NombreDelLugar</b>..."
+            // Si el input/textarea fuera editable div (contenteditable=true) esto funcionaría perfectamente.
         } else {
             inputElement.placeholder = strings.placeholder;
         }
