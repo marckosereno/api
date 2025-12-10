@@ -1,5 +1,5 @@
 // ====================================================================
-// Archivo: chat.js (Versión 9.2 - CORRECCIÓN DE ALUCINACIONES Y SOPORTE HÍBRIDO)
+// Archivo: chat.js (Versión 9.3 - BLINDAJE REFORZADO ANTI-ALUCINACIÓN)
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -50,7 +50,7 @@ const EXCEPTION_DATA_MAP = {
     }, 
 };
 
-// 🛑 NUEVA CONSTANTE: Token de Mención (Debe coincidir con el frontend)
+// 🛑 Token de Mención (Debe coincidir con el frontend)
 const MENTION_TOKEN = "[[PLACE_MENTION]]";
 
 // 1. Inicializamos los clientes
@@ -60,7 +60,7 @@ const placesClient = new PlacesClient({});
 
 
 // =======================================================
-// 🛑 FUNCIONES AUXILIARES (Para corregir ReferenceError)
+// 🛑 FUNCIONES AUXILIARES 
 // =======================================================
 
 /**
@@ -304,7 +304,7 @@ async function getPlaceDetails(query, currentLanguage) {
 
 
 // =======================================================
-// 2. Instrucción de Sistema BASE (OPTIMIZADA)
+// 2. Instrucción de Sistema BASE (OPTIMIZADA V9.3)
 // =======================================================
 
 // Usamos {LANG_PLACEHOLDER} para la inyección de idioma dinámico
@@ -318,6 +318,7 @@ Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
     2.  Responder **directamente a esa pregunta** en modo conversacional (Texto Plano).
     3.  **No debes generar una ficha JSON** si la pregunta es sobre el lugar mencionado. **Solo genera la ficha JSON si el usuario hace una pregunta de LUGAR O CATEGORÍA diferente.**
 **REGLA ANTI-ALUCINACIÓN:** NUNCA inventes o generes datos concretos (teléfono, sitio web, dirección, horarios) que el servidor no haya proporcionado previamente. Tu única tarea es generar la estructura JSON y las descripciones.
+**REGLA ANTI-CONFIDENCIA:** Al clasificar un lugar, **nunca confirmes su existencia** de forma conversacional (ej: 'Sí, existe...') dentro del JSON. Tu única tarea es clasificar para que el servidor procese la búsqueda.
 
 REGLAS DE FORMATO:
 1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 📍, ☀️) al inicio o final de tus respuestas o descripciones.
@@ -547,8 +548,8 @@ export default async function handler(req, res) {
             else if (categoryKeyRaw.includes('barbacoa')) categoryName = currentLanguage === 'es' ? "Barbacoa y Birria" : "Barbacoa and Birria";
             else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = currentLanguage === 'es' ? "Salud y Estética" : "Health and Aesthetics";
             
-            // SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA
-            promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría ${categoryName} en Nuevo Progreso. **Tu respuesta debe ser en ${langText}.**`;
+            // 🛑 CRÍTICO: SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA y PROHIBIR LISTAS.
+            promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría ${categoryName} en Nuevo Progreso. **CRÍTICO: TU RESPUESTA DEBE SER UN ÚNICO JSON DE TIPO 'category'. NUNCA GENERES FICHAS DE 'place' O LISTAS DE LUGARES ESPECÍFICOS. Tu respuesta debe ser en ${langText}.**`;
             
             console.log("PROTOCOLO CATEGORÍA GENERAL ACTIVADO para:", categoryName);
         }
@@ -670,7 +671,7 @@ export default async function handler(req, res) {
                              const categorySearch = ficha.categoryName.replace(/en Progreso/i, '').trim();
                              const mapUrlQuery = categorySearch + GEOGRAPHIC_CONTEXT;
                              
-                             // Corregido a un formato más seguro
+                             // 🟢 CORRECCIÓN: Usar URL de búsqueda de Google Maps estándar
                              const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapUrlQuery)}`; 
                              
                              enrichedFicha.mapUrl = mapUrl; 
