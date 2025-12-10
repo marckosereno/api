@@ -1,3 +1,4 @@
+Si porfa...este es mi index.html donde lo quiero aplicar, de modo que el boton de enviar siempre este visible, superponiendose arriba del teclado y arriba de las predicciones de texto...si puedes aplicalo a mi index.html sin realizar otro cambio en interfaz ni funciones, solo lo que acabamos de hablar, damelo completo y listo para pegar...
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -31,12 +32,6 @@ font-weight:200;
 line-height:0.5cm;
 font-family:FH Oscar Test Medium;
         }
-        /* 🛑 FIX: Aplicamos padding horizontal a las burbujas para compensar la eliminación del p-4 en el contenedor */
-        .user-bubble-container, .model-bubble-container {
-            padding-left: 1rem; /* p-4 = 1rem */
-            padding-right: 1rem;
-        }
-
         .user-bubble { border-radius: 18px 18px 0 18px; max-width: 90% }
         /* 🛑 CAMBIO CLAVE 1: Eliminamos el estilo anterior de la burbuja del modelo, ahora usa el wrapper */
         .model-bubble { border-radius: 18px 18px 18px 0; max-width: 90%; padding-left:8px; backgroud-color: transparent;font-size:16px; line-height:16px;}
@@ -195,11 +190,6 @@ height:44px;
         /* AJUSTE CRÍTICO PARA EL NUEVO HEADER FLOTANTE */
         #message-container {
             padding-top: 6rem; 
-            /* 🛑 CRÍTICO: Eliminamos el p-4 */
-            padding-left: 0; 
-            padding-right: 0; 
-            /* 🛑 CAMBIO CRÍTICO: Espacio extra en la parte inferior para la barra FIJA. */
-            padding-bottom: 250px; /* Asegura que no se superpongan los últimos mensajes */
         }
         #btn-clear-top {
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
@@ -458,30 +448,23 @@ height:44px;
             padding-bottom: 0; 
         }
 
-        /* 🛑 CAMBIO CRÍTICO: HACEMOS FIJO EL CONTENEDOR DE LA BARRA DE BÚSQUEDA */
+        /* 🛑 NUEVO: Wrapper para aplicar los bordes redondeados y el fondo flotante (white) */
         #bottom-bar-search-wrapper {
-             /* 🛑 CRÍTICO: Aplicamos la posición fija para que no se mueva con el scroll/teclado */
-             position: fixed;
-             bottom: 0;
-             width: 100%;
-             z-index: 50; /* Mismo z-index que el header flotante, pero más alto que el teclado virtual */
-             
-             padding-top:22px;  
-             border-radius: 20px 20px 0 0; /* Bordes superiores redondeados */
+          padding-top:22px;  
+ border-radius: 20px 20px 0 0; /* Bordes superiores redondeados */
              background-color: white !important;
              /* 🛑 CRÍTICO: El sombreado simula que el container "flota" */
              box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05), 0 -2px 4px -2px rgba(0, 0, 0, 0.04);
+             z-index: 10;
         }
         
         /* 1. 🎨 FONDO PARA EL QUICK REPLIES CONTAINER (Adaptado para usar el fondo del padre) */
-        /* Nota: Estos chips ahora flotarán *por encima* de la barra de búsqueda si se activan */
         #quick-replies-container {
             border-top: none; /* El padre (bottom-action-area) ya tiene un borde superior */
             background: transparent; /* Fondo transparente para que use el del padre */
             padding: 0.5rem; 
             box-shadow: none; /* La sombra la maneja el padre */
-            z-index: 51; /* Ligeramente más alto para los chips de la barra fija */
-            position: relative; /* Necesario para que el z-index funcione en algunos contextos */
+            z-index: 10;
         }
 
 
@@ -694,14 +677,6 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             margin-left: 8px; /* Separación del input */
             transition: background-color 0.2s, transform 0.1s;
         }
-        
-        /* 🛑 FIX: CLASE DE FOCO PARA EL BOTÓN ENVIAR */
-        #send-message-button.input-active-focus {
-            /* Resalte visual cuando el input está activo */
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.5); /* Anillo azul */
-            background-color: #2563eb !important; /* Azul más oscuro para énfasis */
-        }
-        /* 🛑 FIN FIX DE FOCO */
 
         #send-message-button:hover:not(:disabled) {
             background-color: #2563eb !important;
@@ -712,7 +687,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         }
 
         #send-message-button:disabled {
-            background-color: #93c5fd !important; /* Azul claro cuando está deshabilitado */
+            background-color: #000 !important; /* Azul claro cuando está deshabilitado */
             cursor: not-allowed;
         }
 
@@ -749,7 +724,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
         /* Usaremos la clase map-search-bar solo para el estilo del INPUT, pero el contenedor es input-area-container */
         
         .map-search-bar {
-            /* 🛑 La clase map-search-bar se reutiliza para el estilo del INPUT */
+            /* 🛑 La clase map-search-bar se reutiliza para el estilo del Input */
             /* Quitamos el flex/display:flex porque ahora es solo para el INPUT */
             display: block; 
             flex-grow: 1; /* Ocupa el espacio restante */
@@ -882,9 +857,9 @@ padding-top:0px;
         </div>
         <div id="app-alert-container" class="fixed top-0 w-full flex justify-center z-50 pointer-events-none"></div>
 
-        <div id="message-container" class="flex-grow overflow-y-auto flex flex-col">
+        <div id="message-container" class="flex-grow overflow-y-auto p-4 flex flex-col">
             
-            <div id="model-typing-bubble" class="flex justify-start model-bubble-container">
+            <div id="model-typing-bubble" class="flex justify-start">
                 <div class="flex flex-col items-start">
                     <div class="model-bubble-wrapper p-3 shadow-md">
                         <div class="typing-dots">
@@ -896,7 +871,7 @@ padding-top:0px;
                 </div>
             </div>
             
-            <div id="user-typing-bubble" class="flex justify-end user-bubble-container">
+            <div id="user-typing-bubble" class="flex justify-end">
                 <div class="flex flex-col items-end max-w-xs sm:max-w-md lg:max-w-lg">
                     <div class="user-bubble bg-black text-white p-3 shadow-md">
                         <div class="typing-dots">
@@ -910,15 +885,6 @@ padding-top:0px;
         </div>
 
         <div class="bottom-action-area flex-shrink-0 flex flex-col space-y-2">
-            
-            <div id="menu-actions" class="chip-group-scroll px-4">
-                <div class="inline-flex space-x-3">
-                    <div id="btn-categorias" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="CATEGORIES">✨️ Categorías</div>
-                    <div id="btn-lenguaje" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="LANGUAGE">🧢 Idioma</div>
-                    <div id="btn-comollegar" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="GET_THERE" data-query-es="Dime cómo llegar a Progreso, Tamaulipas." data-query-en="Tell me how to get to Progreso, Tamaulipas.">🚀 Cómo Llegar</div>
-                    <div id="btn-info" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="INFO" data-query-es="Información general sobre Nuevo Progreso." data-query-en="General information about Nuevo Progreso.">ℹ️ Info</div>
-                </div>
-            </div>
             
             <div id="autocomplete-chips-group-container" class="autocomplete-chips-group-container hidden">
                 </div>
@@ -950,20 +916,22 @@ padding-top:0px;
                         <div class="language-chip flex items-center p-2 rounded-full text-sm font-semibold border border-gray-400 bg-white text-gray-800 cursor-pointer transition hover:bg-gray-100" data-lang="en">🇺🇸 English</div>
                     </div>
                 </div>
+                
+                <div id="menu-actions" class="chip-group-scroll px-4">
+                    <div class="inline-flex space-x-3">
+                        <div id="btn-categorias" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="CATEGORIES">✨️ Categorías</div>
+                        <div id="btn-lenguaje" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="LANGUAGE">🧢 Idioma</div>
+                        <div id="btn-comollegar" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="GET_THERE" data-query-es="Dime cómo llegar a Progreso, Tamaulipas." data-query-en="Tell me how to get to Progreso, Tamaulipas.">🚀 Cómo Llegar</div>
+                        <div id="btn-info" class="menu-action-chip action-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition glass-chip" data-action="INFO" data-query-es="Información general sobre Nuevo Progreso." data-query-en="General information about Nuevo Progreso.">ℹ️ Info</div>
+                    </div>
+                </div>
             </div>
             
-            <div id="bottom-bar-search-wrapper"> 
+            <div id="bottom-bar-search-wrapper" class="w-full"> 
                 <div class="bottom-bar-wrapper"> 
                     
                     <div id="map-search-bar" class="map-search-bar mb-2 w-full">
-                        <input 
-                            type="text" 
-                            id="user-input" 
-                            class="map-input" 
-                            placeholder="Pregúntale al mapa" 
-                            autocomplete="off" 
-                            inputmode="text"
-                        >
+                        <input type="text" id="user-input" class="map-input" placeholder="Pregúntale al mapa" autocomplete="off" inputmode="text">
                     </div>
                     
                     <div id="input-area-container" class="flex justify-between items-center w-full"> 
@@ -1415,9 +1383,6 @@ padding-top:0px;
     // 🛑 FUNCIÓN MEJORADA: Scroll instantáneo más robusto usando la barra de búsqueda como target
     function handleInputFocus() {
         if (!inputElement || !messageContainer || !document.getElementById('bottom-bar-search-wrapper')) return;
-        
-        // 🛑 FIX: Añadir la clase de foco al botón enviar
-        sendButton.classList.add('input-active-focus');
 
         // **PASO CLAVE 1:** Scroll instantáneo del contenedor de la barra completa a la vista.
         // Esto le dice al navegador que muestre este elemento justo encima del teclado.
@@ -1445,12 +1410,6 @@ padding-top:0px;
         }, 150); 
     }
     
-    // 🛑 FIX: Añadir la función para quitar el foco
-    function handleInputBlur() {
-        // Quitar la clase de foco al botón enviar
-        sendButton.classList.remove('input-active-focus');
-    }
-
     function hideModelTypingBubble() {
         modelTypingBubble.classList.remove('show');
     }
@@ -1819,8 +1778,7 @@ padding-top:0px;
         let timeSpan = '';
         
         if (m.role === 'user') { 
-            // 🛑 FIX: Usamos el contenedor con padding lateral para alinear la burbuja
-            w.className = 'flex justify-end mb-2 user-bubble-container'; 
+            w.className = 'flex justify-end mb-2'; 
             timeSpan = timeStr ? `<div class="user-timestamp-container"><span class="timestamp">${timeStr}</span></div>` : '';
             w.innerHTML = `
                 <div class="flex flex-col items-end">
@@ -1830,8 +1788,7 @@ padding-top:0px;
             `; 
         } 
         else if (m.role === 'model') {
-            // 🛑 FIX: Usamos el contenedor con padding lateral para alinear la burbuja
-            w.className = 'flex flex-col justify-start w-full mb-2 model-bubble-container';
+            w.className = 'flex flex-col justify-start w-full mb-2';
             timeSpan = timeStr ? `<div class="model-timestamp-container"><span class="timestamp">${timeStr}</span></div>` : '';
             
             let content = '';
@@ -2400,8 +2357,6 @@ padding-top:0px;
         
         // 🛑 CRÍTICO: ADICIÓN DEL LISTENER PARA EL FOCO DEL INPUT (SOLUCIÓN AL PROBLEMA DE SCROLL)
         inputElement.addEventListener('focus', handleInputFocus);
-        // 🛑 FIX: ADICIÓN DEL LISTENER PARA EL BLUR DEL INPUT (QUITAR FOCO AL BOTÓN)
-        inputElement.addEventListener('blur', handleInputBlur);
 
         inputElement.addEventListener('input', () => {
             // Habilitar/Deshabilitar el botón de envío (solo si NO está en modo SPS)
