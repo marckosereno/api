@@ -1,5 +1,5 @@
 // ====================================================================
-// Archivo: chat.js (Versión 9.3 - BLINDAJE REFORZADO ANTI-ALUCINACIÓN)
+// Archivo: chat.js (Versión 9.4 - LIMPIEZA DE NOMBRES Y BLINDAJE FINAL)
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -81,8 +81,20 @@ function areNamesSimilar(searchName, returnedName) {
 }
 
 /**
+ * 🟢 NUEVO: Función auxiliar para limpiar el nombre del lugar.
+ * Elimina comas, números de calle o términos geográficos genéricos que Place API a veces adjunta.
+ */
+function cleanPlaceName(name) {
+    if (!name) return null;
+    // Expresión para eliminar texto después de una coma, o Nuevo Progreso (si ya está)
+    // Ejemplo: "Tienda de Tacos, Calle Principal 123" -> "Tienda de Tacos"
+    // Ejemplo: "Hospital General, Nuevo Progreso" -> "Hospital General"
+    let cleanName = name.replace(/,\s*\w+\s*\d+.*$|,\s*Nuevo Progreso.*$/i, '').trim();
+    return cleanName;
+}
+
+/**
  * 🟢 MEJORADA: Genera una descripción dinámica y multifocal usando Gemini.
- * (Se eliminó el conteo estricto de palabras para reducir alucinaciones.)
  */
 async function generateDynamicDescription(placeName, category, isHealthPlace, currentLanguage) {
     // 1. Definir y seleccionar un punto focal al azar
@@ -106,7 +118,6 @@ async function generateDynamicDescription(placeName, category, isHealthPlace, cu
     const chat = ai.chats.create({
         model: MODEL_NAME, 
         config: {
-            // 🛑 OPTIMIZACIÓN: Se elimina el conteo estricto y el streaming.
             systemInstruction: `Eres un redactor turístico profesional con un tono **${selectedTone}**. Tu única tarea es generar una descripción sobre un negocio. La descripción debe:
             1. **Tener una longitud de máximo 3 oraciones cortas, incluyendo emojis.**
             2. Tener un tono de reporte o resumen de opiniones de terceros, NO tu opinión personal.
@@ -209,8 +220,11 @@ async function getFullPlaceDetails(queryOrPlaceId, currentLanguage) {
 
         const isHealth = isHealthPlaceType(place.types);
         
+        // 🟢 Limpieza del nombre antes de devolverlo
+        const cleanedName = cleanPlaceName(place.name);
+
         return {
-            name: place.name,
+            name: cleanedName, // <--- NOMBRE LIMPIO
             phone: isHealth ? null : (place.formatted_phone_number || null), 
             mapUrl: place.url || null,
             reviewUrl: place.url || null, 
@@ -286,8 +300,11 @@ async function getPlaceDetails(query, currentLanguage) {
             imageUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=250&photoreference=${photoReference}&key=${placesApiKey}`;
         }
 
+        // 🟢 Limpieza del nombre antes de devolverlo
+        const cleanedName = cleanPlaceName(place.name);
+
         return {
-            name: place.name,
+            name: cleanedName, // <--- NOMBRE LIMPIO
             phone: isHealth ? null : (place.formatted_phone_number || null),
             mapUrl: place.url || null,
             reviewUrl: place.url || null, 
@@ -304,7 +321,7 @@ async function getPlaceDetails(query, currentLanguage) {
 
 
 // =======================================================
-// 2. Instrucción de Sistema BASE (OPTIMIZADA V9.3)
+// 2. Instrucción de Sistema BASE (OPTIMIZADA V9.4)
 // =======================================================
 
 // Usamos {LANG_PLACEHOLDER} para la inyección de idioma dinámico
@@ -505,7 +522,7 @@ export default async function handler(req, res) {
                 
                 forcedCanonicalResponse = {
                     type: "place", 
-                    placeName: placeData ? placeData.name : exceptionData.searchName, 
+                    placeName: placeData ? placeData.name : cleanPlaceName(exceptionData.searchName), // Usa el nombre limpio del Place API si existe, sino limpia el nombre de búsqueda
                     placeToSearch: exceptionData.searchName,
                     placeCategory: exceptionData.category, 
                     isHealthPlace: isHealthPlace,
@@ -630,10 +647,13 @@ export default async function handler(req, res) {
                                 try {
                                     const reParsedJson = JSON.parse(rePromptText.substring(rePromptText.indexOf('{'), rePromptText.lastIndexOf('}') + 1));
                                     
+                                    // 🟢 Aplicar limpieza de nombre aquí también
+                                    const cleanedName = cleanPlaceName(placeData.name); 
+
                                     // Usamos la ficha re-parseada (con descripción RAG)
                                     enrichedFicha = {
                                         ...reParsedJson, 
-                                        placeName: placeData.name,
+                                        placeName: cleanedName, // <--- USAMOS EL NOMBRE LIMPIO
                                         mapUrl: placeData.mapUrl,
                                         imageUrl: placeData.imageUrl,
                                         // Restricciones de salud
@@ -671,7 +691,7 @@ export default async function handler(req, res) {
                              const categorySearch = ficha.categoryName.replace(/en Progreso/i, '').trim();
                              const mapUrlQuery = categorySearch + GEOGRAPHIC_CONTEXT;
                              
-                             // 🟢 CORRECCIÓN: Usar URL de búsqueda de Google Maps estándar
+                             // 🟢 URL de búsqueda de Google Maps estándar
                              const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapUrlQuery)}`; 
                              
                              enrichedFicha.mapUrl = mapUrl; 
