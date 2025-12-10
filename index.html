@@ -2,52 +2,34 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-
-    <title>Progreso Tour Guide</title>
-<link href="https://db.onlinewebfonts.com/c/0991fb109ac529a8f639460d21e766cf?family=Spline+Sans+Light" rel="stylesheet">
-<link href="https://db.onlinewebfonts.com/c/c583d0702911444628b39c6d070d99c4?family=Spline+Sans+Medium" rel="stylesheet">
-<link href="https://fonts.cdnfonts.com/css/avenir" rel="stylesheet">
-<link href="https://db.onlinewebfonts.com/c/ddadf4e5d67469bf2fb13ca47ac078ba?family=FH+Oscar+Test+Medium" rel="stylesheet">       
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progreso Tour Guide Chat</title>
     
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     
-    <link href="styles/main.css" rel="stylesheet"> 
+    <link href="styles/main.css" rel="stylesheet">
+    
+    <link href="https://db.onlinewebfonts.com/c/0991fb109ac529a8f639460d21e766cf?family=Spline+Sans+Light" rel="stylesheet">
+    <link href="https://db.onlinewebfonts.com/c/c583d0702911444628b39c6d070d99c4?family=Spline+Sans+Medium" rel="stylesheet">
+    <link href="https://fonts.cdnfonts.com/css/avenir" rel="stylesheet">
+    <link href="https://db.onlinewebfonts.com/c/ddadf4e5d67469bf2fb13ca47ac078ba?family=FH+Oscar+Test+Medium" rel="stylesheet">
 </head>
 <body class="h-full bg-gray-50">
 
-    <div class="chat-window relative">
+    <div class="chat-window relative h-full flex flex-col max-w-lg mx-auto bg-white shadow-xl">
         
-        <div id="app-alert-container" class="fixed top-0 left-0 right-0 z-50 p-4 flex justify-center pointer-events-none">
-            </div>
-
-        <div class="fixed top-0 left-0 right-0 z-40 bg-white/70 backdrop-blur-md shadow-sm p-4 pt-8 flex items-center justify-between space-x-2">
-            <h1 class="text-lg font-bold text-gray-800" id="header-title">
+        <div class="header-container fixed top-0 left-0 right-0 z-40 bg-white shadow-md p-4 flex items-center justify-between">
+            <h1 class="text-xl font-bold text-gray-800" id="header-title">
                 PROGRESO TOUR GUIDE
             </h1>
-            <div class="flex space-x-2 items-center">
-                <button id="btn-notifications" class="text-gray-600 bg-white border border-gray-300 shadow-sm p-2 rounded-full text-lg focus:outline-none" aria-label="Preferencias">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-                </button>
-                <button id="btn-clear-top" class="p-2 rounded-full text-white bg-red-500 hover:bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50" data-action="CLEAR_HISTORY" aria-label="Limpiar chat">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                </button>
-            </div>
+            <button id="btn-clear-history" class="p-2 rounded-full text-white bg-red-500 hover:bg-red-600 transition-colors focus:outline-none" aria-label="Limpiar chat">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+            </button>
         </div>
         
-        <div id="message-container" class="flex-grow p-4 pt-20 overflow-y-auto w-full flex flex-col">
+        <div id="message-container" class="flex-grow p-4 pt-20 pb-28 overflow-y-auto w-full flex flex-col">
             
-            <div id="user-typing-bubble" class="flex justify-end mb-2">
-                <div class="user-bubble bg-black text-white p-3 shadow-md">
-                    <div class="typing-dots">
-                        <span class="dot"></span>
-                        <span class="dot"></span>
-                        <span class="dot"></span>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="model-typing-bubble" class="flex justify-start mb-2">
+            <div id="model-typing-bubble" class="flex justify-start mb-2 hidden">
                 <div class="model-bubble-wrapper p-3 shadow-md flex items-center">
                     <div class="typing-dots">
                         <span class="dot"></span>
@@ -56,127 +38,29 @@
                     </div>
                 </div>
             </div>
-        </div>
+            </div>
 
-        <div id="bottom-bar-search-wrapper" class="bottom-action-area flex-shrink-0 w-full">
+        <div id="bottom-bar-wrapper" class="bottom-action-area fixed bottom-0 left-0 right-0 w-full bg-white shadow-2xl p-3">
             
-            <div id="autocomplete-chips-group-container" class="autocomplete-chips-group-container hidden">
-                </div>
-
-            <div id="dynamic-chips-group" class="chip-group-scroll hidden">
-                <div id="dynamic-chips-list" class="flex space-x-2 px-4 py-2">
-                    </div>
-            </div>
-
-            <div id="category-chips-group" class="chip-group-scroll hidden">
-                <div class="flex space-x-2 px-4 py-2">
-                    <div class="category-chip action-chip bg-indigo-500 text-white p-2 rounded-full text-sm font-semibold cursor-pointer" data-query-es="Dime sobre la Categoría Salud y Estética en Progreso" data-query-en="Tell me about the Health and Beauty Category in Progreso">🏥 Salud & Estética</div>
-                    <div class="category-chip action-chip bg-indigo-500 text-white p-2 rounded-full text-sm font-semibold cursor-pointer" data-query-es="Dime sobre la Categoría Compras y Tiendas en Progreso" data-query-en="Tell me about the Shopping and Stores Category in Progreso">🛍️ Compras</div>
-                    <div class="category-chip action-chip bg-indigo-500 text-white p-2 rounded-full text-sm font-semibold cursor-pointer" data-query-es="Dime sobre la Categoría Entretenimiento y Atracciones en Progreso" data-query-en="Tell me about the Entertainment and Attractions Category in Progreso">🎺 Entretenimiento</div>
-                    <div class="category-chip action-chip bg-indigo-500 text-white p-2 rounded-full text-sm font-semibold cursor-pointer" data-query-es="Top 10 Dentistas en Progreso" data-query-en="Top 10 Dentists in Progreso">🦷 Top 10 Dental</div>
+            <div id="category-chips-group" class="chip-group-scroll mb-2">
+                <div class="flex space-x-2 px-1">
+                    <button class="category-chip action-chip bg-indigo-500 text-white p-2 rounded-full text-sm font-semibold" data-query-es="Dime sobre la Categoría Salud y Estética en Progreso">🏥 Salud & Estética</button>
+                    <button class="category-chip action-chip bg-indigo-500 text-white p-2 rounded-full text-sm font-semibold" data-query-es="Dime sobre la Categoría Compras y Tiendas en Progreso">🛍️ Compras</button>
+                    <button class="category-chip action-chip bg-indigo-500 text-white p-2 rounded-full text-sm font-semibold" data-query-es="Dime sobre la Categoría Entretenimiento y Atracciones en Progreso">🎺 Entretenimiento</button>
+                    <button class="category-chip action-chip bg-indigo-500 text-white p-2 rounded-full text-sm font-semibold" data-query-es="Información general de Progreso">ℹ️ Info</button>
                 </div>
             </div>
 
-            <div id="language-chips-group" class="chip-group-scroll hidden">
-                <div class="flex space-x-2 px-4 py-2">
-                    <div class="language-chip action-chip bg-blue-500 text-white p-2 rounded-full text-sm font-semibold cursor-pointer" data-lang="es">Español 🇪🇸</div>
-                    <div class="language-chip action-chip bg-blue-500 text-white p-2 rounded-full text-sm font-semibold cursor-pointer" data-lang="en">English 🇬🇧</div>
-                </div>
-            </div>
-
-            <div id="quick-action-full-list" class="p-2 px-4 pt-1 flex justify-center hidden">
-                <button id="btn-view-all-places" class="action-btn bg-gray-600 text-white text-sm font-light px-4 py-2 rounded-full">
-                    ➡️ Ver todos los lugares
-                </button>
-            </div>
-
-            <div class="bottom-bar-wrapper">
-                <div id="input-area-container">
-                    
-                    <div id="bottom-left-actions">
-                        <button id="toggle-mode-button" class="blue-glass-chip" aria-label="Alternar modo chat/búsqueda">
-                            <span id="toggle-icon"></span>
-                            <span id="toggle-text">Modo Chat 💬</span>
-                        </button>
-                    </div>
-
-                    <div id="map-search-bar" class="map-search-bar">
-                        <input type="text" id="user-input" class="map-input" placeholder="Pregúntale al mapa" autocomplete="off">
-                    </div>
-
-                    <button id="send-message-button" class="action-btn bg-blue-500 text-white" disabled>
-                        <svg id="sparkle-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 transition-transform duration-300">
-                            <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354l-4.708 2.812c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.006Z" clip-rule="evenodd" />
-                        </svg>
-                        <span id="go-text">Enviar</span>
-                    </button>
-                </div>
-                
-                <div id="menu-actions" class="flex justify-between items-center w-full px-4 py-2 space-x-2">
-                    <button class="menu-action-chip action-btn bg-green-500 text-white text-sm font-light px-4 py-2" data-action="CATEGORIES" data-query-es="" data-query-en="" id="btn-categorias">
-                        ✨️ Categorías
-                    </button>
-                    <button class="menu-action-chip action-btn bg-blue-500 text-white text-sm font-light px-4 py-2" data-action="LANGUAGE" data-query-es="" data-query-en="" id="btn-lenguaje">
-                        🧢 Idioma
-                    </button>
-                    <button class="menu-action-chip action-btn bg-yellow-400 text-gray-800 text-sm font-light px-4 py-2" data-action="MAP_ROUTE" data-query-es="Quiero saber cómo llegar a..." data-query-en="I want to know how to get to..." id="btn-comollegar">
-                        🚀 Cómo Llegar
-                    </button>
-                    <button class="menu-action-chip action-btn bg-gray-600 text-white text-sm font-light px-4 py-2" data-action="INFO" data-query-es="Información general de Progreso" data-query-en="General information about Progreso" id="btn-info">
-                        ℹ️ Info
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div id="notification-preferences-modal" class="notification-modal-overlay">
-        <div class="notification-panel">
-            <h3 class="text-xl font-bold text-gray-800 mb-4">Preferencias de Notificación</h3>
-            
-            <div class="space-y-4">
-                
-                <div class="flex justify-between items-center border-b pb-3">
-                    <label for="toggle-news" class="text-gray-700 font-medium">Alertas de Interfaz (Idioma, Borrar Chat)</label>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="toggle-news" checked>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-
-                <div class="flex justify-between items-center border-b pb-3">
-                    <label for="toggle-reminders" class="text-gray-700 font-medium">Alertas de Fichas (Lugares/Categorías)</label>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="toggle-reminders" checked>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-
-                <div class="flex justify-between items-center opacity-50 cursor-not-allowed">
-                    <label for="toggle-promotions" class="text-gray-700 font-medium">Promociones y Ofertas (Próximamente)</label>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="toggle-promotions" disabled>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="info-card-panel flex mt-4">
-                <span>💡</span> El tipo de alerta (i, error, éxito) es controlado por el sistema.
-            </div>
-
-            <div class="flex justify-end space-x-3 mt-6">
-                <button id="btn-discard-changes" class="bg-gray-200 text-gray-800 font-semibold px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">
-                    Descartar
-                </button>
-                <button id="btn-apply-changes" class="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                    Aplicar
+            <div id="input-area-container" class="flex items-center space-x-2">
+                <input type="text" id="user-input" class="flex-grow p-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Escribe tu pregunta..." autocomplete="off">
+                <button id="send-message-button" class="action-btn bg-blue-500 text-white p-3 rounded-full transition-colors disabled:bg-gray-400" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                 </button>
             </div>
         </div>
     </div>
     
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=TU_CLAVE_API_DE_GOOGLE&libraries=places&callback=initChatUI"></script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=TU_CLAVE_API_DE_GOOGLE&libraries=places&callback=initChat"></script>
     <script src="js/main.js"></script>
 
 </body>
