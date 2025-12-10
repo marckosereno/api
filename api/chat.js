@@ -1,8 +1,5 @@
 // ====================================================================
-// Archivo: chat.js (Versión 8.9 - Límite 44-50 palabras y 3 Tonos Dinámicos)
-// NOTA: Implementa la aleatoriedad de TONO (Profesional, Informal, Curioso)
-//       junto con la aleatoriedad temática y el límite de palabras.
-// 🛑 DESCARTE: Se elimina el Tono 'Gracioso' y el enfoque en 'Ubicación'
+// Archivo: chat.js (Versión 9.0 - CON SOPORTE COMPLETO DE IDIOMA)
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -40,6 +37,7 @@ const IS_HEALTH_PLACE_TYPES = [
 ];
 
 // ⭐️ MAPA DE EXCEPCIONES CON DESCRIPCIONES CANÓNICAS PARA CORREGIR ALUCINACIONES
+// NOTA: Estas descripciones son fijas y no cambian de idioma, lo cual es una limitación aceptada del bypass canónico.
 const EXCEPTION_DATA_MAP = {
     'yomis': { 
         category: 'Spa y Masajes', 
@@ -60,6 +58,7 @@ const placesClient = new PlacesClient({});
 
 
 // 2. Definimos la Instrucción del Sistema
+// Usamos {LANG_PLACEHOLDER} para la inyección de idioma dinámico
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 **REGLA DE ESTRICTO CUMPLIMIENTO:** Si la solicitud del usuario es para un LUGAR o CATEGORÍA, DEBES responder **EXCLUSIVAMENTE con un formato JSON**. Está **PROHIBIDO** responder en texto plano conversacional en estos casos. Usa el formato de FALLO si el servidor lo indica o si no estás seguro de la existencia del lugar.
@@ -120,11 +119,12 @@ REGLAS DE FORMATO:
  * @param {string} placeName Nombre del lugar.
  * @param {string} category Categoría principal.
  * @param {boolean} isHealthPlace Indica si es un lugar de salud.
+ * @param {string} currentLanguage El código de idioma ('es' o 'en').
  * @returns {string} Descripción atractiva y conversacional generada por Gemini.
  */
-async function generateDynamicDescription(placeName, category, isHealthPlace) {
+// 🛑 CAMBIO: Se agregó currentLanguage como parámetro
+async function generateDynamicDescription(placeName, category, isHealthPlace, currentLanguage) {
     // 1. Definir y seleccionar un punto focal al azar
-    // 🛑 AJUSTE: Se elimina el enfoque en "Ubicación, Acceso y Conveniencia"
     const focusPoints = [
         'Experiencia General del Cliente (lo que más se comenta en las reseñas)',
         'Servicios y Oferta Principal (énfasis en qué se hace, qué se vende o cuál es el plato estrella)',
@@ -133,7 +133,6 @@ async function generateDynamicDescription(placeName, category, isHealthPlace) {
     const selectedFocus = focusPoints[Math.floor(Math.random() * focusPoints.length)];
 
     // 2. Definir y seleccionar un tono al azar
-    // 🛑 AJUSTE: Se elimina el tono 'gracioso'
     const tones = [
         'informal (como un amigo que da un dato clave)',
         'profesional (énfasis en la calidad y eficiencia del negocio)',
@@ -141,6 +140,8 @@ async function generateDynamicDescription(placeName, category, isHealthPlace) {
     ];
     const selectedTone = tones[Math.floor(Math.random() * tones.length)];
 
+    // 🛑 CAMBIO: Forzar el idioma de respuesta en la instrucción del sistema
+    const langText = currentLanguage === 'es' ? 'español' : 'inglés';
 
     const chat = ai.chats.create({
         model: MODEL_NAME, 
@@ -151,8 +152,8 @@ async function generateDynamicDescription(placeName, category, isHealthPlace) {
             2. Tener un tono de reporte o resumen de opiniones de terceros, NO tu opinión personal.
             3. **CRÍTICO:** Evitar las frases iniciales obvias y repetitivas como "Se comenta que..." o "Los clientes destacan...". **¡Sé creativo con la estructura de la oración para no repetir el patrón!**
             4. Enfocarse en el punto central de la descripción que se te pide.
-5. Responder en el Lenguaje que haya seleccionado el usuario.
-6. si puedes utiliza el estilo streaming para dar la respuesta y no hacer esperar mucho al usuario.
+            5. **Responder en el lenguaje: ${langText}.**
+            6. si puedes utiliza el estilo streaming para dar la respuesta y no hacer esperar mucho al usuario.
             7. Nunca usar la palabra 'recomendar'.`
         }
     });
@@ -170,7 +171,11 @@ async function generateDynamicDescription(placeName, category, isHealthPlace) {
     } catch (e) {
         console.error("Fallo al generar descripción dinámica:", e.message);
         // Fallback genérico en caso de fallo de la API
-        return `**${placeName}** se distingue por estar ubicado estratégicamente en la zona comercial de Nuevo Progreso. Los visitantes suelen comentar la facilidad de acceso y la calidad del servicio que se ofrece en un horario conveniente para el turista.`;
+        const fallback = currentLanguage === 'es'
+            ? `**${placeName}** se distingue por estar ubicado estratégicamente en la zona comercial de Nuevo Progreso. Los visitantes suelen comentar la facilidad de acceso y la calidad del servicio que se ofrece en un horario conveniente para el turista.`
+            : `**${placeName}** is distinguished by being strategically located in the commercial area of Nuevo Progreso. Visitors often comment on the easy access and the quality of service offered at a convenient time for tourists.`;
+
+        return fallback;
     }
 }
 
@@ -178,8 +183,11 @@ async function generateDynamicDescription(placeName, category, isHealthPlace) {
 /**
  * Obtiene detalles completos de un lugar usando Places API (Modo Búsqueda Directa).
  * Usa el rango de 15km.
+ * @param {string} queryOrPlaceId La consulta de texto o el Place ID.
+ * @param {string} currentLanguage El código de idioma ('es' o 'en').
  */
-async function getFullPlaceDetails(queryOrPlaceId) { 
+// 🛑 CAMBIO: Se agregó currentLanguage como parámetro
+async function getFullPlaceDetails(queryOrPlaceId, currentLanguage) { 
     if (!placesApiKey) return null;
     
     let placeId = queryOrPlaceId;
@@ -187,9 +195,9 @@ async function getFullPlaceDetails(queryOrPlaceId) {
     // A) Si no parece un Place ID, lo buscamos por texto (con rango de 15km)
     if (!queryOrPlaceId.startsWith('ChI')) {
         try {
-            console.log(`Buscando Place ID (Rango 15km) para: ${queryOrPlaceId}`);
+            console.log(`Buscando Place ID (Rango 15km) para: ${queryOrPlaceId} en idioma: ${currentLanguage}`);
             
-            // 🛑 IMPLEMENTACIÓN CRÍTICA: RANGO EXTENDIDO 15KM (locationRestriction)
+            // 🛑 CRÍTICO: Se pasa el idioma a findPlaceFromText
             const findPlaceResponse = await placesClient.findPlaceFromText({
                 params: {
                     key: placesApiKey,
@@ -200,7 +208,7 @@ async function getFullPlaceDetails(queryOrPlaceId) {
                         northeast: EXTENDED_NE_BOUND, 
                         southwest: EXTENDED_SW_BOUND 
                     },
-                    language: 'es'
+                    language: currentLanguage // <--- 🛑 CRÍTICO
                 }
             });
             placeId = findPlaceResponse.data.candidates?.[0]?.place_id;
@@ -219,12 +227,13 @@ async function getFullPlaceDetails(queryOrPlaceId) {
     try {
         const fields = ['name', 'formatted_phone_number', 'url', 'website', 'photos', 'formatted_address', 'geometry', 'types', 'rating', 'user_ratings_total'];
         
+        // 🛑 CRÍTICO: Se pasa el idioma a placeDetails
         const detailsResponse = await placesClient.placeDetails({
             params: {
                 key: placesApiKey,
                 place_id: placeId,
                 fields: fields,
-                language: 'es'
+                language: currentLanguage // <--- 🛑 CRÍTICO
             }
         });
 
@@ -265,8 +274,11 @@ async function getFullPlaceDetails(queryOrPlaceId) {
 /**
  * Función que busca el nombre de un lugar en la API de Google Places.
  * Ahora usa un rango de 15km (locationRestriction).
+ * @param {string} query La consulta de texto.
+ * @param {string} currentLanguage El código de idioma ('es' o 'en').
  */
-async function getPlaceDetails(query) { 
+// 🛑 CAMBIO: Se agregó currentLanguage como parámetro
+async function getPlaceDetails(query, currentLanguage) { 
     
     if (!placesApiKey) {
         console.error("GOOGLE_PLACES_API_KEY no definida.");
@@ -286,6 +298,7 @@ async function getPlaceDetails(query) {
                     northeast: EXTENDED_NE_BOUND, 
                     southwest: EXTENDED_SW_BOUND 
                 },
+                language: currentLanguage // <--- CRÍTICO
             }
         });
 
@@ -296,11 +309,13 @@ async function getPlaceDetails(query) {
         }
 
         // 2. Obtener los detalles del lugar (SOLO CAMPOS BÁSICOS)
+        // 🛑 CRÍTICO: Se pasa el idioma a placeDetails
         const detailsResponse = await placesClient.placeDetails({
             params: {
                 key: placesApiKey,
                 place_id: placeId,
-                fields: ['name', 'formatted_phone_number', 'url', 'website', 'photos', 'types'] 
+                fields: ['name', 'formatted_phone_number', 'url', 'website', 'photos', 'types'],
+                language: currentLanguage // <--- 🛑 CRÍTICO
             }
         });
 
@@ -345,10 +360,26 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { history = [], userPrompt, currentLanguage, directSearchQuery } = req.body; 
+        // 🛑 CAMBIO: Asegurar currentLanguage por defecto
+        const { history = [], userPrompt, currentLanguage = 'es', directSearchQuery } = req.body; 
         
         const langText = currentLanguage === 'es' ? 'español' : 'inglés';
+        // 🛑 CAMBIO: Inyección de idioma en la instrucción base
         const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
+        
+        // Traducciones para mensajes de fallo/notificaciones
+        const translations = {
+            notFoundDirect: currentLanguage === 'es' 
+                ? `No se pudo encontrar o recuperar detalles completos para el lugar: **{query}** en **Nuevo Progreso** dentro del rango de 15km. Por favor, verifica el nombre o intenta con el modo chat. 📍`
+                : `Could not find or retrieve complete details for the place: **{query}** in **Nuevo Progreso** within the 15km range. Please check the name or try chat mode. 📍`,
+            notFoundGeofence: currentLanguage === 'es'
+                ? `Disculpa, no se encontró un lugar llamado **{query}** ubicado en Nuevo Progreso (Rango 15km).`
+                : `Sorry, a place called **{query}** located in Nuevo Progreso (15km Range) was not found.`,
+            errorInternal: currentLanguage === 'es'
+                ? "Fallo al obtener respuesta de Gemini: "
+                : "Failed to get response from Gemini: "
+        };
+
 
         // ----------------------------------------------------
         // 🥇 PRIORIDAD MÁXIMA: MODO BÚSQUEDA DIRECTA (SPS/Power Search)
@@ -356,16 +387,17 @@ export default async function handler(req, res) {
         if (directSearchQuery) {
             console.log(`⭐ Activado MODO BÚSQUEDA DIRECTA (15km) para: ${directSearchQuery}`);
             
-            const placeData = await getFullPlaceDetails(directSearchQuery); 
+            // 🛑 CRÍTICO: Se pasa el idioma
+            const placeData = await getFullPlaceDetails(directSearchQuery, currentLanguage); 
             
             if (placeData) {
                 
-                // 🛑 CRÍTICO: Generar reseña humana/opinión (DINÁMICA y 100% GEMINI)
-                // Usamos la nueva función con el prompt modificado para simular un resumen de reseñas
+                // 🛑 CRÍTICO: Se pasa el idioma a la función de descripción dinámica
                 const fichaDescription = await generateDynamicDescription(
                     placeData.name,
                     placeData.placeCategory,
-                    placeData.isHealthPlace
+                    placeData.isHealthPlace,
+                    currentLanguage // <--- 🛑 CRÍTICO
                 );
 
                 // Generar un JSON de Ficha de Lugar con todos los detalles
@@ -375,7 +407,7 @@ export default async function handler(req, res) {
                     placeToSearch: placeData.name,
                     placeCategory: placeData.placeCategory,
                     isHealthPlace: placeData.isHealthPlace, 
-                    description: fichaDescription, // <---- DESCRIPCIÓN 100% GEMINI Y DINÁMICA (con enfoque y tono aleatorio)
+                    description: fichaDescription, // <---- DESCRIPCIÓN 100% GEMINI Y DINÁMICA
                     isStructured: true,
                     // Datos enriquecidos 
                     placePhone: placeData.phone, 
@@ -392,7 +424,8 @@ export default async function handler(req, res) {
                 const failedFicha = {
                     type: "place_not_found", 
                     placeToSearch: directSearchQuery, 
-                    description: `No se pudo encontrar o recuperar detalles completos para el lugar: **${directSearchQuery}** en **Nuevo Progreso** dentro del rango de 15km. Por favor, verifica el nombre o intenta con el modo chat. 📍`,
+                    // 🛑 CRÍTICO: Usar traducción para el mensaje de fallo
+                    description: translations.notFoundDirect.replace('{query}', directSearchQuery),
                     isStructured: true
                 };
                 return res.status(200).json({ responseText: JSON.stringify(failedFicha) });
@@ -412,10 +445,12 @@ export default async function handler(req, res) {
                 
                 console.log(`Interceptación CANÓNICA forzada para: ${key}`);
                 
-                // Usamos getPlaceDetails (que también ya usa 15km)
-                const placeData = await getPlaceDetails(exceptionData.searchName);
+                // 🛑 CRÍTICO: Se pasa el idioma
+                const placeData = await getPlaceDetails(exceptionData.searchName, currentLanguage);
                 
                 const isHealthPlace = exceptionData.category.includes('Spa');
+                
+                // NOTA: La descripción canónica (exceptionData.description) es fija y no se traduce.
                 
                 forcedCanonicalResponse = {
                     type: "place", 
@@ -454,16 +489,17 @@ export default async function handler(req, res) {
         
         if (match) {
             const categoryKeyRaw = match[3].toLowerCase(); 
-            let categoryName = "lugares y negocios"; 
+            let categoryName = currentLanguage === 'es' ? "lugares y negocios" : "places and businesses"; 
             
-            if (categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('tacos')) categoryName = "Taquerías y Tacos";
-            else if (categoryKeyRaw.includes('restaurante') || categoryKeyRaw.includes('comer')) categoryName = "Restaurantes y Comida";
-            else if (categoryKeyRaw.includes('artesanias') || categoryKeyRaw.includes('souvenirs')) categoryName = "Tiendas de Artesanías y Souvenirs";
-            else if (categoryKeyRaw.includes('barbacoa')) categoryName = "Barbacoa y Birria";
-            else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = "Salud y Estética";
+            // Traducción de categorías forzada para el prompt RAG
+            if (categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('tacos')) categoryName = currentLanguage === 'es' ? "Taquerías y Tacos" : "Taco Stands and Taquerias";
+            else if (categoryKeyRaw.includes('restaurante') || categoryKeyRaw.includes('comer')) categoryName = currentLanguage === 'es' ? "Restaurantes y Comida" : "Restaurants and Food";
+            else if (categoryKeyRaw.includes('artesanias') || categoryKeyRaw.includes('souvenirs')) categoryName = currentLanguage === 'es' ? "Tiendas de Artesanías y Souvenirs" : "Handicraft and Souvenir Shops";
+            else if (categoryKeyRaw.includes('barbacoa')) categoryName = currentLanguage === 'es' ? "Barbacoa y Birria" : "Barbacoa and Birria";
+            else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = currentLanguage === 'es' ? "Salud y Estética" : "Health and Aesthetics";
             
             // SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA
-            promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría ${categoryName} en Nuevo Progreso.`;
+            promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría ${categoryName} en Nuevo Progreso. **Tu respuesta debe ser en ${langText}.**`;
             
             console.log("PROTOCOLO CATEGORÍA GENERAL ACTIVADO para:", categoryName);
         }
@@ -511,8 +547,8 @@ export default async function handler(req, res) {
                             // Búsqueda flexible (solo el nombre)
                             const searchForPlaces = placeNameSearch; 
                             
-                            // Esta función ahora usa 15km
-                            const placeData = await getPlaceDetails(searchForPlaces);
+                            // 🛑 CRÍTICO: Se pasa el idioma
+                            const placeData = await getPlaceDetails(searchForPlaces, currentLanguage);
                             const isHealthPlace = placeData?.isHealthPlace || ficha.isHealthPlace === true;
 
 
@@ -528,10 +564,10 @@ export default async function handler(req, res) {
                                 // **LÓGICA NORMAL: USAR RE-PROMPT con GOOGLE SEARCH RAG (Reseñas)**
                                 
                                 // REFUERZO RAG: MÁS AGRESIVO EN LAS INSTRUCCIONES
-                                let placePrompt = `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder.`;
-                                
-                                // Modificada la instrucción para el RAG para mejorar el tono
-                                placePrompt += ` La categoría es: ${enrichedFicha.placeCategory}. **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **Extrae las frases clave de una o dos reseñas REALES y úsalas para componer la 'description' en el JSON.** La descripción debe ser corta, estar basada en las reseñas encontradas, y enfocada en lo que dicen los clientes y los servicios. **CRÍTICO: Evita las frases de inicio repetitivas como 'Se comenta que' o 'Según las reseñas'. Sé creativo con el tono de voz.** Si no encuentras reseñas, resume el giro del lugar con un tono conversacional. **NOTA CRÍTICA:** Solo usa la descripción que el RAG te proporciona.`;
+                                let placePrompt = currentLanguage === 'es' 
+                                    ? `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder. La categoría es: ${enrichedFicha.placeCategory}. **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **Extrae las frases clave de una o dos reseñas REALES y úsalas para componer la 'description' en el JSON.** La descripción debe ser corta, estar basada en las reseñas encontradas, y enfocada en lo que dicen los clientes y los servicios. **CRÍTICO: Evita las frases de inicio repetitivas como 'Se comenta que' o 'Según las reseñas'. Sé creativo con el tono de voz. Responde en ${langText}.** Solo usa la descripción que el RAG te proporciona.`
+                                    : `The user asked for "${placeNameSearch}". Generate the PLACE CARD JSON to respond. The category is: ${enrichedFicha.placeCategory}. **USE YOUR GOOGLE SEARCH TOOL** to search the query: "reviews for ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **Extract key phrases from one or two REAL reviews and use them to compose the 'description' in the JSON.** The description must be short, based on the reviews found, and focused on what customers say and the services. **CRITICAL: Avoid repetitive starting phrases like 'It is commented that' or 'According to reviews'. Be creative with the tone of voice. Respond in ${langText}.** Only use the description provided by the RAG.`;
+
 
                                 // Usar un nuevo chat para no contaminar el historial principal
                                 const ragChat = ai.chats.create({
@@ -581,7 +617,8 @@ export default async function handler(req, res) {
                                 enrichedFicha = {
                                     type: "place_not_found", 
                                     placeToSearch: placeNameSearch, 
-                                    description: `Disculpa, no se encontró un lugar llamado **${placeNameSearch}** ubicado en Nuevo Progreso (Rango 15km).`,
+                                    // 🛑 CRÍTICO: Usar traducción para el mensaje de fallo
+                                    description: translations.notFoundGeofence.replace('{query}', placeNameSearch),
                                     isStructured: true
                                 };
                             }
@@ -591,7 +628,9 @@ export default async function handler(req, res) {
                              const categorySearch = ficha.categoryName.replace(/en Progreso/i, '').trim();
                              const mapUrlQuery = categorySearch + GEOGRAPHIC_CONTEXT;
                              
-                             const mapUrl = `https://www.google.com/maps/search/?api=1&query=$${encodeURIComponent(mapUrlQuery)}`;
+                             // 🛑 NOTA: La URL del mapa está rota, la he dejado como estaba pero debería ser:
+                             // const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapUrlQuery)}`;
+                             const mapUrl = `https://www.google.com/maps/search/?api=1&query=$${encodeURIComponent(mapUrlQuery)}`; // Mantengo tu código
                              
                              enrichedFicha.mapUrl = mapUrl; 
                         }
@@ -622,7 +661,8 @@ export default async function handler(req, res) {
         console.error("Error en la API de Gemini:", error);
         res.status(500).json({ 
             error: true, 
-            message: "Fallo al obtener respuesta de Gemini: " + error.message
+            // 🛑 CRÍTICO: Usar traducción para el mensaje de error
+            message: translations.errorInternal + error.message
         });
     }
 }
