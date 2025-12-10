@@ -3,21 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-
     <title>Progreso Tour Guide</title>
 <link href="https://db.onlinewebfonts.com/c/0991fb109ac529a8f639460d21e766cf?family=Spline+Sans+Light" rel="stylesheet">
 <link href="https://db.onlinewebfonts.com/c/c583d0702911444628b39c6d070d99c4?family=Spline+Sans+Medium" rel="stylesheet">
 <link href="https://fonts.cdnfonts.com/css/avenir" rel="stylesheet">
-         <link href="https://db.onlinewebfonts.com/c/ddadf4e5d67469bf2fb13ca47ac078ba?family=FH+Oscar+Test+Medium" rel="stylesheet">       
+<link href="https://db.onlinewebfonts.com/c/ddadf4e5d67469bf2fb13ca47ac078ba?family=FH+Oscar+Test+Medium" rel="stylesheet">       
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
-        
         html, body { 
             font-family:FH Oscar Test Medium; 
             height: 100%; 
             margin: 0; 
             padding: 0; 
-            
             background: linear-gradient(179deg, rgb(224 235 251 / 4%) 0%, #eff6ff 100% 60%);
         }
         .chat-window { 
@@ -27,17 +24,13 @@
             flex-direction: column; 
             background-color: transparent; 
             overflow: hidden;
-font-weight:200;
-line-height:0.5cm;
-font-family:FH Oscar Test Medium;
+            font-weight:200;
+            line-height:0.5cm;
+            font-family:FH Oscar Test Medium;
         }
         .user-bubble { border-radius: 18px 18px 0 18px; max-width: 90% }
-        
         .model-bubble { border-radius: 18px 18px 18px 0; max-width: 90%; padding-left:8px; backgroud-color: transparent;font-size:16px; line-height:16px;}
-        
-        
         .model-bubble-wrapper {
-            
             background: linear-gradient(127deg, #ffffff85, #fff); 
             color: #373737; 
             border-radius: 18px 18px 18px 0;
@@ -46,27 +39,19 @@ font-family:FH Oscar Test Medium;
             max-width: 91%;
             width: fit-content;
         }
-
         .action-bar-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 10px; padding-bottom: 5px }
         .action-btn { 
             white-space: nowrap;
-            
             border-radius: 23px; 
             font-weight: 500;   
-            
-            
             background: rgba(255, 255, 255, 0.1); 
             border: 1px solid rgba(255, 255, 255, 0.3); 
             backdrop-filter: blur(8px); 
             -webkit-backdrop-filter: blur(8px); 
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
             color: #FFFFFF !important; 
-            
-            
             transition: all 0.3s ease; 
         }
-
-        
         .action-bar-container .action-btn.bg-green-500 {
             background-color: #000 !important; 
             backdrop-filter: none;
@@ -87,23 +72,17 @@ font-family:FH Oscar Test Medium;
             color: #1F2937 !important; 
         }
         .action-bar-container .action-btn.bg-gray-600 {
-            
             background: rgba(75, 85, 99, 0.75) !important;
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             border: 1px solid rgba(255, 255, 255, 0.3);
             color: #FFFFFF !important;
         }
-
         .chip-group-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 0px; padding-bottom: 5px }
-        
-        
         .map-search-bar {
-            
             background: rgba(255, 255, 255, 0.4); 
             backdrop-filter: blur(12px); 
             -webkit-backdrop-filter: blur(12px); 
-            
             border-radius: 20px;
             box-sha: 1px 2px 2px 2px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.06); 
             border: 1px solid rgba(255, 255, 255, 0.6); 
@@ -113,8 +92,6 @@ font-family:FH Oscar Test Medium;
             width: 100%; 
             box-sizing: border-box; 
         }
-        
-        
         .map-input {
             flex-grow: 1;
             padding: 0.75rem 0.75rem; 
@@ -123,29 +100,18 @@ font-family:FH Oscar Test Medium;
             background: transparent;
             border: none;
             min-width: 0; 
-            
             outline: none !important;
             box-shadow: none !important;
-height:44px;
+            height:44px;
         }
-        
-        
-        
-
-        
-        
         * {
             -webkit-tap-highlight-color: transparent !important; 
         }
-        
-        
-        
         .action-chip, .category-chip, .language-chip, .map-input, .dynamic-chip, #toggle-mode-button, .autocomplete-chip, .attribution-chip { 
             outline: none !important;
             box-shadow: none !important;
             --tw-ring-color: transparent !important;
         }
-        
         .action-chip:focus, .action-chip:active, .category-chip:focus, .category-chip:active, .language-chip:focus, .language-chip:active, .dynamic-chip:focus, .dynamic-chip:active, #toggle-mode-button:focus, #toggle-mode-button:active, .autocomplete-chip:focus, .autocomplete-chip:active, .attribution-chip:focus, .attribution-chip:active { 
             outline: none !important;
             box-shadow: none !important;
@@ -154,8 +120,6 @@ height:44px;
         .hover\:bg-gray-300:active {
             background-color: #d1d5db; 
         }
-        
-        
         .category-chip, .language-chip, .dynamic-chip {
             opacity: 0;
             transform: translateY(20px);
@@ -168,13 +132,10 @@ height:44px;
             opacity: 1;
             transform: translateY(0);
         }
-
-        
         .timestamp {
             font-size: 0.7rem; 
             color: #9ca3af; 
             margin-top: 2px;
-            
         }
         .user-timestamp-container { 
             align-self: flex-end; 
@@ -184,9 +145,6 @@ height:44px;
             align-self: flex-start; 
             margin-left: 4px; 
         }
-        
-
-        
         #message-container {
             padding-top: 6rem; 
         }
@@ -194,8 +152,6 @@ height:44px;
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
             outline: none !important;
         }
-
-        
         .notification-card {
             background-color: white;
             border-radius: 16px;
@@ -212,12 +168,10 @@ height:44px;
             transition: transform 0.4s ease-out, opacity 0.4s ease-out;
             opacity: 0;
         }
-
         .notification-card.show {
             transform: translateY(0);
             opacity: 1;
         }
-
         .notification-card .message-content {
             flex-grow: 1;
             font-weight: 500;
@@ -225,7 +179,6 @@ height:44px;
             align-items: center;
             line-height:16px;
         }
-
         .notification-card .close-btn {
             background: none;
             border: none;
@@ -238,12 +191,9 @@ height:44px;
             line-height: 1;
             transition: color 0.2s;
         }
-        
         .notification-card .close-btn:active {
             color: #4b5563; 
         }
-
-        
         #btn-notifications {
             background-color: white;
             color: #4b5563; 
@@ -266,8 +216,6 @@ height:44px;
             background-color: #e5e7eb;
             color: #000;
         }
-
-        
         .notification-modal-overlay {
             position: fixed;
             top: 0;
@@ -283,12 +231,10 @@ height:44px;
             visibility: hidden;
             transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
         }
-
         .notification-modal-overlay.show {
             opacity: 1;
             visibility: visible;
         }
-
         .notification-panel {
             background-color: white;
             border-radius: 12px;
@@ -301,13 +247,10 @@ height:44px;
             padding: 20px;
             pointer-events: auto; 
         }
-
         .notification-modal-overlay.show .notification-panel {
             transform: translateY(0);
             opacity: 1;
         }
-
-        
         .toggle-switch {
             position: relative;
             display: inline-block;
@@ -315,13 +258,11 @@ height:44px;
             height: 20px; 
             flex-shrink: 0;
         }
-
         .toggle-switch input {
             opacity: 0;
             width: 0;
             height: 0;
         }
-
         .slider {
             position: absolute;
             cursor: pointer;
@@ -333,7 +274,6 @@ height:44px;
             transition: .4s;
             border-radius: 20px; 
         }
-
         .slider:before {
             position: absolute;
             content: "";
@@ -346,20 +286,15 @@ height:44px;
             border-radius: 50%; 
             box-shadow: 0 1px 3px rgba(0,0,0,0.2); 
         }
-
         input:checked + .slider {
             background-color: #2563eb; 
         }
-
         input:focus + .slider {
             box-shadow: 0 0 1px #2563eb;
         }
-
         input:checked + .slider:before {
             transform: translateX(20px); 
         }
-
-        
         .info-card-panel {
             background-color: #eff6ff; 
             color: #1e40af; 
@@ -375,53 +310,32 @@ height:44px;
             margin-right: 8px;
             font-size: 1.1rem;
         }
-        
-        
         .stacked-photo {
-          
           width: 260px; 
           max-width: 120px; 
           height: auto; 
           object-fit: cover; 
           border-radius: 12px; 
           position: relative;
-          
-          
           box-shadow: 
-            
             6px -4px 0 0 rgba(0, 0, 0, 0.15),
-            
             3px -5px 0 0 rgba(0, 0, 0, 0.08);
-
-          
           transform: rotate(356deg); 
           transition: transform 0.15s ease-out;
           margin-bottom: 12px; 
           border: 4px solid white; 
-          
-          
           margin-left: 10px;
           margin-right: 32px; 
         }
-        
-        
         .image-link {
             display: block; 
             width: fit-content; 
-            
         }
-        
-        
         .stacked-photo.clickable-effect:active {
-            
             transform: scale(0.98) translateY(2px) rotate(356deg); 
-            
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); 
             cursor: grabbing;
         }
-
-
-        
         @media (max-width: 640px) {
           .stacked-photo {
             transform: rotate(358deg) !important;
@@ -434,30 +348,19 @@ height:44px;
             border: 2px solid #333;
           }
         }
-        
-        
-        
-        
         .bottom-action-area {
-            
             border-top: none;
-            
             box-shadow: none; 
             z-index: 10;
             padding-bottom: 0; 
         }
-
-        
         #bottom-bar-search-wrapper {
           padding-top:22px;  
- border-radius: 20px 20px 0 0; 
+          border-radius: 20px 20px 0 0; 
              background-color: white !important;
-             
              box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05), 0 -2px 4px -2px rgba(0, 0, 0, 0.04);
              z-index: 10;
         }
-        
-        
         #quick-replies-container {
             border-top: none; 
             background: transparent; 
@@ -465,34 +368,22 @@ height:44px;
             box-shadow: none; 
             z-index: 10;
         }
-
-
-        
         .glass-chip {
-            
             background: linear-gradient(167deg, #93c5fd 0%, #3e6bff 90%) !important; 
-            
             backdrop-filter: blur(8px); 
             -webkit-backdrop-filter: blur(8px);
-            
             border: 1px solid rgba(255, 255, 255, 0.8) !important; 
-            
             box-shadow: 
                 inset 0 1px 0 rgba(255, 255, 255, 0.9),
                 inset 0 -1px 0 rgba(0, 0, 0, 0.1);
-            
             color: #fefefe !important; 
-            
             transition: all 0.2s ease-in-out;
-            
-            
             white-space: nowrap;
             display: inline-flex;
             align-items: center;
             border-radius: 9999px; 
             padding: 8px 12px;
         }
-
         .glass-chip:hover {
             background: linear-gradient(177deg, #2563eb 0%, #3b82f6 100%) !important;
             box-shadow: 
@@ -500,26 +391,17 @@ height:44px;
                 inset 0 1px 0 rgba(255, 255, 255, 1),
                 inset 0 -1px 0 rgba(0, 0, 0, 0.2);
         }
-
         .glass-chip:active {
             background: rgb(226 246 255 / 80%) !important;
             box-shadow: none !important; 
         }
-
-        
         .blue-glass-chip {
-            
             background: linear-gradient(90deg, rgb(215 236 255 / 50%) 0%, rgb(230 245 255 / 80%) 90%) !important;
-            
             backdrop-filter: blur(8px); 
             -webkit-backdrop-filter: blur(8px);
-            
-            
             border: 1px solid rgba(130, 180, 255, 0.8) !important; 
             color: #1e40af !important; 
             font-weight: 600; 
-            
-            
             white-space: nowrap;
             display: inline-flex;
             align-items: center;
@@ -527,7 +409,6 @@ height:44px;
             padding: 8px 12px;
             transition: all 0.2s ease-in-out;
         }
-
         .blue-glass-chip:hover {
             background: linear-gradient(90deg, rgb(190 220 255 / 70%) 0%, rgb(210 235 255 / 90%) 100%) !important;
             box-shadow: 
@@ -535,41 +416,28 @@ height:44px;
                 inset 0 1px 0 rgba(255, 255, 255, 1),
                 inset 0 -1px 0 rgba(0, 0, 0, 0.2);
         }
-
         .blue-glass-chip:active {
             background: rgb(180 210 255 / 90%) !important;
             box-shadow: none !important; 
         }
-
-
-        
         #menu-actions .menu-action-chip {
             background-color: transparent !important;
         }
-        
-        
-        
-        
         #user-typing-bubble, #model-typing-bubble {
             opacity: 0;
             visibility: hidden;
-            
             transition: opacity 0.2s ease-out, visibility 0.2s ease-out, height 0.2s ease-out, margin-bottom 0.2s ease-out;
             margin-bottom: 0 !important; 
             height: 0; 
             overflow: hidden; 
-            
         }
-        
-        
         #user-typing-bubble.show, #model-typing-bubble.show {
             opacity: 1;
             visibility: visible;
             height: auto; 
-padding-bottom:40px; 
+            padding-bottom:40px; 
             margin-bottom: 18px !important; 
         }
-        
         .typing-dots {
             display: flex;
             align-items: center;
@@ -582,58 +450,41 @@ padding-bottom:40px;
             margin: 0 2px;
             animation: bounce 1.4s infinite ease-in-out both;
         }
-        
         #model-typing-bubble .dot { background-color: black; }
-        
         #user-typing-bubble .dot { background-color: white; }
-
         .typing-dots .dot:nth-child(1) { animation-delay: -0.32s; }
         .typing-dots .dot:nth-child(2) { animation-delay: -0.16s; }
         .typing-dots .dot:nth-child(3) { animation-delay: 0s; }
-
         @keyframes bounce {
             0%, 80%, 100% { transform: scale(0); }
             40% { transform: scale(1); }
         }
-        
-        
         #user-input.sps-mode { 
             border-color: #f59e0b; 
             background-color: #fffef2; 
             font-weight: bold;
             color: #2563eb; 
         }
-        
-        
-        
         #toggle-mode-button {
-            
             background: linear-gradient(90deg, rgb(215 236 255 / 50%) 0%, rgb(230 245 255 / 80%) 90%) !important;
             backdrop-filter: blur(8px); 
             -webkit-backdrop-filter: blur(8px);
             border: 1px solid rgba(130, 180, 255, 0.8) !important; 
             color: #1e40af !important; 
             font-weight: 600; 
-            
             white-space: nowrap;
             display: inline-flex;
             align-items: center;
             border-radius: 9999px; 
-            
-            
             padding: 8px 12px;
             height: auto; 
             width: auto;
-            
-            
             margin-left: 0; 
             margin-right: 0; 
-            
             flex-shrink: 0;
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
             transition: all 0.2s ease-in-out;
         }
-
         #toggle-mode-button:hover {
             background: linear-gradient(90deg, rgb(190 220 255 / 70%) 0%, rgb(210 235 255 / 90%) 100%) !important;
             box-shadow: 
@@ -641,31 +492,22 @@ padding-bottom:40px;
                 inset 0 1px 0 rgba(255, 255, 255, 1),
                 inset 0 -1px 0 rgba(0, 0, 0, 0.2);
         }
-
-        
         #toggle-mode-button.active {
             background: linear-gradient(154deg, #fff 0%, #eff6ff 90%) !important; 
             border: 1px solid rgba(255, 165, 0, 0.8) !important; 
             color: #1f2937 !important; 
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-        
         #toggle-mode-button:active {
             transform: scale(0.98); 
         }
-
-        
         #toggle-icon {
             display: none !important;
         }
-        
-        
         #send-message-button {
-            
             background-color: #3b82f6 !important; 
             color: white;
             border-radius: 9999px; 
-            
             width: auto; 
             height: auto;
             padding: 10px 14px; 
@@ -676,61 +518,41 @@ padding-bottom:40px;
             margin-left: 8px; 
             transition: background-color 0.2s, transform 0.1s;
         }
-
         #send-message-button:hover:not(:disabled) {
             background-color: #2563eb !important;
         }
-
         #send-message-button:active:not(:disabled) {
             transform: scale(0.95);
         }
-
         #send-message-button:disabled {
             background-color: #d1d5db !important; 
             cursor: not-allowed;
             color: #6b7280;
         }
-
-        
         #go-text {
-            
             display: inline !important; 
             font-weight: 600;
         }
-        
-        
         #send-message-button svg {
             fill: currentColor; 
             height: 18px; 
             width: 18px;
-            
             transform: none; 
             margin-right: 6px; 
         }
-
-
-        
         #input-area-container {
-            
             border-top: 1px solid #e5e7eb; 
-            
             display: flex;
             align-items: center; 
             padding: 4px; 
             width: 100%;
         }
-
-        
-        
         .map-search-bar {
-            
             display: block; 
             flex-grow: 1; 
             margin-left: 8px; 
             margin-right: 8px; 
             padding: 0; 
-            
-            
             background: rgba(255, 255, 255, 0.4); 
             backdrop-filter: blur(12px); 
             -webkit-backdrop-filter: blur(12px); 
@@ -738,76 +560,54 @@ padding-bottom:40px;
             box: 1px 2px 2px 2px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.06); 
             border: 1px solid rgba(255, 255, 255, 0.6); 
         }
-
-        
         #user-input {
             width: 100%; 
             padding: 0.75rem 1rem; 
-            
             background: transparent !important; 
             color: #1f2937;
         }
-
-        
         #bottom-left-actions {
             display: flex;
             align-items: center;
             flex-shrink: 0;
             padding: 4px; 
         }
-        
-        
         .bottom-bar-wrapper {
-             
              display: flex;
              flex-direction: column; 
              align-items: center; 
              flex-shrink: 0;
              width: 100%;
-             
-             
              padding: 0 1rem 0.5rem 1rem; 
         }
-
-        
         #go-button {
             display: none !important;
         }
-
-
-        
-        
         .pac-container { display: none !important; visibility: hidden !important; } .autocomplete-chips-group-container { 
-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 0.5rem 1rem; 
-display: flex; flex-wrap: nowrap; 
-align-items: center; padding-top:0px; } .autocomplete-chip { 
-background-color: #eff6ff; color: #1f2937; border: 1px solid #d1d5db; border-radius: 9999px; padding: 6px 10px; margin-right: 8px; 
-cursor: pointer; 
-white-space: nowrap; 
-flex-shrink: 0; 
-transition: background-color 0.1s, transform 0.1s; font-size: 0.9rem; } .autocomplete-chip:hover { 
-background-color: #e0f2fe; } .autocomplete-chip:active { 
-transform: scale(0.98); background-color: #c0e1fd; } .attribution-chip { 
-font-size: 0.75rem; 
-color: #6b7280; 
-margin-left: 10px; 
-padding: 5px 10px; 
-background-color: #f9fafb; 
-border-radius: 10px; 
-flex-shrink: 0; } .mention-placeholder-icon { 
-margin-right: 4px; color: #4b5563; }
+        width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 0.5rem 1rem; 
+        display: flex; flex-wrap: nowrap; 
+        align-items: center; padding-top:0px; } .autocomplete-chip { 
+        background-color: #eff6ff; color: #1f2937; border: 1px solid #d1d5db; border-radius: 9999px; padding: 6px 10px; margin-right: 8px; 
+        cursor: pointer; 
+        white-space: nowrap; 
+        flex-shrink: 0; 
+        transition: background-color 0.1s, transform 0.1s; font-size: 0.9rem; } .autocomplete-chip:hover { 
+        background-color: #e0f2fe; } .autocomplete-chip:active { 
+        transform: scale(0.98); background-color: #c0e1fd; } .attribution-chip { 
+        font-size: 0.75rem; 
+        color: #6b7280; 
+        margin-left: 10px; 
+        padding: 5px 10px; 
+        background-color: #f9fafb; 
+        border-radius: 10px; 
+        flex-shrink: 0; } .mention-placeholder-icon { 
+        margin-right: 4px; color: #4b5563; }
     </style>
 </head>
 <body class="h-screen bg-gray-50 flex items-center justify-center">
-
-    
     <div class="chat-window w-full max-w-lg shadow-xl relative bg-white">
-
-        
         <div id="app-alert-container" class="fixed top-0 left-0 right-0 p-4 pt-10 flex flex-col items-center justify-end z-40 space-y-2 pointer-events-none">
-            
         </div>
-        
         <div id="header-bar" class="fixed top-0 w-full max-w-lg flex justify-between items-center p-4 pt-8 bg-white z-20 border-b border-gray-200">
             <h1 class="text-xl font-bold text-gray-800">Progreso Tour Guide</h1>
             <div class="flex space-x-2">
@@ -823,10 +623,7 @@ margin-right: 4px; color: #4b5563; }
                 </button>
             </div>
         </div>
-
-        
         <div id="message-container" class="flex-1 overflow-y-auto p-4 space-y-4">
-            
             <div id="user-typing-bubble" class="flex justify-end mb-2">
                 <div class="user-bubble bg-black text-white p-3 shadow-md">
                     <div class="typing-dots">
@@ -836,8 +633,6 @@ margin-right: 4px; color: #4b5563; }
                     </div>
                 </div>
             </div>
-
-            
             <div id="model-typing-bubble" class="flex justify-start mb-2">
                 <div class="model-bubble-wrapper">
                     <div class="typing-dots">
@@ -847,15 +642,9 @@ margin-right: 4px; color: #4b5563; }
                     </div>
                 </div>
             </div>
-            
-            
             <div id="dynamic-chips-group" class="chip-group-scroll flex space-x-2 hidden mb-4">
-                
             </div>
-            
         </div>
-
-        
         <div id="bottom-bar-search-wrapper" class="w-full">
             <div id="quick-replies-container" class="chip-group-scroll flex space-x-2 w-full px-4 mb-2 z-10">
                 <div id="menu-actions" class="flex space-x-2 flex-shrink-0">
@@ -864,14 +653,9 @@ margin-right: 4px; color: #4b5563; }
                     <div class="menu-action-chip glass-chip cursor-pointer" data-action="INFO" data-query-es="Información general sobre Nuevo Progreso." data-query-en="General information about Nuevo Progreso.">ℹ️ Info</div>
                 </div>
             </div>
-
             <div class="bottom-bar-wrapper">
-                
                 <div class="autocomplete-chips-group-container flex space-x-2 hidden" id="autocomplete-chips-group-container">
-                    
-                    
                 </div>
-                
                 <div id="input-area-container" class="flex justify-between items-center w-full">
                     <div id="bottom-left-actions">
                         <button id="toggle-mode-button" title="Alternar Modo Búsqueda Geográfica">
@@ -879,11 +663,9 @@ margin-right: 4px; color: #4b5563; }
                             <span id="toggle-text">Modo Chat</span>
                         </button>
                     </div>
-                    
                     <div id="map-search-bar" class="map-search-bar">
                         <input type="text" id="user-input" class="map-input" placeholder="Pregúntale al mapa" autocomplete="off" inputmode="text">
                     </div>
-                    
                     <button id="send-message-button" class="transition disabled:opacity-50" disabled>
                         <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 122.88 122.88" class="flex-shrink-0">
                             <g>
@@ -893,30 +675,22 @@ margin-right: 4px; color: #4b5563; }
                         <span id="go-text">Enviar</span>
                     </button>
                 </div>
-
-                
                 <div id="category-chips-group" class="chip-group-scroll flex space-x-2 mt-2 px-4 hidden">
                     <div class="category-chip blue-glass-chip cursor-pointer text-sm font-semibold" data-action="CATEGORY" data-query-es="Salud y Belleza" data-query-en="Health & Beauty">🏥 Salud & Belleza</div>
                     <div class="category-chip blue-glass-chip cursor-pointer text-sm font-semibold" data-action="CATEGORY" data-query-es="Compras y Tiendas" data-query-en="Shopping">🛍️ Compras & Tiendas</div>
                     <div class="category-chip blue-glass-chip cursor-pointer text-sm font-semibold" data-action="CATEGORY" data-query-es="Comida y Entretenimiento" data-query-en="Food & Entertainment">🍽️ Entretenimiento</div>
                     <div class="category-chip blue-glass-chip cursor-pointer text-sm font-semibold" data-action="CATEGORY" data-query-es="Top 10 Dental" data-query-en="Top 10 Dental">🦷 Top 10 Dental</div>
                 </div>
-
-                
                 <div id="language-chips-group" class="chip-group-scroll flex space-x-2 mt-2 px-4 hidden">
                     <div class="language-chip blue-glass-chip cursor-pointer text-sm font-semibold" data-lang="es">🇪🇸 Español</div>
                     <div class="language-chip blue-glass-chip cursor-pointer text-sm font-semibold" data-lang="en">🇺🇸 English</div>
                 </div>
             </div>
         </div>
-
     </div>
-
-    
     <div id="notification-modal" class="notification-modal-overlay">
         <div class="notification-panel">
             <h3 class="text-xl font-bold mb-4 text-gray-800">Preferencias de Notificación</h3>
-            
             <div class="flex justify-between items-center mb-4">
                 <span class="text-gray-700">Alertas de Interfaz (Noticias, Historial)</span>
                 <label class="toggle-switch">
@@ -924,7 +698,6 @@ margin-right: 4px; color: #4b5563; }
                     <span class="slider"></span>
                 </label>
             </div>
-            
             <div class="flex justify-between items-center mb-4">
                 <span class="text-gray-700">Alertas Estructuradas (Fichas de Lugar)</span>
                 <label class="toggle-switch">
@@ -932,7 +705,6 @@ margin-right: 4px; color: #4b5563; }
                     <span class="slider"></span>
                 </label>
             </div>
-            
             <div class="flex justify-between items-center mb-4 opacity-50 cursor-not-allowed" title="Característica deshabilitada">
                 <span class="text-gray-700">Promociones y Ofertas</span>
                 <label class="toggle-switch">
@@ -940,12 +712,10 @@ margin-right: 4px; color: #4b5563; }
                     <span class="slider"></span>
                 </label>
             </div>
-
             <div class="info-card-panel flex mt-4 hidden" id="info-card-promotions">
                 <span class="font-bold">⚠️</span>
                 <p>Esta función está actualmente deshabilitada y no recibirá notificaciones de promociones.</p>
             </div>
-
             <button onclick="saveNotificationPreferences()" class="w-full mt-6 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition">
                 Guardar Preferencias
             </button>
@@ -954,11 +724,7 @@ margin-right: 4px; color: #4b5563; }
             </button>
         </div>
     </div>
-
     <script>
-    
-    
-    
     let chatHistory = [];
     let currentLanguage = 'es';
     let categoriesVisible = false;
@@ -968,20 +734,12 @@ margin-right: 4px; color: #4b5563; }
     let isBotTyping = false; 
     let isSPSMode = false;
     let placeIdForDirectSearch = "ChIJV79q-k1mZIYRJ29vD_vF0qA"; 
-    
     let autocompleteService; 
-    
     let lastTotalCount = 0; 
     let lastApiQuery = null; 
-    
-    
-    
     let isMentionMode = false; 
     let currentMentionPlace = null; 
     const MENTION_TOKEN = "[[PLACE_MENTION]]"; 
-    
-    
-    
     const inputElement = document.getElementById('user-input'); 
     const sendButton = document.getElementById('send-message-button');
     const messageContainer = document.getElementById('message-container');
@@ -996,23 +754,17 @@ margin-right: 4px; color: #4b5563; }
     const toggleText = document.getElementById('toggle-text');
     const bottomBarWrapper = document.querySelector('.bottom-bar-wrapper');
     const autocompleteChipsGroupContainer = document.getElementById('autocomplete-chips-group-container');
-    
-    
     const btnClearTop = document.getElementById('btn-clear-top');
     const btnNotifications = document.getElementById('btn-notifications');
     const notificationModal = document.getElementById('notification-modal');
     const toggleNews = document.getElementById('toggle-news');
     const toggleReminders = document.getElementById('toggle-reminders');
     const infoCardPromotions = document.getElementById('info-card-promotions');
-
-
-    
     const UI_STRINGS = {
         es: {
             header: "PROGRESO TOUR GUIDE",
             placeholder: "Pregúntale al mapa",
             searchPlaceholder: "Escribe el nombre del negocio...",
-            
             goButton: "Enviar", 
             loadingStatus: "Procesando tu petición...",
             categories: "✨️ Categorías",
@@ -1030,7 +782,6 @@ margin-right: 4px; color: #4b5563; }
             btnPhone: "Llamar Ahora 📞",
             btnReview: "Reseñas ⭐",
             btnWebsite: "Sitio Web/Redes 🌐",
-            
             spsMode: "Modo Pro ●Activado 🦾",
             chatMode: "Modo Chat 💬",
             // INICIO DEL CAMBIO: Sin emoji y con negrita HTML para el nombre
@@ -1041,7 +792,6 @@ margin-right: 4px; color: #4b5563; }
             header: "PROGRESO TOUR GUIDE",
             placeholder: "Ask the map",
             searchPlaceholder: "Enter the business name...",
-            
             goButton: "Send", 
             loadingStatus: "Processing your request...",
             categories: "✨️ Categories",
@@ -1059,7 +809,6 @@ margin-right: 4px; color: #4b5563; }
             btnPhone: "Call Now 📞",
             btnReview: "Reviews ⭐",
             btnWebsite: "Website/Social 🌐",
-            
             spsMode: "Pro Mode ●Active 🦾",
             chatMode: "Chat Mode 💬",
             // INICIO DEL CAMBIO: Sin emoji y con negrita HTML para el nombre
@@ -1067,7 +816,6 @@ margin-right: 4px; color: #4b5563; }
             // FIN DEL CAMBIO
         }
     };
-    
     let notificationPreferences = { news: true, 
 reminders: true, 
 promotions: false }; 
@@ -1075,8 +823,6 @@ promotions: false };
     if (inputElement) inputElement.disabled = false;
     if (sendButton) sendButton.disabled = true;
 
-    
-    
     function formatTime(date) {
         if (!date) return '';
         const d = date instanceof Date ? date : new Date(date);
@@ -1095,23 +841,17 @@ promotions: false };
         chatHistory = [];
         localStorage.removeItem('chatHistory');
         renderChat();
-        
         hideChipGroup(dynamicChipsList);
-        
         autocompleteChipsGroupContainer.classList.add('hidden');
         autocompleteChipsGroupContainer.innerHTML = '';
         lastTotalCount = 0;
         lastApiQuery = null;
-        
         if (isSPSMode) toggleSPSMode();
-        
         resetMentionMode();
-        
         inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
     }
 
     function loadHistory() {
-        
         let loaded = false;
         try {
             const savedHistory = localStorage.getItem('chatHistory');
@@ -1126,17 +866,14 @@ promotions: false };
             }
         } catch (e) {
             console.error("Error al cargar o parsear el historial de localStorage", e);
-            
             chatHistory = [];
         }
-        
         if (!loaded) {
             chatHistory = [];
         }
         return loaded;
     }
 
-    
     function saveNotificationPreferences() {
         try {
             localStorage.setItem('notificationPreferences', JSON.stringify(notificationPreferences));
@@ -1152,40 +889,32 @@ promotions: false };
             if (savedPrefs) {
                 notificationPreferences = JSON.parse(savedPrefs);
             }
-            
             if (toggleNews) toggleNews.checked = notificationPreferences.news;
             if (toggleReminders) toggleReminders.checked = notificationPreferences.reminders;
-            
         } catch (e) {
             console.error("Error al cargar las preferencias de notificación:", e);
         }
     }
 
-    
     function isNearBottom() {
         if (!messageContainer) return true;
         const scrollDifference = messageContainer.scrollHeight - messageContainer.scrollTop;
         const viewportHeight = messageContainer.clientHeight;
-        
         const isNearBottom = scrollDifference <= viewportHeight + 200;
         return isNearBottom;
     }
 
-    
     function alertUser(m, t='i', preferenceType = 'news') {
-        
         if (t !== 'error' && !notificationPreferences[preferenceType]) {
             console.log(`Notificación de tipo "${preferenceType}" deshabilitada por el usuario. Mensaje: ${m}`);
             return;
         }
-        
         if (appAlertContainer) {
             const existingAlert = appAlertContainer.querySelector('.notification-card');
             if (existingAlert) {
                 existingAlert.remove();
             }
         }
-        
         const hideAlert = (alertElement) => {
             if (!alertElement || !alertElement.parentNode) return;
             alertElement.classList.remove('show');
@@ -1227,24 +956,15 @@ promotions: false };
         if (messageContainer) messageContainer.scrollTop = messageContainer.scrollHeight;
     }
 
-    
     function toggleInput(d) {
         if (inputElement) inputElement.disabled = d;
     }
 
     function scrollToBottomSmooth(instant = false) {
         if (!messageContainer || !bottomBarWrapper) return;
-        
-        
-        
-        
-        
         setTimeout(() => {
-            
             messageContainer.scrollTop = messageContainer.scrollHeight;
-            
             bottomBarWrapper.scrollIntoView({ behavior: 'instant', block: 'end' });
-            
         }, 150);
     }
 
@@ -1254,45 +974,33 @@ promotions: false };
 
     function showLoadingIndicator() {
         isBotTyping = true;
-        
         hideUserTypingBubble();
-        
         modelTypingBubble.classList.add('show');
-        
         inputElement.placeholder = UI_STRINGS[currentLanguage].loadingStatus;
-        
         inputElement.disabled = true;
         sendButton.disabled = true;
         toggleButton.disabled = true;
-        
         scrollToBottom();
     }
 
     function hideLoadingIndicator() {
         isBotTyping = false;
-        
         hideModelTypingBubble();
-        
         if (isSPSMode) {
             inputElement.placeholder = UI_STRINGS[currentLanguage].searchPlaceholder;
         } else if (currentMentionPlace) {
-            
             inputElement.placeholder = UI_STRINGS[currentLanguage].mentionPlaceholder(currentMentionPlace.textName);
         } else {
             inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
         }
-
         inputElement.disabled = false;
         toggleButton.disabled = false;
-        
         sendButton.disabled = isSPSMode || inputElement.value.trim() === '';
     }
 
     function showUserTypingBubble() {
-        
         if (inputElement.value.trim().length > 0) {
             userTypingBubble.classList.add('show');
-            
             if (isNearBottom()) {
                 scrollToBottomSmooth();
             }
@@ -1305,70 +1013,52 @@ promotions: false };
         userTypingBubble.classList.remove('show');
     }
     
-    
     function toggleSPSMode() {
         isSPSMode = !isSPSMode;
 
         if (isSPSMode) {
-            
             inputElement.classList.add('sps-mode');
             toggleButton.classList.add('active');
             toggleText.innerHTML = UI_STRINGS[currentLanguage].spsMode;
             inputElement.placeholder = UI_STRINGS[currentLanguage].searchPlaceholder;
-            
             sendButton.disabled = true;
-            
             resetMentionMode();
-            
             if (inputElement && !inputElement.hasAutocompleteListener) {
                 inputElement.addEventListener('input', handleAutocompleteInput);
                 inputElement.hasAutocompleteListener = true;
             }
         } else {
-            
             inputElement.classList.remove('sps-mode');
             toggleButton.classList.remove('active');
             toggleText.innerHTML = UI_STRINGS[currentLanguage].chatMode;
             inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
-            
             sendButton.disabled = inputElement.value.trim() === '';
-            
             autocompleteChipsGroupContainer.classList.add('hidden');
             autocompleteChipsGroupContainer.innerHTML = '';
-            
-            
         }
     }
 
     function resetMentionMode() {
         isMentionMode = false;
         currentMentionPlace = null;
-        
         if (!isSPSMode) {
             inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
         }
-        
         autocompleteChipsGroupContainer.classList.add('hidden');
         autocompleteChipsGroupContainer.innerHTML = '';
-        
         const inputValue = inputElement.value.trim();
-        
         if (!isSPSMode) {
             sendButton.disabled = inputValue === '';
         }
-        
     }
 
     function handleAutocompleteInput(e) {
-        
         if (isSPSMode) {
-            
             if (e.target.value.trim().length < 3) {
                 autocompleteChipsGroupContainer.classList.add('hidden');
                 autocompleteChipsGroupContainer.innerHTML = '';
                 return;
             }
-            
             const request = {
                 input: e.target.value.trim(),
                 locationRestriction: {
@@ -1378,13 +1068,9 @@ promotions: false };
                 radius: 5000, 
                 language: currentLanguage
             };
-
-            
-            
             if (!autocompleteService) {
                 autocompleteService = new google.maps.places.AutocompleteService();
             }
-
             autocompleteService.getPlacePredictions(request, (predictions, status) => {
                 if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
                     renderAutocompleteChips(predictions);
@@ -1393,18 +1079,13 @@ promotions: false };
                     autocompleteChipsGroupContainer.innerHTML = '';
                 }
             });
-
         } else if (e.target.value.includes('@') && !isMentionMode) {
-            
             isMentionMode = true;
-            
             const queryAfterAt = e.target.value.substring(e.target.value.lastIndexOf('@') + 1).trim();
 
             if (queryAfterAt.length >= 3) {
-                
                 const request = {
                     input: queryAfterAt,
-                    
                     locationRestriction: {
                         north: 26.077, east: -98.00,
                         south: 25.968, west: -98.05
@@ -1412,12 +1093,9 @@ promotions: false };
                     radius: 5000, 
                     language: currentLanguage
                 };
-
-                
                 if (!autocompleteService) {
                     autocompleteService = new google.maps.places.AutocompleteService();
                 }
-
                 autocompleteService.getPlacePredictions(request, (predictions, status) => {
                     if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
                         renderAutocompleteChips(predictions);
@@ -1431,18 +1109,14 @@ promotions: false };
                 autocompleteChipsGroupContainer.innerHTML = '';
             }
         } else if (!e.target.value.includes('@') && isMentionMode) {
-            
             resetMentionMode();
         } else if (e.target.value.includes('@') && isMentionMode) {
-            
             const queryAfterAt = e.target.value.substring(e.target.value.lastIndexOf('@') + 1).trim();
             if (queryAfterAt.length < 3) {
                 autocompleteChipsGroupContainer.classList.add('hidden');
                 autocompleteChipsGroupContainer.innerHTML = '';
             }
-             
         }
-
     }
 
     function renderAutocompleteChips(predictions) {
@@ -1457,29 +1131,19 @@ promotions: false };
             const placeName = p.structured_formatting.main_text;
             const placeId = p.place_id;
             chip.className = 'autocomplete-chip';
-            
             const actionType = isSPSMode ? 'sps-select' : 'mention-select';
-            
             chip.setAttribute('data-action', actionType);
             chip.setAttribute('data-place-id', placeId);
             chip.setAttribute('data-place-name', placeName);
-
             chip.innerHTML = isSPSMode ? placeName : `<span class="mention-placeholder-icon">@</span>${placeName}`;
-            
             chip.addEventListener('click', () => handleAutocompleteSelect(placeId, placeName));
-            
             autocompleteChipsGroupContainer.appendChild(chip);
         });
-
-        
         const attribution = document.createElement('div');
         attribution.className = 'attribution-chip';
         attribution.innerHTML = 'Powered by Google Places';
         autocompleteChipsGroupContainer.appendChild(attribution);
-
-
         autocompleteChipsGroupContainer.classList.remove('hidden');
-        
         scrollToBottomSmooth();
     }
 
@@ -1493,67 +1157,39 @@ promotions: false };
         const inputElement = document.getElementById('user-input'); 
         
         if (isSPSMode) {
-            
-            
             inputElement.value = placeName;
-            
             handleSend(placeName, true, placeId); 
-            
-            
             autocompleteChipsGroupContainer.classList.add('hidden');
             autocompleteChipsGroupContainer.innerHTML = '';
         } else {
-            
-            
-            // Bloque para Menciones (Modo Chat)
-            
-            // 1. Lógica de reconstrucción del input 
             const currentInputValue = inputElement.value;
             const mentionIndex = currentInputValue.lastIndexOf('@');
             
             if (mentionIndex !== -1) {
-                
                 const textBeforeMention = currentInputValue.substring(0, mentionIndex);
-                
-                
                 const queryPart = currentInputValue.substring(mentionIndex + 1);
                 const firstSpaceIndex = queryPart.indexOf(' ');
-                
                 let textAfterSelection = '';
                 if (firstSpaceIndex !== -1) {
-                    
                     textAfterSelection = queryPart.substring(firstSpaceIndex); 
                 }
-                
-                // 2. Construir el nuevo valor del input
                 const newInputValue = `${textBeforeMention}@${placeName}${textAfterSelection}`;
                 inputElement.value = newInputValue;
-
-                // 3. Guardar el estado de la mención para el envío
                 currentMentionPlace = {
                     placeId: placeId,
                     textName: placeName,
                 };
-
-                // 4. Actualizar UI
-                // Usamos el placeholder con negrita (como se definió en UI_STRINGS)
                 inputElement.placeholder = UI_STRINGS[currentLanguage].mentionPlaceholder(placeName);
                 sendButton.disabled = inputElement.value.trim() === '';
                 isMentionMode = false;
                 autocompleteChipsGroupContainer.classList.add('hidden'); 
-                
-                // ⭐️ NUEVO: MANTENER EL FOCO Y EL TECLADO ABIERTO
                 inputElement.focus();
-                
-                // ⭐️ NUEVO: Colocar el cursor al final del input para que el usuario siga escribiendo
                 const newCursorPosition = newInputValue.length;
                 inputElement.setSelectionRange(newCursorPosition, newCursorPosition);
             }
-
         }
     }
 
-    
     function vibrateDevice() {
         if ("vibrate" in navigator) {
             navigator.vibrate(100);
@@ -1592,16 +1228,10 @@ promotions: false };
         hideChipGroup(languageChipsGroup, languageChips);
         languageMenuVisible = false;
 
-        
         if (isSPSMode) {
             inputElement.placeholder = strings.searchPlaceholder;
         } else if (currentMentionPlace) {
-            // El placeholder contiene HTML <b>...</b>
             inputElement.placeholder = strings.mentionPlaceholder(currentMentionPlace.textName);
-            
-            // Para que el navegador interprete el HTML en el placeholder (suele requerir truco CSS/JS extra o usar un div editable, pero lo dejamos como texto plano por compatibilidad del input)
-            // Por ahora, el placeholder se verá como "Conversando sobre <b>NombreDelLugar</b>..."
-            // Si el input/textarea fuera editable div (contenteditable=true) esto funcionaría perfectamente.
         } else {
             inputElement.placeholder = strings.placeholder;
         }
@@ -1610,26 +1240,20 @@ promotions: false };
         document.querySelector('.menu-action-chip[data-action="CATEGORIES"]').innerHTML = strings.categories;
         document.querySelector('.menu-action-chip[data-action="LANGUAGE"]').innerHTML = strings.language;
         document.querySelector('.menu-action-chip[data-action="INFO"]').innerHTML = strings.info;
-        
         document.querySelector('#go-text').textContent = strings.goButton;
         document.querySelector('.category-chip[data-query-es="Salud y Belleza"]').innerHTML = strings.chipHealth;
         document.querySelector('.category-chip[data-query-es="Compras y Tiendas"]').innerHTML = strings.chipShopping;
         document.querySelector('.category-chip[data-query-es="Comida y Entretenimiento"]').innerHTML = strings.chipEntertainment;
         document.querySelector('.category-chip[data-query-es="Top 10 Dental"]').innerHTML = strings.chipDental;
-        
         toggleText.innerHTML = isSPSMode ? strings.spsMode : strings.chatMode;
 
-        
         if (langChanged && typeof renderChat === 'function') {
             renderChat();
             scrollToBottom();
         }
-
-        
         alertUser(lang === 'es' ? 'Idioma cambiado a Español. ✅' : 'Language set to English. ✅', 'i', 'news');
     }
 
-    
     function handleMenuAction(action, query) {
         vibrateDevice();
         
@@ -1679,7 +1303,6 @@ promotions: false };
         }
     }
 
-    
     function createMessageBubble(m) {
         const w = document.createElement('div');
         const timeStr = m.timestamp ? formatTime(m.timestamp) : '';
@@ -1706,11 +1329,8 @@ promotions: false };
                 const isPlaceOrCategory = (m.type === 'place' || m.type === 'category');
                 
                 if (m.placePhotoUrl) {
-                    
                     const isClickable = m.mapUrl || m.websiteUrl || m.searchQuery;
                     const clickableClass = isClickable ? 'clickable-effect' : '';
-                    
-                    
                     const targetUrl = m.mapUrl || m.websiteUrl || `https://www.google.com/search?q=${encodeURIComponent(m.searchQuery || m.placeName || m.categoryName || 'Nuevo Progreso')}`;
                     
                     imageHTML = `
@@ -1721,13 +1341,11 @@ promotions: false };
                 }
 
                 if (m.type === 'place' || m.type === 'category') {
-                    
                     const isPlace = m.type === 'place';
                     const isHealthPlace = m.isHealthPlace === true; 
                     const entityName = isPlace ? (m.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) : (m.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
                     let actionsHTML = '';
 
-                    
                     if (isPlace && m.websiteUrl) {
                         actionsHTML += `
                             <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="WEBSITE" data-website-url="${m.websiteUrl}">
@@ -1736,7 +1354,6 @@ promotions: false };
                         `;
                     }
 
-                    
                     if (m.mapUrl) {
                         actionsHTML += `
                             <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="MAP" data-map-url="${m.mapUrl}">
@@ -1745,7 +1362,6 @@ promotions: false };
                         `;
                     }
 
-                    
                     if (isPlace && !isHealthPlace) {
                         if (m.placePhone) {
                             actionsHTML += `
@@ -1763,7 +1379,6 @@ promotions: false };
                         }
                     }
 
-                    
                     if (entityName) {
                         actionsHTML += `
                             <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-action="SEARCH" data-entity-name="${entityName}">
@@ -1775,30 +1390,23 @@ promotions: false };
                     actionsBar = `<div class="action-bar-container"><div class="flex space-x-2">${actionsHTML}</div></div>`;
                 }
 
-                
                 let textContent = m.text || '';
                 
                 if (m.placeName && isPlaceOrCategory) {
-                    
                     textContent = `
                         <p class="text-xl font-bold mb-1">${m.placeName}</p>
                         ${textContent}
                     `;
                 } else if (m.categoryName && isPlaceOrCategory) {
-                    
                     textContent = `
                         <p class="text-xl font-bold mb-1">${m.categoryName}</p>
                         ${textContent}
                     `;
                 }
 
-                
                 if (m.type === 'local_recommendation' && m.totalCount && m.apiQueryForChip) {
-                    
                     lastTotalCount = m.totalCount;
                     lastApiQuery = m.apiQueryForChip;
-
-                    
                     actionsBar = `
                         <div class="action-bar-container">
                             <div class="flex space-x-2">
@@ -1808,14 +1416,12 @@ promotions: false };
                             </div>
                         </div>
                     `;
-                    
                 }
 
                 content = `${imageHTML}<div class="text-base">${textContent.replace(/\n/g, '<br>')}</div>${actionsBar}`;
                 
 
             } else {
-                
                 content = `<div class="text-base">${m.text.replace(/\n/g, '<br>')}</div>`;
             }
 
@@ -1829,14 +1435,12 @@ promotions: false };
         return w;
     }
 
-    
     function renderChat() {
         messageContainer.innerHTML = '';
         chatHistory.forEach(m => {
             messageContainer.appendChild(createMessageBubble(m));
         });
 
-        
         const actionButtons = messageContainer.querySelectorAll('.action-bar-container .blue-glass-chip');
         actionButtons.forEach(button => {
             if (button.classList.contains('listener-attached')) return;
@@ -1850,7 +1454,6 @@ promotions: false };
 
                 } else if (action === 'SEARCH' && this.getAttribute('data-entity-name')) {
                     const entityName = this.getAttribute('data-entity-name');
-                    
                     const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(entityName + " Nuevo Progreso Tamps")}`;
                     window.open(searchUrl, '_blank');
                     alertUser(currentLanguage === 'es' ? `Buscando "${entityName}" en Google.` : `Searching for "${entityName}" on Google.`, 'i', 'news');
@@ -1868,79 +1471,41 @@ promotions: false };
                     alertUser(currentLanguage === 'es' ? 'Abriendo sitio web en nueva ventana.' : 'Opening website in new window.', 'i', 'news');
 
                 } else if (action === 'VIEW_ALL' && lastApiQuery) {
-                    
                     const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(lastApiQuery)}`;
                     window.open(searchUrl, '_blank');
                     alertUser(currentLanguage === 'es' ? `Buscando los ${this.getAttribute('data-count')} lugares en Google.` : `Searching for all ${this.getAttribute('data-count')} places on Google.`, 'i', 'news');
                 }
-
-                
                 this.classList.add('listener-attached');
             });
         });
-
         scrollToBottom();
     }
 
-    
-    
-    
-    
     function handleSend(query = inputElement.value.trim(), isSPSorDirect = false, placeIdForDirectSearch = null) {
-        
         if (isBotTyping) return;
-
         let userPrompt = query;
-
         if (userPrompt === '') return;
-
-        
-        
         const userMessage = { role: 'user', text: userPrompt, timestamp: new Date() };
         chatHistory.push(userMessage);
-
-        
         inputElement.value = '';
         sendButton.disabled = true;
         hideUserTypingBubble();
-        
-        
-        
-        
-        
-        
-        
-        
         let placeIdForAPI = placeIdForDirectSearch; 
         if (currentMentionPlace && !isSPSorDirect) {
-            
             placeIdForAPI = currentMentionPlace.placeId;
-            
-            
             const mentionText = '@' + currentMentionPlace.textName;
-            
             const regex = new RegExp(mentionText.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'i');
             userPrompt = userPrompt.replace(regex, MENTION_TOKEN);
-
-            
             resetMentionMode();
         }
-        
         hideChipGroup(categoryChipsGroup, categoryChips);
         categoriesVisible = false;
         hideChipGroup(languageChipsGroup, languageChips);
         languageMenuVisible = false;
         hideChipGroup(dynamicChipsList);
-        
-        
         autocompleteChipsGroupContainer.classList.add('hidden');
         autocompleteChipsGroupContainer.innerHTML = '';
-
-
         showLoadingIndicator();
-
-        
-        
         const API_URL = 'http://localhost:3000/api/gemini'; 
         const payload = {
             query: userPrompt,
@@ -1949,8 +1514,6 @@ promotions: false };
             placeId: placeIdForAPI,
             language: currentLanguage
         };
-
-        
         fetch(API_URL, {
             method: 'POST',
             headers: {
@@ -1969,48 +1532,29 @@ promotions: false };
             const modelResponseText = data.text || UI_STRINGS[currentLanguage].error;
             let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date(), isStructured: false };
             let dynamicChipsData = data.chips || [];
-
-            
             try {
-                
                 const jsonMatch = modelResponseText.match(/```json\s*([\s\S]*?)\s*```/);
                 let rawJson = jsonMatch ? jsonMatch[1].trim() : null;
 
                 if (rawJson) {
-                    
-                    
                     const structure = JSON.parse(rawJson);
-                    
                     const conversacionText = modelResponseText.replace(jsonMatch[0], '').trim();
                     if (conversacionText.length > 0) {
-                        
                         chatHistory.push({ role: 'model', text: conversacionText, timestamp: new Date(), isStructured: false });
                     }
-
-                    
                     const fichasParaMostrar = [];
-
-                    
                     if (Array.isArray(structure)) {
-                        
                         fichasParaMostrar.push(...structure);
                         finalMessage.isMultiStructured = true;
                     } else if (structure.placeName || structure.categoryName || structure.type === 'local_recommendation') {
-                        
                         fichasParaMostrar.push(structure);
                         finalMessage.isStructured = true;
                     }
-                    
-                    
                     fichasParaMostrar.forEach(ficha => {
                         ficha.role = 'model';
                         ficha.timestamp = new Date();
                         ficha.isStructured = true;
-                        
-                        
                         chatHistory.push(ficha);
-
-                        
                         if (fichasParaMostrar.indexOf(ficha) === 0) {
                             const isPlace = ficha.type === 'place';
                             const entityName = isPlace ? (ficha.placeName || (currentLanguage === 'es' ? 'Ubicación' : 'Location')) : (ficha.categoryName || (currentLanguage === 'es' ? 'Categoría' : 'Category'));
@@ -2018,28 +1562,20 @@ promotions: false };
                             if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
                         }
                     });
-
-                    
                     saveHistory();
                     if (typeof renderChat === 'function') renderChat();
                     return; 
-
                 } else {
-                    
                     if (modelResponseText.includes('totalCount')) {
                         const localRecMatch = modelResponseText.match(/\{(?:[^}])*totalCount[^}]*\}/i);
                         if (localRecMatch) {
                             const localRecJson = localRecMatch[0];
                             const localRecStructure = JSON.parse(localRecJson);
-                            
-                            
                             finalMessage.text = modelResponseText.replace(localRecMatch[0], '').trim();
                             finalMessage.isStructured = true;
                             finalMessage.type = 'local_recommendation';
                             finalMessage.totalCount = localRecStructure.totalCount;
                             finalMessage.apiQueryForChip = localRecStructure.apiQueryForChip;
-
-                            
                             lastTotalCount = localRecStructure.totalCount;
                             lastApiQuery = localRecStructure.apiQueryForChip;
                         }
@@ -2047,35 +1583,25 @@ promotions: false };
                 }
             } catch (e) {
                 console.error("Error al parsear JSON estructurado, de chip o array:", e);
-                
                 finalMessage.text = modelResponseText;
             }
-
-            
             chatHistory.push(finalMessage); 
-
-            
             lastTotalCount = 0;
             lastApiQuery = null;
 
-            
             if (dynamicChipsData && dynamicChipsData.length > 0) {
-                
                 renderDynamicChips(dynamicChipsData);
                 quickActionFullList.classList.add('hidden'); 
             } else {
-                
                 quickActionFullList.classList.remove('hidden');
                 hideChipGroup(dynamicChipsList); 
             }
-
             saveHistory();
             if (typeof renderChat === 'function') renderChat();
         })
         .catch(error => {
             console.error('Fetch error:', error);
             hideLoadingIndicator();
-
             const errorMessage = {
                 role: 'model',
                 text: currentLanguage === 'es' 
@@ -2083,116 +1609,81 @@ promotions: false };
                     : `❌ Sorry, a connection error occurred (${error.message}). Please try again.`,
                 timestamp: new Date()
             };
-
             chatHistory.push(errorMessage);
             saveHistory();
             if (typeof renderChat === 'function') renderChat();
-
             alertUser(currentLanguage === 'es' ? 'Error al contactar al servidor. Revisa tu conexión.' : 'Error contacting the server. Check your connection.', 'error', 'news');
         });
     }
 
-    
     function renderDynamicChips(chips) {
         dynamicChipsList.innerHTML = '';
-        
         chips.forEach((chipData, index) => {
-            const chip = document.createElement('div');
             const query = currentLanguage === 'es' ? chipData.query_es : chipData.query_en;
             const text = currentLanguage === 'es' ? chipData.text_es : chipData.text_en;
-
+            const chip = document.createElement('div');
             chip.className = 'dynamic-chip blue-glass-chip cursor-pointer text-sm font-semibold';
             chip.setAttribute('data-action', 'DYNAMIC_QUERY'); 
             chip.setAttribute('data-query', query); 
             chip.textContent = text;
-            
-            
             setTimeout(() => {
                 chip.classList.add('visible-chip');
             }, index * 100);
-
-            
             chip.addEventListener('click', function() {
                 vibrateDevice();
                 const q = this.getAttribute('data-query');
                 handleSend(q); 
-                
                 hideChipGroup(dynamicChipsList);
                 quickActionFullList.classList.remove('hidden');
             });
-
             dynamicChipsList.appendChild(chip);
         });
-
         quickActionFullList.classList.add('hidden'); 
         dynamicChipsList.classList.remove('hidden');
         scrollToBottomSmooth();
     }
 
-
-    
     if (sendButton) sendButton.addEventListener('click', () => {
         if (!isSPSMode) handleSend();
     });
 
-    
     if (inputElement) inputElement.addEventListener('keypress', function(e) {
         if (e.key === 'Enter' && !isSPSMode) {
             handleSend();
         }
     });
 
-    
     if (toggleButton) toggleButton.addEventListener('click', toggleSPSMode);
 
-    
     if (inputElement) {
-        
         inputElement.addEventListener('focus', () => {
             if (isNearBottom()) {
-                
                 scrollToBottomSmooth();
             }
-            
             if (!isSPSMode) showUserTypingBubble(); 
         });
-
-        
         inputElement.addEventListener('input', () => {
-            
             if (!isSPSMode) {
                 sendButton.disabled = inputElement.value.trim() === '';
             } else {
-                
-                
             }
-            
             if (!isSPSMode && !currentMentionPlace) {
                 showUserTypingBubble();
             } else {
                 hideUserTypingBubble(); 
             }
         });
-        
-        
         inputElement.addEventListener('blur', () => {
-            
-            
             setTimeout(() => {
                  hideUserTypingBubble();
             }, 300); 
         });
-
-        
         if (!inputElement.hasAutocompleteListener) {
             inputElement.addEventListener('input', handleAutocompleteInput);
             inputElement.hasAutocompleteListener = true;
         }
-
     }
 
-
-    
     const menuActionChips = document.querySelectorAll('#menu-actions .menu-action-chip');
     menuActionChips.forEach(chip => {
         chip.addEventListener('click', function() {
@@ -2203,7 +1694,6 @@ promotions: false };
         });
     });
 
-    
     const categoryActionChips = document.querySelectorAll('#category-chips-group .category-chip');
     categoryActionChips.forEach(chip => {
         chip.addEventListener('click', function() {
@@ -2214,7 +1704,6 @@ promotions: false };
         });
     });
 
-    
     const languageActionChips = document.querySelectorAll('#language-chips-group .language-chip');
     languageActionChips.forEach(chip => {
         chip.addEventListener('click', function() {
@@ -2223,9 +1712,7 @@ promotions: false };
         });
     });
 
-    
     if (btnClearTop) btnClearTop.addEventListener('click', () => handleMenuAction('CLEAR_HISTORY', null));
-    
     
     if (btnNotifications) btnNotifications.addEventListener('click', () => {
         notificationModal.classList.add('show');
@@ -2243,32 +1730,22 @@ promotions: false };
         });
     }
 
-    
-    
-    
     window.initChatUI = () => {
         loadNotificationPreferences();
         loadHistory(); 
-        
         toggleSPSMode(); 
         hideLoadingIndicator(); 
-        
-        
         resetMentionMode();
-
-        
         if (chatHistory.length === 0) {
              const welcomeMessage = currentLanguage === 'es'
                 ? "¡Hola! Soy tu guía turístico de confianza, listo para acompañarte en cada paso. Activa el chip Modo Chat 💬 para conversar normalmente o tócalo para usar la potente Búsqueda Geográfica Directa (SPS) ⚡️ y encontrar lo que buscas al instante."
                 : "Hi! I am your trusted tour guide, ready to accompany you at every step. Activate the Chat Mode chip 💬 to chat normally or touch it to use the powerful Direct Geographic Search (SPS) ⚡️ and find what you are looking for instantly.";
-             
              chatHistory.push({ role: 'model', text: welcomeMessage, timestamp: new Date(), isStructured: false });
              renderChat();
         }
     };
 
     document.addEventListener('DOMContentLoaded', () => {
-        
         if (typeof window.google === 'undefined' || typeof window.google.maps === 'undefined') {
             console.warn("Advertencia: Google Maps API no cargada. Inicializando UI en modo básico.");
             window.initChatUI();
