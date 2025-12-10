@@ -11,7 +11,7 @@
          <link href="https://db.onlinewebfonts.com/c/ddadf4e5d67469bf2fb13ca47ac078ba?family=FH+Oscar+Test+Medium" rel="stylesheet">       
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
-        /* Estilo base */
+        /* Estilos base */
         html, body { 
             font-family:FH Oscar Test Medium; 
             height: 100%; 
@@ -369,7 +369,7 @@
                     </svg>
                 </div>
                 
-                <input type="text" id="chat-input" placeholder="Escribe un mensaje..." class="flex-grow glass-container" **inputmode="text"**>
+                <input type="text" id="chat-input" placeholder="Escribe un mensaje..." class="flex-grow glass-container" inputmode="text">
                 
                 <button id="send-button" onclick="handleSend();" class="p-2 rounded-full bg-blue-500 text-white shadow-lg transition duration-150 ease-in-out hover:bg-blue-600">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -459,6 +459,7 @@
     const categoryChipsContainer = document.getElementById('category-chips-container');
     const languageChipsContainer = document.getElementById('language-chips-container');
     
+    // Referencias a los Lottie Players de los chips de acción
     const menuActions = {
         categories: document.getElementById('lottie-categories'),
         language: document.getElementById('lottie-language'),
@@ -608,11 +609,10 @@
     function handleMenuAction(action) {
         const t = translations[currentLanguage];
         
-        // 🛑 NUEVO: Simular animación de un solo ciclo en el chip principal
+        // Reproducir la animación de un solo ciclo en el chip principal
         const lottieElement = menuActions[action];
         if (lottieElement) {
             lottieElement.play();
-            // La animación de un solo ciclo es por diseño (no tiene loop)
         }
         
         switch (action) {
@@ -687,7 +687,7 @@
                 toggleMenuChips(categoryChipsContainer, 'categories');
             };
             
-            // 🛑 NUEVO: Ícono animado para las categorías (Hamburguesa 🍔)
+            // Ícono animado para las categorías (Hamburguesa 🍔) - Constante
             chip.innerHTML = `
                 <lottie-player 
                     src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f354/lottie.json" 
@@ -723,7 +723,7 @@
                 }
             };
             
-            // 🛑 NUEVO: Ícono animado para los idiomas (Globo Terráqueo 🌍)
+            // Ícono animado para los idiomas (Globo Terráqueo 🌍) - Constante
             chip.innerHTML = `
                 <lottie-player 
                     src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f30d/lottie.json" 
@@ -792,7 +792,7 @@
         
         const textContent = document.createElement('span');
         
-        // 🛑 NUEVO: Implementación del token de mención en la respuesta del modelo
+        // Implementación del token de mención en la respuesta del modelo
         let displayText = message.text;
 
         if (!isUser && displayText.includes('[[PLACE_MENTION]]')) {
@@ -949,16 +949,14 @@
             text: messageText, 
             timestamp: new Date(),
             isSPS: isSPSMode,
-            mentionPlaceName: null // Por defecto a null
+            mentionPlaceName: null 
         };
         
         // 2. Lógica para el modo Mención
         if (currentMentionPlace.isMentioning && !isSPSMode) {
-            // Asumimos que el usuario seleccionó o confirmó un lugar
-            // En una implementación real, se validaría el placeId aquí.
             userMessage.mentionPlaceId = currentMentionPlace.placeId || 'PLACE_ID_SIMULADO';
-            userMessage.mentionPlaceName = currentMentionPlace.textName || messageText.substring(1).trim(); // Guarda el nombre del lugar para el token
-            userMessage.text = messageText; // El texto completo se envía
+            userMessage.mentionPlaceName = currentMentionPlace.textName || messageText.substring(1).trim(); 
+            userMessage.text = messageText; 
             
             // Aseguramos que se envíe el comando especial para el backend
             userMessage.text = `!mention ${userMessage.mentionPlaceName}: ${messageText.replace('@', '').trim()}`;
@@ -1057,14 +1055,14 @@
         chatInput.addEventListener('input', handleInput);
 
         // Inicializar
-        applyTranslations(); // Aplica idioma por defecto
+        applyTranslations(); 
         
         // Inicializa el modo Chat y asegura que el icono correcto se muestre
-        isSPSMode = true; // Se inicializa en true para forzar a que la función lo ponga en FALSE
-        toggleSPSMode(); // Se inicializa en modo normal (chat)
+        isSPSMode = true; 
+        toggleSPSMode(); 
         hideLoadingIndicator(); 
         
-        // 🛑 NUEVO: Resetear el modo Mención
+        // Resetear el modo Mención
         resetMentionMode();
 
         // 6. Mensaje de bienvenida inicial (solo si el historial está vacío)
