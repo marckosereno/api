@@ -126,7 +126,7 @@ font-family:FH Oscar Test Medium;
             /* 🛑 REQUERIDO: Eliminar todo lo que tenga que ver con el focus */
             outline: none !important;
             box-shadow: none !important;
-            height:44px;
+height:44px;
         }
         /* 🛑 ELIMINADO: Estilos del botón 'go-button' que contenía el ícono de las flechas */
         /* .go-button {} ... */
@@ -437,27 +437,24 @@ font-family:FH Oscar Test Medium;
         
         /* --- CAMBIOS SOLICITADOS EN CSS --- */
         
-        /* 🛑 CRÍTICO: CONTENEDOR FLOTANTE PARA EL CHAT INPUT */
+        /* NUEVO: ESTILO PARA EL CONTENEDOR INFERIOR COMPLETO (Quick Replies + Chat Bar) */
         .bottom-action-area {
-            position: fixed; /* Mantenemos el contenedor fijo al fondo */
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            z-index: 10;
-            /* Eliminamos estilos de borde y sombra, se los pasamos al wrapper interno */
+            /* 🛑 CRÍTICO: Eliminamos el border-top y el box-shadow de aquí */
             border-top: none;
+            /*background: linear-gradient(90deg, rgba(196, 228, 242, 0.35) 0%, #eff6ff 40%, #eff6ff 100%);*/
             box-shadow: none; 
+            z-index: 10;
             padding-bottom: 0; 
         }
 
-        /* 🛑 CRÍTICO: Wrapper para aplicar los bordes redondeados y el fondo flotante (white) */
+        /* 🛑 NUEVO: Wrapper para aplicar los bordes redondeados y el fondo flotante (white) */
         #bottom-bar-search-wrapper {
           padding-top:22px;  
-          border-radius: 20px 20px 0 0; /* Bordes superiores redondeados */
-          background-color: white !important;
-          /* 🛑 CRÍTICO: El sombreado simula que el container "flota" */
-          box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05), 0 -2px 4px -2px rgba(0, 0, 0, 0.04);
-          z-index: 10;
+ border-radius: 20px 20px 0 0; /* Bordes superiores redondeados */
+             background-color: white !important;
+             /* 🛑 CRÍTICO: El sombreado simula que el container "flota" */
+             box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05), 0 -2px 4px -2px rgba(0, 0, 0, 0.04);
+             z-index: 10;
         }
         
         /* 1. 🎨 FONDO PARA EL QUICK REPLIES CONTAINER (Adaptado para usar el fondo del padre) */
@@ -796,7 +793,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             display: flex;
             flex-wrap: nowrap; /* Asegura que se desborde horizontalmente */
             align-items: center;
-            padding-top:0px;
+padding-top:0px;
         }
 
         .autocomplete-chip {
@@ -933,16 +930,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
                 <div class="bottom-bar-wrapper"> 
                     
                     <div id="map-search-bar" class="map-search-bar mb-2 w-full">
-                        <input 
-                            type="text" 
-                            id="user-input" 
-                            class="map-input" 
-                            placeholder="Pregúntale al mapa" 
-                            autocomplete="off" 
-                            autocorrect="off" 
-                            autocapitalize="off" 
-                            spellcheck="false" 
-                            inputmode="text">
+                        <input type="text" id="user-input" class="map-input" placeholder="Pregúntale al mapa" autocomplete="off" inputmode="text">
                     </div>
                     
                     <div id="input-area-container" class="flex justify-between items-center w-full"> 
@@ -1397,16 +1385,10 @@ padding-bottom:40px; /* Devolvemos la altura automática */
 
         // **PASO CLAVE 1:** Scroll instantáneo del contenedor de la barra completa a la vista.
         // Esto le dice al navegador que muestre este elemento justo encima del teclado.
-        // CRÍTICO: Usamos 'bottom-action-area' que es el contenedor fijo
-        const bottomBarArea = document.querySelector('.bottom-action-area');
-        
-        // **NUEVO FIX: SCROLL DEL CONTENEDOR PRINCIPAL**
-        // Desplazamos el contenedor del chat para asegurar que el último mensaje no se cubra.
-        messageContainer.scrollTop = messageContainer.scrollHeight;
+        // CRÍTICO: Usamos 'bottom-bar-search-wrapper' que es el contenedor que flota
+        const bottomBarWrapper = document.getElementById('bottom-bar-search-wrapper');
 
-
-        // Scroll del contenedor fijo a la vista (para forzar al navegador a recalcular)
-        bottomBarArea.scrollIntoView({ 
+        bottomBarWrapper.scrollIntoView({ 
             behavior: 'instant',
             block: 'end' // Scroll para que el final del elemento quede a la vista
         });
@@ -1418,10 +1400,12 @@ padding-bottom:40px; /* Devolvemos la altura automática */
              messageContainer.scrollTop = messageContainer.scrollHeight;
              
              // 2b. Reconfirmar el scroll de la barra de chat (instantáneo)
-             bottomBarArea.scrollIntoView({ 
+             bottomBarWrapper.scrollIntoView({ 
                 behavior: 'instant', 
                 block: 'end' 
              });
+             // No es necesario window.scrollTo(0, document.body.scrollHeight) si el contenedor
+             // del chat está manejando el scroll correctamente, y en iOS puede causar rebotes.
         }, 150); 
     }
     
