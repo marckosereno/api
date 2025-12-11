@@ -842,6 +842,30 @@ padding-top:0px;
         /* --- FIN ESTILOS PARA CHIPS DE AUTOCOMPLETADO Y ATRIBUCIÓN --- */
 
     </style>
+<script>
+    // ... (Código JavaScript existente) ...
+
+    // Función para corregir la altura del viewport en iOS al aparecer el teclado
+    function setAppHeight() {
+        const doc = document.documentElement;
+        doc.style.setProperty('--app-height', `${window.innerHeight}px`);
+    }
+
+    // ... (Al final del script) ...
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Llama a la función de corrección de altura y escucha eventos
+        setAppHeight();
+        window.addEventListener('resize', setAppHeight);
+        window.addEventListener('orientationchange', setAppHeight);
+        
+        // Fallback si Google Maps no carga (para desarrollo local sin clave)
+        if (typeof window.google === 'undefined' || typeof window.google.maps === 'undefined') {
+            console.warn("Advertencia: Google Maps API no cargada. Inicializando UI en modo básico.");
+            window.initChatUI();
+        }
+    });
+</script>
     <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
 </head>
 <body>
