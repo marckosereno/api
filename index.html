@@ -1,3 +1,8 @@
+Ok, te voy a dar el código completo corregido nuevamente en 4 partes. Hay más errores de sintaxis que arreglar.
+
+**PARTE 1 DE 4:**
+
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -43,14 +48,14 @@
             position: relative;
         }
         .user-bubble { border-radius: 18px 18px 0 18px; max-width: 90% }
-        .model-bubble { border-radius: 18px 18px 18px 0; max-width: 90%; padding-left:8px; backgroud-color: transparent;font-size:16px; line-height:16px;}
+        .model-bubble { border-radius: 18px 18px 18px 0; max-width: 90%; padding-left:8px; background-color: transparent;font-size:16px; line-height:16px;}
         
         .model-bubble-wrapper {
             background: linear-gradient(127deg, #ffffff85, #fff); 
             color: #373737;
             border-radius: 18px 18px 18px 0;
             padding: 12px;
-           
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.6);
             max-width: 91%;
             width: fit-content;
         }
@@ -82,7 +87,7 @@
             border: none;
         }
         .action-bar-container .action-btn.bg-yellow-400 {
-            background-color:!important;
+            background-color: #FBBF24 !important;
             backdrop-filter: none;
             -webkit-backdrop-filter: none;
             border: none;
@@ -103,7 +108,7 @@
             backdrop-filter: blur(12px); 
             -webkit-backdrop-filter: blur(12px); 
             border-radius: 20px;
-           
+            box-shadow: 1px 2px 2px 2px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.06); 
             border: 1px solid rgba(255, 255, 255, 0.6); 
             display: flex;
             align-items: center;
@@ -174,7 +179,6 @@
             padding-top: 6rem; 
         }
         #btn-clear-top {
-            box-shadow:;
             outline: none !important;
         }
 
@@ -664,6 +668,7 @@
             backdrop-filter: blur(12px); 
             -webkit-backdrop-filter: blur(12px); 
             border-radius: 20px;
+            box-shadow: 1px 2px 2px 2px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.06); 
             border: 1px solid rgba(255, 255, 255, 0.6); 
         }
 
@@ -754,7 +759,7 @@
         }
 
     </style>
-<script>
+    <script>
     // 🛑 FIX iOS: Función para corregir la altura del viewport cuando aparece el teclado
     function setAppHeight() {
         const doc = document.documentElement;
@@ -768,6 +773,7 @@
 </script>
     <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
 </head>
+
 <body>
     <div id="chat-window" class="chat-window h-screen w-full"> 
         
@@ -855,7 +861,7 @@
                 <div class="bottom-bar-wrapper"> 
                     
                     <div id="map-search-bar" class="map-search-bar mb-2 w-full">
-                        <input type="text" id="user-input" class="map-input" placeholder="Pregúntale al mapa" autocomplete="new-text-value" inputmode="text">
+                        <input type="text" id="user-input" class="map-input" placeholder="Pregúntale a Marco" autocomplete="new-text-value" inputmode="text">
 
                     </div>
                     
@@ -1092,6 +1098,7 @@
     if (inputElement) inputElement.disabled = false;
     if (sendButton) sendButton.disabled = false;
 
+
     function saveHistory() {
         try {
             localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
@@ -1125,7 +1132,6 @@
         dynamicChipsGroup.classList.add('hidden');
         autocompleteChipsGroupContainer.classList.add('hidden');
         autocompleteChipsGroupContainer.innerHTML = '';
-
 
         lastTotalCount = 0;
         lastApiQuery = null;
@@ -1176,7 +1182,7 @@
                 notificationPreferences = JSON.parse(savedPrefs);
             }
             if (toggleNews) toggleNews.checked = notificationPreferences.news;
-            if (toggleReminders) toggleReminders.checked = notificationPreferences.preferences;
+            if (toggleReminders) toggleReminders.checked = notificationPreferences.reminders;
         } catch (e) {
             console.error("Error al cargar las preferencias de notificación:", e);
         }
@@ -1278,9 +1284,7 @@
     function handleInputFocus() {
         if (!inputElement || !messageContainer) return;
 
-        // Pequeño delay para que iOS termine de ajustar el viewport
         setTimeout(() => {
-            // Scroll del mensaje container al fondo
             if (messageContainer) {
                 messageContainer.scrollTop = messageContainer.scrollHeight;
             }
@@ -1365,7 +1369,6 @@
                  inputElement.addEventListener('input', handleAutocompleteInput);
                  inputElement.hasAutocompleteListener = true;
             }
-
 
         } else {
             inputElement.classList.remove('sps-mode'); 
@@ -1602,7 +1605,6 @@
         lastTotalCount = 0;
         lastApiQuery = null;
 
-
         if (action !== 'CATEGORIES' && categoriesVisible) {
             hideChipGroup(categoryChipsGroup, categoryChips);
             categoriesVisible = false;
@@ -1615,7 +1617,6 @@
         if (notificationModal.classList.contains('show')) {
             notificationModal.classList.remove('show');
         }
-
 
         if (action === 'CATEGORIES') {
             if (categoriesVisible) {
@@ -1888,7 +1889,6 @@
         
         resetMentionMode();
 
-
         dynamicChipsGroup.classList.remove('hidden');
 
         chips.forEach((chipData, index) => {
@@ -1921,7 +1921,6 @@
         
         scrollToBottom();
     }
-
 
     async function getGeminiResponse(userPrompt, chatHistoryForAPI, placeId = null) {
         
@@ -1961,7 +1960,8 @@
         }
     }
 
-    async function handleSend(userPromptInput = null, placeIdForDirectSearch = null) {
+PARTE 4 DE 4 (FINAL):
+async function handleSend(userPromptInput = null, placeIdForDirectSearch = null) {
         
         const isSPSorDirect = placeIdForDirectSearch !== null;
         
@@ -2155,8 +2155,8 @@
         
         if (typeof renderChat === 'function') renderChat();
     }
-```
-if (sendButton) sendButton.addEventListener('click', () => {
+    
+    if (sendButton) sendButton.addEventListener('click', () => {
         if (!isSPSMode) handleSend(); 
     });
     
@@ -2347,3 +2347,4 @@ if (sendButton) sendButton.addEventListener('click', () => {
     </script>
 </body>
 </html>
+
