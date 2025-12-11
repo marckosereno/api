@@ -401,30 +401,23 @@ html, body {
           }
         }
         
-        /* 🛑 FIX iOS: Ajustes críticos para el contenedor inferior */
         .bottom-action-area {
-            border-top: none;
-            box-shadow: none; 
-            z-index: 10;
-            padding-bottom: 0;
-            /* 🛑 FIX iOS: Cambiar a position absolute para evitar problemas con el teclado */
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            /* 🛑 FIX iOS: Añadir padding-bottom seguro para notch */
-            padding-bottom: env(safe-area-inset-bottom, 0);
-        }
+    border-top: none;
+    box-shadow: none; 
+    z-index: 10;
+    /* 🛑 FIX iOS: Añadir padding para el área segura del notch */
+    padding-bottom: env(safe-area-inset-bottom, 0);
+}
 
         #bottom-bar-search-wrapper {
-          padding-top:22px;  
-          border-radius: 20px 20px 0 0;
-          background-color: white !important;
-          box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05), 0 -2px 4px -2px rgba(0, 0, 0, 0.04);
-          z-index: 10;
-          /* 🛑 FIX iOS: Añadir padding-bottom para el área segura */
-          padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0));
-        }
+  padding-top:22px;  
+  border-radius: 20px 20px 0 0;
+  background-color: white !important;
+  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05), 0 -2px 4px -2px rgba(0, 0, 0, 0.04);
+  z-index: 10;
+  /* 🛑 FIX iOS: Padding para notch */
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0));
+}
         
         #quick-replies-container {
             border-top: none;
