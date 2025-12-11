@@ -2675,8 +2675,8 @@ padding-top:0px;
         // 6. Mensaje de bienvenida inicial (solo si el historial está vacío)
         if (chatHistory.length === 0) {
              const welcomeMessage = currentLanguage === 'es'
-                ? "¡Hola! Soy tu guía turístico de confianza, listo para acompañarte en cada paso. Activa el chip Modo Chat 💬 para conversar normalmente o tócalo para usar la potente Búsqueda Geográfica Directa (SPS) ⚡️ y encontrar lo que buscas al instante."
-                : "Hi! I am your trusted tour guide, ready to accompany you at every step. Activate the Chat Mode chip 💬 to chat normally or touch it to use the powerful Direct Geographic Search (SPS) ⚡️ and find what you are looking for instantly.";
+                ? "¡Hola! Soy Marco!👋 tu guía turístico de confianza, listo para acompañarte en cada paso. Utiliza el "Modo Chat" 💬 para conversar normalmente o tócalo para usar el potente "Búscador de Lugares" (PSB) 🔥 y encontrar lo que buscas al instante."
+                : "Hello! I am Marco!👋, your trusted tour guide, ready to accompany you at every step. Use "Chat Mode" 💬 to chat normally or touch it to use the powerful "Look Finder" (PSB) 🔥 and find what you are looking for instantly.";
              
              chatHistory.push({ role: 'model', text: welcomeMessage, timestamp: new Date(), isStructured: false });
              renderChat();
