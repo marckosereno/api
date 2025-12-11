@@ -42,7 +42,7 @@ font-family:FH Oscar Test Medium;
             color: #373737; /* Texto negro */
             border-radius: 18px 18px 18px 0;
             padding: 12px; /* Mantiene el padding uniforme de la burbuja */
-            box-sha: 0 4px 6px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.6); /* Corregida la propiedad `box-sha` */
             max-width: 91%;
             width: fit-content;
         }
@@ -80,7 +80,8 @@ font-family:FH Oscar Test Medium;
             border: none;
         }
         .action-bar-container .action-btn.bg-yellow-400 {
-            background-color:!important; /* Amarillo sólido */
+            /* 🛑 CORRECCIÓN: Se había olvidado el valor de background-color */
+            background-color: #FBBF24 !important; /* Amarillo sólido */
             backdrop-filter: none;
             -webkit-backdrop-filter: none;
             border: none;
@@ -105,7 +106,7 @@ font-family:FH Oscar Test Medium;
             -webkit-backdrop-filter: blur(12px); 
             /* ------------------------------------------ */
             border-radius: 20px;
-            box-sha: 1px 2px 2px 2px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.06); 
+            box-shadow: 1px 2px 2px 2px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.06); /* Corregida la propiedad `box-sha` */
             border: 1px solid rgba(255, 255, 255, 0.6); 
             display: flex;
             align-items: center;
@@ -117,7 +118,9 @@ font-family:FH Oscar Test Medium;
         /* 🛑 CRÍTICO: Eliminación de estilos de focus del input y padding/fondo transparente */
         .map-input {
             flex-grow: 1;
-            padding: 0.75rem 0.75rem; 
+            /* 🛑 CORRECCIÓN DEL ERROR DE ESTIRAMIENTO: Reducimos padding vertical y AÑADIMOS box-sizing: border-box */
+            padding: 0.5rem 0.75rem; 
+            box-sizing: border-box; /* CRÍTICO: Evita que el padding se sume al height de 44px */
             color: #1f2937; /* Color de texto oscuro para que se vea bien */
             font-size: 1.125rem;
             background: transparent;
@@ -126,7 +129,7 @@ font-family:FH Oscar Test Medium;
             /* 🛑 REQUERIDO: Eliminar todo lo que tenga que ver con el focus */
             outline: none !important;
             box-shadow: none !important;
-height:44px;
+            height:44px;
         }
         /* 🛑 ELIMINADO: Estilos del botón 'go-button' que contenía el ícono de las flechas */
         /* .go-button {} ... */
@@ -191,7 +194,7 @@ height:44px;
             padding-top: 6rem; 
         }
         #btn-clear-top {
-            box-shadow:;
+            box-shadow: none; /* Corregida la propiedad `box-shadow` */
             outline: none !important;
         }
 
@@ -448,8 +451,8 @@ height:44px;
         /* 🛑 NUEVO: Wrapper para aplicar los bordes redondeados y el fondo flotante (white) */
         #bottom-bar-search-wrapper {
           padding-top:22px;  
- border-radius: 20px 20px 0 0; /* Bordes superiores redondeados */
-             background-color: white !important;
+          border-radius: 20px 20px 0 0; /* Bordes superiores redondeados */
+          background-color: white !important;
              /* 🛑 CRÍTICO: El sombreado simula que el container "flota" */
              box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05), 0 -2px 4px -2px rgba(0, 0, 0, 0.04);
              z-index: 10;
@@ -564,7 +567,7 @@ height:44px;
             opacity: 1;
             visibility: visible;
             height: auto; 
-padding-bottom:40px; /* Devolvemos la altura automática */
+            padding-bottom:40px; /* Devolvemos la altura automática */
             margin-bottom: 18px !important; /* Restauramos el margen para que se vea bien */
         }
         
@@ -735,14 +738,17 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             backdrop-filter: blur(12px); 
             -webkit-backdrop-filter: blur(12px); 
             border-radius: 20px;
-            box: 1px 2px 2px 2px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.06); 
+            box-shadow: 1px 2px 2px 2px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.06); /* Corregida la propiedad `box` */
             border: 1px solid rgba(255, 255, 255, 0.6); 
         }
 
         /* 🛑 CRÍTICO: Reubicar y estilizar el INPUT dentro del nuevo contenedor map-search-bar */
         #user-input {
             width: 100%; /* Ocupa todo el ancho de su contenedor */
-            padding: 0.75rem 1rem; /* Ajuste del padding interior del input */
+            /* 🛑 CORRECCIÓN DE ESTIRAMIENTO: Reducimos padding vertical y aseguramos box-sizing. */
+            padding: 0.5rem 1rem; 
+            box-sizing: border-box; /* CRÍTICO: Asegura que el padding se incluya en la altura. */
+            height: 44px; /* Asegura la altura del input. */
             /* Asegurar que el input no tenga su propio fondo, sino que use el del padre .map-search-bar */
             background: transparent !important; 
             color: #1f2937;
@@ -792,7 +798,7 @@ padding-bottom:40px; /* Devolvemos la altura automática */
             display: flex;
             flex-wrap: nowrap; /* Asegura que se desborde horizontalmente */
             align-items: center;
-padding-top:0px;
+            padding-top:0px;
         }
 
         .autocomplete-chip {
@@ -840,6 +846,7 @@ padding-top:0px;
         /* --- FIN ESTILOS PARA CHIPS DE AUTOCOMPLETADO Y ATRIBUCIÓN --- */
 
     </style>
+
     <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
 </head>
 <body>
