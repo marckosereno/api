@@ -23,17 +23,16 @@
             background: linear-gradient(179deg, rgb(224 235 251 / 4%) 0%, #eff6ff 100% 60%);
         }
         .chat-window { 
-    /* height: 100%; <-- Línea original, puedes comentarla o eliminarla */
-    height: 100vh; /* Fallback para navegadores modernos que manejan 100vh correctamente */
-    height: calc(var(--vh, 1vh) * 100); /* ⬅️ ¡SOLUCIÓN CRÍTICA PARA SAFARI! */
-    width: 100vw; 
-    display: flex; 
-    flex-direction: column; 
-    background-color: transparent; 
-    overflow: hidden;
-    /* ... el resto de estilos ... */
-}
-
+            height: 100%; 
+            width: 100vw; 
+            display: flex; 
+            flex-direction: column; 
+            background-color: transparent; 
+            overflow: hidden;
+font-weight:200;
+line-height:0.5cm;
+font-family:FH Oscar Test Medium;
+        }
         .user-bubble { border-radius: 18px 18px 0 18px; max-width: 90% }
         /* 🛑 CAMBIO CLAVE 1: Eliminamos el estilo anterior de la burbuja del modelo, ahora usa el wrapper */
         .model-bubble { border-radius: 18px 18px 18px 0; max-width: 90%; padding-left:8px; backgroud-color: transparent;font-size:16px; line-height:16px;}
