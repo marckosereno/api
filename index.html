@@ -11,38 +11,39 @@
 <link href="https://fonts.cdnfonts.com/css/avenir" rel="stylesheet">
          <link href="https://db.onlinewebfonts.com/c/ddadf4e5d67469bf2fb13ca47ac078ba?family=FH+Oscar+Test+Medium" rel="stylesheet">       
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <style>
-        /* 🛑 FIX CRÍTICO iOS: Variable CSS para altura dinámica del viewport */
-        :root {
-            --app-height: 100vh;
-        }
+    <script>
+function setAppHeight() {
+    document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+}
+window.addEventListener('resize', setAppHeight);
+window.addEventListener('orientationchange', setAppHeight);
+setAppHeight();
+</script>
+<style>
         
-        /* Estilo base */
-        html, body { 
-            font-family:FH Oscar Test Medium; 
-            height: 100%; 
-            margin: 0; 
-            padding: 0; 
-            /* 🛑 FIX iOS: Prevenir scroll del body */
-            overflow: hidden;
-            position: fixed;
-            width: 100%;
-            background: linear-gradient(179deg, rgb(224 235 251 / 4%) 0%, #eff6ff 100% 60%);
-        }
+            /* 🛑 FIX iOS: Variable para viewport dinámico */
+:root {
+    --app-height: 100vh;
+}
+
+html, body { 
+    font-family:FH Oscar Test Medium; 
+    height: 100%; 
+    margin: 0; 
+    padding: 0; 
+    background: linear-gradient(179deg, rgb(224 235 251 / 4%) 0%, #eff6ff 100% 60%);
+}
         .chat-window { 
-            /* 🛑 FIX iOS: Usar variable CSS en lugar de 100vh directo */
-            height: var(--app-height);
-            width: 100vw; 
-            display: flex; 
-            flex-direction: column; 
-            background-color: transparent; 
-            overflow: hidden;
-            font-weight:200;
-            line-height:0.5cm;
-            font-family:FH Oscar Test Medium;
-            /* 🛑 FIX iOS: Posición relativa para contexto */
-            position: relative;
-        }
+    height: var(--app-height); /* 🛑 FIX iOS */
+    width: 100vw; 
+    display: flex; 
+    flex-direction: column; 
+    background-color: transparent; 
+    overflow: hidden;
+    font-weight:200;
+    line-height:0.5cm;
+    font-family:FH Oscar Test Medium;
+}
         .user-bubble { border-radius: 18px 18px 0 18px; max-width: 90% }
         .model-bubble { border-radius: 18px 18px 18px 0; max-width: 90%; padding-left:8px; background-color: transparent;font-size:16px; line-height:16px;}
         
