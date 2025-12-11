@@ -98,6 +98,7 @@ font-family:FH Oscar Test Medium;
         .chip-group-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 0px; padding-bottom: 5px }
         
         /* Estilo de la barra de chat NUEVO (GLASSMOPRHISM) */
+        /* 🛑 Este estilo solo se usará para el cuerpo del input dentro del contenedor flex */
         .map-search-bar {
             /* 🌟 MODIFICADO: APLICACIÓN DEL BLUR GLASSMORPHISM A LA BARRA COMPLETA */
             background: rgba(255, 255, 255, 0.4); 
@@ -107,9 +108,15 @@ font-family:FH Oscar Test Medium;
             border-radius: 20px;
             box-shadow: 1px 2px 2px 2px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.06); /* Corregida la propiedad `box-sha` */
             border: 1px solid rgba(255, 255, 255, 0.6); 
-            display: flex;
-            align-items: center;
-            padding: 4px; 
+            
+            /* 🛑 CRÍTICO: DEBE SER UN CONTENEDOR FLEXIBLE DENTRO DEL PADRE FLEX */
+            display: flex; /* Ahora es un contenedor flex para su hijo #user-input */
+            align-items: center; /* Centrado vertical para el input dentro de sí mismo */
+            flex-grow: 1; /* Ocupa el espacio restante */
+            margin-left: 8px; /* Separación del Action Chip */
+            margin-right: 8px; /* Separación del botón de Enviar */
+            padding: 0; /* Quitamos el padding del contenedor antiguo */
+            
             width: 100%; 
             box-sizing: border-box; 
         }
@@ -719,29 +726,7 @@ font-family:FH Oscar Test Medium;
             width: 100%;
         }
 
-        /* 🛑 CRÍTICO: La barra de búsqueda (map-search-bar) ahora solo contendrá el input, sin iconos */
-        /* Usaremos la clase map-search-bar solo para el estilo del INPUT, pero el contenedor es input-area-container */
-        
-        .map-search-bar {
-            /* 🛑 La clase map-search-bar se reutiliza para el estilo del Input */
-            /* Quitamos el flex/display:flex porque ahora es solo para el INPUT */
-            display: block; 
-            flex-grow: 1; /* Ocupa el espacio restante */
-            margin-left: 8px; /* Separación del Action Chip */
-            margin-right: 8px; /* Separación del botón de Enviar */
-            padding: 0; /* Quitamos el padding del contenedor antiguo */
-            
-            /* Reaplicar estilos de Glassmorphism para el INPUT */
-            background: rgba(255, 255, 255, 0.4); 
-            backdrop-filter: blur(12px); 
-            -webkit-backdrop-filter: blur(12px); 
-            border-radius: 20px;
-            box-shadow: 1px 2px 2px 2px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.06); /* 🛑 CORREGIDO: De 'box' a 'box-shadow' */
-            border: 1px solid rgba(255, 255, 255, 0.6); 
-        }
-
         /* 🛑 CRÍTICO: Reubicar y estilizar el INPUT dentro del nuevo contenedor map-search-bar */
-              /* 🛑 CRÍTICO: Reubicar y estilizar el INPUT dentro del nuevo contenedor map-search-bar */
         #user-input {
             width: 100%; /* Ocupa todo el ancho de su contenedor */
             
@@ -940,11 +925,6 @@ font-family:FH Oscar Test Medium;
             <div id="bottom-bar-search-wrapper" class="w-full"> 
                 <div class="bottom-bar-wrapper"> 
                     
-                    <div id="map-search-bar" class="map-search-bar mb-2 w-full">
-                        <input type="text" id="user-input" class="map-input" placeholder="Pregúntale a Marco" autocomplete="new-text-value" inputmode="text">
-
-                    </div>
-                    
                     <div id="input-area-container" class="flex justify-between items-center w-full"> 
                         
                         <div id="bottom-left-actions">
@@ -954,6 +934,9 @@ font-family:FH Oscar Test Medium;
                             </button>
                         </div>
 
+                        <div id="map-search-bar" class="map-search-bar w-full"> 
+                            <input type="text" id="user-input" class="map-input" placeholder="Pregúntale a Marco" autocomplete="new-text-value" inputmode="text">
+                        </div>
                         <button id="send-message-button" class="transition disabled:opacity-50" disabled>
                             <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 122.88 122.88" class="flex-shrink-0">
                                 <g>
@@ -1022,6 +1005,7 @@ font-family:FH Oscar Test Medium;
             </div>
         </div>
     </div>
+
         
     <script async defer
         src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBGmgdkbqtCnIe7nWZYUKk9aAKWI6rKAFM&libraries=places&callback=initChatUI">
