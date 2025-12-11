@@ -23,16 +23,17 @@
             background: linear-gradient(179deg, rgb(224 235 251 / 4%) 0%, #eff6ff 100% 60%);
         }
         .chat-window { 
-            height: 100%; 
-            width: 100vw; 
-            display: flex; 
-            flex-direction: column; 
-            background-color: transparent; 
-            overflow: hidden;
-font-weight:200;
-line-height:0.5cm;
-font-family:FH Oscar Test Medium;
-        }
+    /* height: 100%; <-- Línea original, puedes comentarla o eliminarla */
+    height: 100vh; /* Fallback para navegadores modernos que manejan 100vh correctamente */
+    height: calc(var(--vh, 1vh) * 100); /* ⬅️ ¡SOLUCIÓN CRÍTICA PARA SAFARI! */
+    width: 100vw; 
+    display: flex; 
+    flex-direction: column; 
+    background-color: transparent; 
+    overflow: hidden;
+    /* ... el resto de estilos ... */
+}
+
         .user-bubble { border-radius: 18px 18px 0 18px; max-width: 90% }
         /* 🛑 CAMBIO CLAVE 1: Eliminamos el estilo anterior de la burbuja del modelo, ahora usa el wrapper */
         .model-bubble { border-radius: 18px 18px 18px 0; max-width: 90%; padding-left:8px; backgroud-color: transparent;font-size:16px; line-height:16px;}
@@ -1019,6 +1020,7 @@ padding-top:0px;
     </script>
 
     <script>
+
     // --- BLOQUE JAVASCRIPT: SETUP Y UTILIDADES ---
     
     // **NOTA: Debe coincidir con el endpoint de Vercel/backend**
@@ -1046,6 +1048,20 @@ padding-top:0px;
     let currentMentionPlace = null; // { placeId: string, textName: string, query: string }
     const MENTION_TOKEN = "[[PLACE_MENTION]]"; // Token a enviar al backend
     // ----------------------------------------------------
+// Solución para el bug de 100vh en Safari (iOS/iPadOS)
+function setAppHeight() {
+  // Obtenemos el 1% de la altura real del viewport
+  const vh = window.innerHeight * 0.01;
+  // Establecemos esa altura como una variable CSS
+  document.documentElement.style.setProperty('--vh', `${vh}px`);
+}
+
+// Llama a la función al cargar la página
+setAppHeight(); 
+
+// Y también cada vez que la ventana cambie de tamaño (rotación, aparición/desaparición de barras)
+window.addEventListener('resize', setAppHeight);
+window.addEventListener('orientationchange', setAppHeight);
 
 
     // Referencias a Elementos del DOM
