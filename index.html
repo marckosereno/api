@@ -741,16 +741,22 @@ font-family:FH Oscar Test Medium;
         }
 
         /* 🛑 CRÍTICO: Reubicar y estilizar el INPUT dentro del nuevo contenedor map-search-bar */
+              /* 🛑 CRÍTICO: Reubicar y estilizar el INPUT dentro del nuevo contenedor map-search-bar */
         #user-input {
             width: 100%; /* Ocupa todo el ancho de su contenedor */
-            /* 🛑 CORRECCIÓN DE ESTIRAMIENTO: Usamos 0.6rem (9.6px) para un mejor ajuste vertical. */
-            padding: 0.6rem 1rem; 
-            box-sizing: border-box !important; /* CRÍTICO: Aseguramos que el padding se incluya en la altura. */
-            height: 44px; /* Asegura la altura del input. */
+            
+            /* 🛑 CORRECCIÓN FINAL: Eliminar padding vertical y usar line-height para centrar */
+            padding: 0 1rem; /* Padding horizontal de 1rem (16px) */
+            line-height: 44px; /* Hace que el texto se centre verticalmente con el height: 44px */
+            
+            box-sizing: border-box !important; /* Mantenido para evitar sorpresas */
+            height: 44px; /* Altura fija */
+            
             /* Asegurar que el input no tenga su propio fondo, sino que use el del padre .map-search-bar */
             background: transparent !important; 
             color: #1f2937;
         }
+
 
         /* 🛑 CRÍTICO: Estilo para el contenedor de los Action Chips/Botón de SPS */
         #bottom-left-actions {
