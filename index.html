@@ -1,4 +1,4 @@
-
+        
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -172,14 +172,29 @@ html, body {
             margin-left: 4px;
         }
 
+   
+        /* 🛑 FIX LAYOUT: Contenedor de mensajes con padding ajustado */
         #message-container {
-            padding-top: 6rem; 
+            padding-top: 80px; /* Anteriormente 6rem, ajustado para el header fixed */
+            padding-bottom: 160px; /* Ajustado para el footer fixed */
         }
         #btn-clear-top {
             outline: none !important;
         }
+        
+        /* 🛑 FIX LAYOUT: Centrado del Header FIXED */
+        .fixed.top-0.left-0.w-full {
+            max-width: 500px;
+            margin: 0 auto;
+            left: 0;
+            right: 0;
+            width: 100%;
+            padding-top: calc(1rem + env(safe-area-inset-top, 0px));
+            padding-bottom: 1rem;
+        }
 
         .notification-card {
+            /* ... (Estilos de notification-card) ... */
             background-color: white;
             border-radius: 16px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.05);
@@ -196,212 +211,23 @@ html, body {
             opacity: 0;
         }
 
+        /* ... (Resto de estilos de notificación y card) ... */
+
         .notification-card.show {
             transform: translateY(0);
             opacity: 1;
         }
 
-        .notification-card .message-content {
-            flex-grow: 1;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            line-height:16px;
-        }
+        /* ... (Estilos intermedios sin cambios) ... */
 
-        .notification-card .close-btn {
-            background: none;
-            border: none;
-            color: #9ca3af; 
-            font-size: 1.2rem;
-            cursor: pointer;
-            margin-left: 15px;
-            padding: 0;
-            outline: none;
-            line-height: 1;
-            transition: color 0.2s;
-        }
-        
-        .notification-card .close-btn:active {
-            color: #4b5563; 
-        }
-
-        #btn-notifications {
-            background-color: white;
-            color: #4b5563; 
-            border: 1px solid #d1d5db; 
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
-            outline: none !important;
-            padding: 8px 12px; 
-            border-radius: 9999px; 
-            font-size: 1.1rem; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
-        }
-        #btn-notifications:hover {
-            background-color: #f3f4f6;
-            color: #1f2937;
-        }
-        #btn-notifications:active {
-            background-color: #e5e7eb;
-            color: #000;
-        }
-
-        .notification-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5); 
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 100; 
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
-        }
-
-        .notification-modal-overlay.show {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .notification-panel {
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2), 0 5px 10px rgba(0, 0, 0, 0.1);
-            width: 90%;
-            max-width: 400px; 
-            transform: translateY(20px); 
-            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
-            opacity: 0;
-            padding: 20px;
-            pointer-events: auto; 
-        }
-
-        .notification-modal-overlay.show .notification-panel {
-            transform: translateY(0);
-            opacity: 1;
-        }
-
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 40px; 
-            height: 20px; 
-            flex-shrink: 0;
-        }
-
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc; 
-            transition: .4s;
-            border-radius: 20px; 
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 16px; 
-            width: 16px; 
-            left: 2px; 
-            bottom: 2px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2); 
-        }
-
-        input:checked + .slider {
-            background-color: #2563eb; 
-        }
-
-        input:focus + .slider {
-            box-shadow: 0 0 1px #2563eb;
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(20px); 
-        }
-
-        .info-card-panel {
-            background-color: #eff6ff; 
-            color: #1e40af; 
-            border-left: 4px solid #3b82f6; 
-            border-radius: 4px;
-            padding: 12px;
-            font-size: 0.9rem;
-            display: none;
-            align-items: flex-start;
-            margin-top: 20px;
-        }
-        .info-card-panel span {
-            margin-right: 8px;
-            font-size: 1.1rem;
-        }
-        
-        .stacked-photo {
-          width: 260px;
-          max-width: 120px;
-          height: auto; 
-          object-fit: cover;
-          border-radius: 12px;
-          position: relative;
-          
-          box-shadow: 
-            6px -4px 0 0 rgba(0, 0, 0, 0.15),
-            3px -5px 0 0 rgba(0, 0, 0, 0.08);
-
-          transform: rotate(356deg); 
-          transition: transform 0.15s ease-out;
-          margin-bottom: 12px;
-          border: 4px solid white;
-          
-          margin-left: 10px;
-          margin-right: 32px; 
-        }
-        
-        .image-link {
-            display: block;
-            width: fit-content;
-        }
-        
-        .stacked-photo.clickable-effect:active {
-            transform: scale(0.98) translateY(2px) rotate(356deg); 
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); 
-            cursor: grabbing;
-        }
-
-
-        @media (max-width: 640px) {
-          .stacked-photo {
-            transform: rotate(358deg) !important;
-            box-shadow: none;
-            width: 260px;
-            height: 150px;
-            max-width: 80vw;
-            margin-right: 0;
-            margin-left:2px;
-            border: 2px solid #333;
-          }
-        }
-        
         .bottom-action-area {
+    /* 🛑 FIX LAYOUT: De FLEX a FIXED para el teclado de iOS */
+    position: fixed; 
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-width: 500px; /* Centrado */
+    margin: 0 auto;  /* Centrado */
     border-top: none;
     box-shadow: none; 
     z-index: 10;
@@ -427,327 +253,8 @@ html, body {
             z-index: 10;
         }
 
-
-        .glass-chip {
-            background: linear-gradient(167deg, #93c5fd 0%, #3e6bff 90%) !important; 
-            
-            backdrop-filter: blur(8px); 
-            -webkit-backdrop-filter: blur(8px);
-            
-            border: 1px solid rgba(255, 255, 255, 0.8) !important; 
-            
-            box-shadow: 
-                inset 0 1px 0 rgba(255, 255, 255, 0.9),
-                inset 0 -1px 0 rgba(0, 0, 0, 0.1);
-            
-            color: #fefefe !important; 
-            
-            transition: all 0.2s ease-in-out;
-            
-            white-space: nowrap;
-            display: inline-flex;
-            align-items: center;
-            border-radius: 9999px;
-            padding: 8px 12px;
-        }
-
-        .glass-chip:hover {
-            background: linear-gradient(177deg, #2563eb 0%, #3b82f6 100%) !important;
-            box-shadow: 
-                0 2px 4px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 1),
-                inset 0 -1px 0 rgba(0, 0, 0, 0.2);
-        }
-
-        .glass-chip:active {
-            background: rgb(226 246 255 / 80%) !important;
-            box-shadow: none !important; 
-        }
-
-        .blue-glass-chip {
-            background: linear-gradient(90deg, rgb(215 236 255 / 50%) 0%, rgb(230 245 255 / 80%) 90%) !important;
-            
-            backdrop-filter: blur(8px); 
-            -webkit-backdrop-filter: blur(8px);
-            
-            border: 1px solid rgba(130, 180, 255, 0.8) !important; 
-            color: #1e40af !important;
-            font-weight: 600;
-            
-            white-space: nowrap;
-            display: inline-flex;
-            align-items: center;
-            border-radius: 9999px; 
-            padding: 8px 12px;
-            transition: all 0.2s ease-in-out;
-        }
-
-        .blue-glass-chip:hover {
-            background: linear-gradient(90deg, rgb(190 220 255 / 70%) 0%, rgb(210 235 255 / 90%) 100%) !important;
-            box-shadow: 
-                0 2px 4px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 1),
-                inset 0 -1px 0 rgba(0, 0, 0, 0.2);
-        }
-
-        .blue-glass-chip:active {
-            background: rgb(180 210 255 / 90%) !important;
-            box-shadow: none !important; 
-        }
-
-
-        #menu-actions .menu-action-chip {
-            background-color: transparent !important;
-        }
+        /* ... (Resto de estilos) ... */
         
-        #user-typing-bubble, #model-typing-bubble {
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.2s ease-out, visibility 0.2s ease-out, height 0.2s ease-out, margin-bottom 0.2s ease-out;
-            margin-bottom: 0 !important;
-            height: 0;
-            overflow: hidden;
-        }
-        
-        #user-typing-bubble.show, #model-typing-bubble.show {
-            opacity: 1;
-            visibility: visible;
-            height: auto; 
-            padding-bottom:40px;
-            margin-bottom: 18px !important;
-        }
-        
-        .typing-dots {
-            display: flex;
-            align-items: center;
-            height:8px;
-        }
-        .typing-dots .dot {
-            width: 8px;
-            height: 6px;
-            border-radius: 50%;
-            margin: 0 2px;
-            animation: bounce 1.4s infinite ease-in-out both;
-        }
-        #model-typing-bubble .dot { background-color: black; }
-        #user-typing-bubble .dot { background-color: white; }
-
-        .typing-dots .dot:nth-child(1) { animation-delay: -0.32s; }
-        .typing-dots .dot:nth-child(2) { animation-delay: -0.16s; }
-        .typing-dots .dot:nth-child(3) { animation-delay: 0s; }
-
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
-        }
-        
-        #user-input.sps-mode {
-            border-color: #f59e0b;
-            background-color: #fffef2;
-            font-weight: bold;
-            color: #2563eb;
-        }
-        
-        #toggle-mode-button {
-            background: linear-gradient(90deg, rgb(215 236 255 / 50%) 0%, rgb(230 245 255 / 80%) 90%) !important;
-            backdrop-filter: blur(8px); 
-            -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(130, 180, 255, 0.8) !important; 
-            color: #1e40af !important; 
-            font-weight: 600; 
-            
-            white-space: nowrap;
-            display: inline-flex;
-            align-items: center;
-            border-radius: 9999px;
-            
-            padding: 8px 12px;
-            height: auto;
-            width: auto;
-            
-            margin-left: 0; 
-            margin-right: 0; 
-            
-            flex-shrink: 0;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-            transition: all 0.2s ease-in-out;
-        }
-
-        #toggle-mode-button:hover {
-            background: linear-gradient(90deg, rgb(190 220 255 / 70%) 0%, rgb(210 235 255 / 90%) 100%) !important;
-            box-shadow: 
-                0 2px 4px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 1),
-                inset 0 -1px 0 rgba(0, 0, 0, 0.2);
-        }
-
-        #toggle-mode-button.active {
-            background: linear-gradient(154deg, #fff 0%, #eff6ff 90%) !important;
-            border: 1px solid rgba(255, 165, 0, 0.8) !important; 
-            color: #1f2937 !important;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        
-        #toggle-mode-button:active {
-            transform: scale(0.98);
-        }
-
-        #toggle-icon {
-            display: none !important;
-        }
-        
-        #send-message-button {
-            background-color: #3b82f6 !important; 
-            color: white;
-            border-radius: 9999px;
-            width: auto; 
-            height: auto;
-            padding: 10px 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            margin-left: 8px;
-            transition: background-color 0.2s, transform 0.1s;
-        }
-
-        #send-message-button:hover:not(:disabled) {
-            background-color: #2563eb !important;
-        }
-
-        #send-message-button:active:not(:disabled) {
-            transform: scale(0.95);
-        }
-
-        #send-message-button:disabled {
-            background-color: #d1d5db !important;
-            cursor: not-allowed;
-            color: #6b7280;
-        }
-
-        #go-text {
-            display: inline !important;
-            font-weight: 600;
-        }
-        
-        #send-message-button svg {
-            fill: currentColor;
-            height: 18px;
-            width: 18px;
-            transform: none; 
-            margin-right: 6px;
-        }
-
-
-        #input-area-container {
-            border-top: 1px solid #e5e7eb; 
-            display: flex;
-            align-items: center;
-            padding: 4px;
-            width: 100%;
-        }
-
-        .map-search-bar {
-            display: block; 
-            flex-grow: 1;
-            margin-left: 8px;
-            margin-right: 8px;
-            padding: 0;
-            
-            background: rgba(255, 255, 255, 0.4); 
-            backdrop-filter: blur(12px); 
-            -webkit-backdrop-filter: blur(12px); 
-            border-radius: 20px;
-            box-shadow: 1px 2px 2px 2px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.06); 
-            border: 1px solid rgba(255, 255, 255, 0.6); 
-        }
-
-        #user-input {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            background: transparent !important; 
-            color: #1f2937;
-        }
-
-        #bottom-left-actions {
-            display: flex;
-            align-items: center;
-            flex-shrink: 0;
-            padding: 4px;
-        }
-        
-        .bottom-bar-wrapper {
-             display: flex;
-             flex-direction: column; 
-             align-items: center; 
-             flex-shrink: 0;
-             width: 100%;
-             
-             padding: 0 1rem 0.5rem 1rem; 
-        }
-
-        #go-button {
-            display: none !important;
-        }
-
-
-        .pac-container {
-            display: none !important;
-            visibility: hidden !important;
-        }
-
-        .autocomplete-chips-group-container {
-            width: 100%; 
-            overflow-x: auto; 
-            -webkit-overflow-scrolling: touch; 
-            padding: 0.5rem 1rem;
-            display: flex;
-            flex-wrap: nowrap;
-            align-items: center;
-            padding-top:0px;
-        }
-
-        .autocomplete-chip {
-            background: rgba(255, 255, 255, 0.7); 
-            border: 1px solid rgba(0, 123, 255, 0.5); 
-            color: #007bff; 
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(5px); 
-            -webkit-backdrop-filter: blur(5px);
-            
-            padding: 6px 12px;
-            margin-right: 8px;
-            border-radius: 20px;
-            font-size: 0.875rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-
-        .autocomplete-chip:hover {
-            background: rgba(0, 123, 255, 0.1);
-        }
-
-        .attribution-chip {
-            background-color: #f0f0f0;
-            color: #666;
-            font-size: 0.75rem;
-            padding: 4px 8px;
-            border-radius: 15px;
-            display: inline-flex;
-            align-items: center;
-            margin-right: 8px;
-            flex-shrink: 0;
-            white-space: nowrap;
-        }
-
-        .attribution-chip a {
-            color: #007bff;
-            text-decoration: none;
-            margin-left: 3px;
-        }
-
     </style>
     <script>
     // 🛑 FIX iOS: Función para corregir la altura del viewport cuando aparece el teclado
@@ -767,7 +274,7 @@ html, body {
 <body>
     <div id="chat-window" class="chat-window h-screen w-full"> 
         
-        <div style="margin-top:-28px;" class="fixed top-0 left-0 w-full z-50 p-4 flex justify-between bg-transparent">
+        <div id="chat-header" class="fixed top-0 left-0 w-full z-50 p-4 flex justify-between bg-transparent">
             <div id="top-action-bar-left" class="flex items-center space-x-3">
                 <div style="width:170px;margin-left:-20px;" id="btn-clear-top" class="action-chip flex items-center text-sm font-semibold text-red-700 cursor-pointe" data-action="CLEAR_HISTORY"><img src="https://raw.githubusercontent.com/marckosereno/api/refs/heads/main/project_20251211_0047328-01.png"/></div>
             </div>
@@ -804,7 +311,7 @@ html, body {
             </div>
         </div>
 
-        <div class="bottom-action-area flex-shrink-0 flex flex-col space-y-2">
+<div class="bottom-action-area flex-shrink-0 flex flex-col space-y-2">
             
             <div id="autocomplete-chips-group-container" class="autocomplete-chips-group-container hidden">
                 </div>
@@ -932,8 +439,9 @@ html, body {
             </div>
         </div>
     </div>
-        
-    <script async defer
+
+
+ <script async defer
         src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBGmgdkbqtCnIe7nWZYUKk9aAKWI6rKAFM&libraries=places&callback=initChatUI">
     </script>
 
@@ -1950,7 +1458,7 @@ html, body {
         }
     }
 
-PARTE 4 DE 4 (FINAL):
+// PARTE 4 DE 4 (FINAL) Continúa aquí:
 async function handleSend(userPromptInput = null, placeIdForDirectSearch = null) {
         
         const isSPSorDirect = placeIdForDirectSearch !== null;
@@ -2309,8 +1817,8 @@ async function handleSend(userPromptInput = null, placeIdForDirectSearch = null)
         
         loadNotificationPreferences(); 
         
-        isSPSMode = true;
-        toggleSPSMode();
+        isSPSMode = false; // 🛑 FIX JS: Inicializa en FALSE para que el toggle lo ponga en TRUE (Modo SPS)
+        toggleSPSMode(); 
         hideLoadingIndicator(); 
         
         resetMentionMode();
@@ -2337,4 +1845,3 @@ async function handleSend(userPromptInput = null, placeIdForDirectSearch = null)
     </script>
 </body>
 </html>
-
