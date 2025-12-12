@@ -1,5 +1,5 @@
 // ====================================================================
-// Archivo: chat.js (Versión 9.4 - Descripciones sin Ubicación)
+// Archivo: chat.js (Versión 9.5 - Tono Objetivo/Impersonal)
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -93,16 +93,17 @@ function areNamesimilar(name1, name2) {
 async function generateDynamicDescription(name, category, isHealth, currentLanguage) {
     const langText = currentLanguage === 'es' ? 'español' : 'inglés';
     
-    // 🟢 CAMBIO v9.4: Instrucción para OMITIR la ubicación.
+    // 🟢 CAMBIO v9.5: Instrucción para tono OBJETIVO/IMPERSONAL.
     const placePrompt = currentLanguage === 'es' 
-        ? `Genera una descripción corta (2 oraciones) y atractiva para el lugar "${name}" en la categoría "${category}". Céntrate en los servicios, experiencia y el ambiente. **CRÍTICO: La descripción DEBE omitir cualquier mención a la ubicación geográfica (ej. "Nuevo Progreso").** Sé profesional y utiliza un emoji relevante. Responde solo con el texto de la descripción en ${langText}.`
-        : `Generate a short (2-sentence), appealing description for the place "${name}" in the category "${category}". Focus on services, experience, and atmosphere. **CRITICAL: The description MUST omit any mention of the geographic location (e.g., "Nuevo Progreso").** Be professional and use a relevant emoji. Respond only with the description text in ${langText}.`;
+        ? `Genera una descripción corta (2 oraciones) y atractiva para el lugar "${name}" en la categoría "${category}". Céntrate en los servicios, experiencia y el ambiente. **CRÍTICO 1: La descripción DEBE omitir cualquier mención a la ubicación geográfica (ej. "Nuevo Progreso").** **CRÍTICO 2: La descripción DEBE usar un tono objetivo/impersonal, NUNCA uses pronombres de primera persona del plural (ej. "nosotros", "nuestro", "nuestra").** Responde solo con el texto de la descripción en ${langText}.`
+        : `Generate a short (2-sentence), appealing description for the place "${name}" in the category "${category}". Focus on services, experience, and atmosphere. **CRITICAL 1: The description MUST omit any mention of the geographic location (e.g., "Nuevo Progreso").** **CRITICAL 2: The description MUST use an objective/impersonal tone, NEVER use first-person plural pronouns (e.g., "we", "our").** Respond only with the description text in ${langText}.`;
     
     try {
         const result = await ai.chats.create({
             model: MODEL_NAME, 
             config: {
-                systemInstruction: `Eres un escritor de descripciones turísticas. Tu única tarea es generar descripciones en el idioma solicitado.` 
+                // Se agregó "impersonal" al rol
+                systemInstruction: `Eres un escritor de descripciones turísticas con tono profesional e impersonal. Tu única tarea es generar descripciones en el idioma solicitado.` 
             }
         }).sendMessage({ message: placePrompt });
         
@@ -242,7 +243,7 @@ Tu misión es asistir a turistas.
 1.  **Formato Estructurado (JSON):** Cuando el usuario pida información específica (un lugar, o un listado/categoría), DEBES responder con una o más fichas JSON estructuradas.
 2.  **Formato Conversacional (Texto Plano):** Para saludos, preguntas generales, fallos, o mensajes de chat normales, responde en texto plano.
 3.  **Localización (CRÍTICO):** NUNCA afirmes que un lugar se encuentra en Nuevo Progreso a menos que tengas confirmación del Place API. Si el Place API no devuelve un resultado, DEBES asumir que el lugar está fuera de tu jurisdicción (el área de 15km alrededor de Nuevo Progreso). Si el lugar no existe en Places API, NUNCA LO INVENTES; simplemente di que no lo puedes encontrar en el área. Si respondes con una ficha, usa el nombre devuelto por Places API. **CRÍTICO: Cuando generes una ficha de lugar ("type": "place"), la propiedad description DEBE OMITIR cualquier mención a la ubicación geográfica (ej. "Nuevo Progreso", "Progreso", "Tamaulipas").**
-4.  **Tono:** Siempre eres profesional, amigable y muy útil.
+4.  **Tono (CRÍTICO):** Siempre eres profesional, amigable y muy útil. Para descripciones de lugares, **DEBES usar un tono objetivo e impersonal, NUNCA utilices pronombres o términos que te incluyan como "nosotros", "nuestro", "nuestra", "mi sistema", etc.** Céntrate en la experiencia, servicio o datos.
 5.  **IDIOMA:** Responde SIEMPRE en {LANG_PLACEHOLDER}.
 6.  **Multi-Ficha:** Si proporcionas más de una ficha (ej. "dame ideas para el día"), usa el formato 'isMultiStructured: true'.
 7.  **Campos Health/Privacy:** Si un lugar es de salud/médico (dental, farmacia, clínica), el campo 'isHealthPlace' debe ser 'true' y DEBES OMITIR su número de teléfono y sitio web del JSON.
@@ -272,10 +273,10 @@ export default async function handler(req, res) {
         
         // Traducciones para mensajes de fallo/notificaciones
         const translations = { 
-            // MODIFICADO para ser más enfático: el lugar no se pudo verificar en Nuevo Progreso.
+            // 🟢 AJUSTE DE TONO: Se modificó "nuestra área de cobertura" por "el área de cobertura"
             notFoundDirect: currentLanguage === 'es' 
-                ? `Disculpa, no pudimos verificar o encontrar los detalles completos para el lugar: **{query}** en nuestra área de cobertura de **Nuevo Progreso** (15km). Intenta con otra búsqueda. 📍`
-                : `Sorry, we could not verify or retrieve complete details for the place: **{query}** in our **Nuevo Progreso** coverage area (15km). Please try another search. 📍`,
+                ? `Disculpa, no pudimos verificar o encontrar los detalles completos para el lugar: **{query}** en el área de cobertura de **Nuevo Progreso** (15km). Intenta con otra búsqueda. 📍`
+                : `Sorry, we could not verify or retrieve complete details for the place: **{query}** in the **Nuevo Progreso** coverage area (15km). Please try another search. 📍`,
             // MODIFICADO para ser más enfático: el lugar no se encontró.
             notFoundGeofence: currentLanguage === 'es'
                 ? `Disculpa, no se encontró un lugar llamado **{query}** ubicado en Nuevo Progreso (Rango 15km).`
@@ -318,7 +319,7 @@ export default async function handler(req, res) {
                         placeToSearch: placeData.name,
                         placeCategory: placeData.placeCategory,
                         isHealthPlace: placeData.isHealthPlace, 
-                        description: fichaDescription, // <---- DESCRIPCIÓN 100% GEMINI Y DINÁMICA (SIN UBICACIÓN)
+                        description: fichaDescription, // <---- DESCRIPCIÓN 100% GEMINI Y DINÁMICA (SIN UBICACIÓN, TONO OBJETIVO)
                         isStructured: true,
                         // Datos enriquecidos 
                         placePhone: placeData.phone, 
@@ -335,7 +336,7 @@ export default async function handler(req, res) {
                     const failedFicha = {
                         type: "place_not_found", 
                         placeToSearch: directSearchQuery, 
-                        // Usar traducción para el mensaje de fallo (VERSION 9.3)
+                        // Usar traducción para el mensaje de fallo (VERSION 9.5 - TONO IMPERSONAL)
                         description: translations.notFoundDirect.replace('{query}', directSearchQuery),
                         isStructured: true
                     };
@@ -384,8 +385,9 @@ export default async function handler(req, res) {
                 } else {
                     // Si el Place ID de la mención no funciona, devolvemos un error conversacional
                     const failedMessage = currentLanguage === 'es'
-                        ? "Disculpa, no pude encontrar la información para el lugar mencionado dentro de nuestra área de cobertura. ¿Podrías intentar la búsqueda directa (⚡️)?"
-                        : "Sorry, I couldn't find the information for the mentioned place within our coverage area. Could you try the direct search (⚡️)?";
+                        // 🟢 AJUSTE DE TONO: Se modificó "nuestra área de cobertura" por "el área de cobertura"
+                        ? "Disculpa, no pude encontrar la información para el lugar mencionado dentro del área de cobertura. ¿Podrías intentar la búsqueda directa (⚡️)?"
+                        : "Sorry, I couldn't find the information for the mentioned place within the coverage area. Could you try the direct search (⚡️)?";
                     return res.status(200).json({ responseText: failedMessage });
                 }
             }
@@ -525,10 +527,10 @@ export default async function handler(req, res) {
                             if (placeData && !isNameMiscorrelated) {
                                 // **LÓGICA NORMAL: USAR RE-PROMPT con GOOGLE SEARCH RAG (Reseñas)**
                                 
-                                // 🟢 REFUERZO RAG CRÍTICO: Se agregó la omisión de ubicación
+                                // 🟢 REFUERZO RAG CRÍTICO: Se agregó la omisión de ubicación y el tono impersonal
                                 let placePrompt = currentLanguage === 'es' 
-                                    ? `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder. La categoría es: ${enrichedFicha.placeCategory}. **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **CRÍTICO: Extrae las frases clave de una o dos reseñas REALES y úsalas para componer la 'description' en el JSON.** La descripción debe ser corta (2 a 3 oraciones), estar BASADA ESTRICTAMENTE EN LO QUE DICEN LOS CLIENTES Y SERVICIOS REALES. **ABSOLUTAMENTE PROHIBIDO usar frases de inicio como 'Se comenta que', 'Según las reseñas', o 'Este lugar es'. Y CRÍTICAMENTE, DEBES OMITIR cualquier mención a la ubicación geográfica (ej. "Nuevo Progreso", "Progreso"). SÉ DIRECTO. Responde SOLO con el JSON completo en ${langText}.**`
-                                    : `The user asked for "${placeNameSearch}". Generate the PLACE CARD JSON to respond. The category is: ${enrichedFicha.placeCategory}. **USE YOUR GOOGLE SEARCH TOOL** to search the query: "reviews for ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **CRITICAL: Extract key phrases from one or two REAL reviews and use them to compose the 'description' in the JSON.** The description must be short (2 to 3 sentences), strictly BASED ON WHAT CUSTOMERS SAY AND REAL SERVICES. **ABSOLUTELY PROHIBITED to use starting phrases like 'It is commented that', 'According to reviews', or 'This place is'. AND CRITICALLY, YOU MUST OMIT any mention of the geographic location (e.g., "Nuevo Progreso", "Progreso"). BE DIRECT. Respond ONLY with the complete JSON in ${langText}.**`;
+                                    ? `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder. La categoría es: ${enrichedFicha.placeCategory}. **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **CRÍTICO: Extrae las frases clave de una o dos reseñas REALES y úsalas para componer la 'description' en el JSON.** La descripción debe ser corta (2 a 3 oraciones), estar BASADA ESTRICTAMENTE EN LO QUE DICEN LOS CLIENTES Y SERVICIOS REALES. **ABSOLUTAMENTE PROHIBIDO usar frases de inicio como 'Se comenta que', 'Según las reseñas', o 'Este lugar es'. Y CRÍTICAMENTE, DEBES OMITIR cualquier mención a la ubicación geográfica (ej. "Nuevo Progreso", "Progreso"). Además, DEBES usar un tono objetivo e impersonal, NUNCA utilices pronombres o términos que te incluyan como "nosotros" o "nuestro". SÉ DIRECTO. Responde SOLO con el JSON completo en ${langText}.**`
+                                    : `The user asked for "${placeNameSearch}". Generate the PLACE CARD JSON to respond. The category is: ${enrichedFicha.placeCategory}. **USE YOUR GOOGLE SEARCH TOOL** to search the query: "reviews for ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **CRITICAL: Extract key phrases from one or two REAL reviews and use them to compose the 'description' in the JSON.** The description must be short (2 to 3 sentences), strictly BASED ON WHAT CUSTOMERS SAY AND REAL SERVICES. **ABSOLUTELY PROHIBITED to use starting phrases like 'It is commented that', 'According to reviews', or 'This place is'. AND CRITICALLY, YOU MUST OMIT any mention of the geographic location (e.g., "Nuevo Progreso", "Progreso"). Additionally, YOU MUST use an objective/impersonal tone, NEVER use pronouns or terms that include you like "we" or "our". BE DIRECT. Respond ONLY with the complete JSON in ${langText}.**`;
 
 
                                 // Usar un nuevo chat para no contaminar el historial principal
