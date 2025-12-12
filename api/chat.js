@@ -1,5 +1,5 @@
 // ====================================================================
-// Archivo: chat.js (Versión 9.5 - Tono Objetivo/Impersonal)
+// Archivo: chat.js (Versión 9.6 - Detección de Categoría Standalone)
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -93,7 +93,7 @@ function areNamesimilar(name1, name2) {
 async function generateDynamicDescription(name, category, isHealth, currentLanguage) {
     const langText = currentLanguage === 'es' ? 'español' : 'inglés';
     
-    // 🟢 CAMBIO v9.5: Instrucción para tono OBJETIVO/IMPERSONAL.
+    // 🟢 Instrucción para tono OBJETIVO/IMPERSONAL y omisión de ubicación.
     const placePrompt = currentLanguage === 'es' 
         ? `Genera una descripción corta (2 oraciones) y atractiva para el lugar "${name}" en la categoría "${category}". Céntrate en los servicios, experiencia y el ambiente. **CRÍTICO 1: La descripción DEBE omitir cualquier mención a la ubicación geográfica (ej. "Nuevo Progreso").** **CRÍTICO 2: La descripción DEBE usar un tono objetivo/impersonal, NUNCA uses pronombres de primera persona del plural (ej. "nosotros", "nuestro", "nuestra").** Responde solo con el texto de la descripción en ${langText}.`
         : `Generate a short (2-sentence), appealing description for the place "${name}" in the category "${category}". Focus on services, experience, and atmosphere. **CRITICAL 1: The description MUST omit any mention of the geographic location (e.g., "Nuevo Progreso").** **CRITICAL 2: The description MUST use an objective/impersonal tone, NEVER use first-person plural pronouns (e.g., "we", "our").** Respond only with the description text in ${langText}.`;
@@ -273,7 +273,7 @@ export default async function handler(req, res) {
         
         // Traducciones para mensajes de fallo/notificaciones
         const translations = { 
-            // 🟢 AJUSTE DE TONO: Se modificó "nuestra área de cobertura" por "el área de cobertura"
+            // AJUSTE DE TONO: Se modificó "nuestra área de cobertura" por "el área de cobertura"
             notFoundDirect: currentLanguage === 'es' 
                 ? `Disculpa, no pudimos verificar o encontrar los detalles completos para el lugar: **{query}** en el área de cobertura de **Nuevo Progreso** (15km). Intenta con otra búsqueda. 📍`
                 : `Sorry, we could not verify or retrieve complete details for the place: **{query}** in the **Nuevo Progreso** coverage area (15km). Please try another search. 📍`,
@@ -385,7 +385,7 @@ export default async function handler(req, res) {
                 } else {
                     // Si el Place ID de la mención no funciona, devolvemos un error conversacional
                     const failedMessage = currentLanguage === 'es'
-                        // 🟢 AJUSTE DE TONO: Se modificó "nuestra área de cobertura" por "el área de cobertura"
+                        // AJUSTE DE TONO: Se modificó "nuestra área de cobertura" por "el área de cobertura"
                         ? "Disculpa, no pude encontrar la información para el lugar mencionado dentro del área de cobertura. ¿Podrías intentar la búsqueda directa (⚡️)?"
                         : "Sorry, I couldn't find the information for the mentioned place within the coverage area. Could you try the direct search (⚡️)?";
                     return res.status(200).json({ responseText: failedMessage });
@@ -445,22 +445,51 @@ export default async function handler(req, res) {
         
         let promptToSend = userPrompt;
 
-        // Patrón para detectar solicitudes de listado/recomendación
-        const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra).*\\s+(\\d+|unos cuantos)?\\s*(taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias|clinica|farmacia|dental|optica)s?`, 'i');
-        
-        const match = userPrompt.match(recommendationPattern);
-        
+        // Lista de categorías que deberían forzar una ficha de categoría
+        const categoryNouns = ['taquería', 'restaurante', 'tienda', 'barbacoa', 'lugar', 'lugares', 'souvenirs', 'artesanías', 'artesanias', 'clínica', 'clinica', 'farmacia', 'dental', 'óptica', 'optica', 'antojito', 'antojitos', 'comida', 'bares', 'bebidas', 'spa', 'masajes', 'desayuno', 'postre'];
+        const pluralCategoryNouns = categoryNouns.map(n => n.endsWith('s') ? n : n + 's');
+        const allCategoryNouns = [...new Set([...categoryNouns, ...pluralCategoryNouns])];
+
+        // Patrón para detectar solicitudes de listado/recomendación (con verbo de comando)
+        const commandRecommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra).*\\s+(\\d+|unos cuantos)?\\s*(${categoryNouns.join('|')})s?`, 'i');
+
+        let match = userPrompt.match(commandRecommendationPattern);
+        let categoryKeyRaw = ''; // Inicializar
+
         if (match) {
-            const categoryKeyRaw = match[3].toLowerCase(); 
+            categoryKeyRaw = match[3].toLowerCase(); // Categoría encontrada por el comando
+        } else {
+            // 🛑 V9.6: Intentar detectar categoría como palabra única o frase corta
+            const promptCleaned = userPrompt.trim().toLowerCase().replace(/^(los|las)\s+/i, ''); // Quitar "los " o "las " al inicio
+            
+            // Buscar coincidencia exacta con una de las categorías (singular o plural)
+            if (allCategoryNouns.includes(promptCleaned)) {
+                // Forzar la categoría
+                categoryKeyRaw = promptCleaned.replace(/s$/, ''); // Usar la forma singular como clave (e.g., 'antojitos' -> 'antojito')
+                // Mock a match structure to enter the 'if (match)' block
+                match = [promptCleaned, '', '', categoryKeyRaw]; 
+                console.log("PROTOCOLO CATEGORÍA STANDALONE ACTIVADO para:", categoryKeyRaw);
+            }
+        }
+                
+        if (match) {
+            // Si llegamos aquí, categoryKeyRaw tiene la categoría base (singular)
+            
             let categoryName = currentLanguage === 'es' ? "lugares y negocios" : "places and businesses"; 
             
             // Traducción de categorías forzada para el prompt RAG
-            if (categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('tacos')) categoryName = currentLanguage === 'es' ? "Taquerías y Tacos" : "Taco Stands and Taquerias";
-            else if (categoryKeyRaw.includes('restaurante') || categoryKeyRaw.includes('comer')) categoryName = currentLanguage === 'es' ? "Restaurantes y Comida" : "Restaurants and Food";
-            else if (categoryKeyRaw.includes('artesanias') || categoryKeyRaw.includes('souvenirs')) categoryName = currentLanguage === 'es' ? "Tiendas de Artesanías y Souvenirs" : "Handicraft and Souvenir Shops";
+            if (categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('taco')) categoryName = currentLanguage === 'es' ? "Taquerías y Tacos" : "Taco Stands and Taquerias";
+            // 🟢 V9.6: Añadido Antojitos
+            else if (categoryKeyRaw.includes('antojito') || categoryKeyRaw.includes('comida')) categoryName = currentLanguage === 'es' ? "Antojitos Mexicanos y Comida Local" : "Mexican Snacks and Local Food";
+            else if (categoryKeyRaw.includes('restaurante')) categoryName = currentLanguage === 'es' ? "Restaurantes y Comida Internacional" : "Restaurants and International Food";
             else if (categoryKeyRaw.includes('barbacoa')) categoryName = currentLanguage === 'es' ? "Barbacoa y Birria" : "Barbacoa and Birria";
-            else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = currentLanguage === 'es' ? "Salud y Estética" : "Health and Aesthetics";
-            
+            else if (categoryKeyRaw.includes('artesania') || categoryKeyRaw.includes('souvenirs') || categoryKeyRaw.includes('tienda')) categoryName = currentLanguage === 'es' ? "Tiendas de Artesanías y Compras" : "Handicraft and Shopping";
+            else if (categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia') || categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('spa') || categoryKeyRaw.includes('masajes')) categoryName = currentLanguage === 'es' ? "Salud y Estética" : "Health and Aesthetics";
+            else if (categoryKeyRaw.includes('bares') || categoryKeyRaw.includes('bebidas')) categoryName = currentLanguage === 'es' ? "Bares y Vida Nocturna" : "Bars and Nightlife";
+            else if (categoryKeyRaw.includes('lugar')) categoryName = currentLanguage === 'es' ? "Lugares de Interés General" : "General Points of Interest";
+            else if (categoryKeyRaw.includes('desayuno')) categoryName = currentLanguage === 'es' ? "Lugares de Desayuno y Café" : "Breakfast and Coffee Places";
+            else if (categoryKeyRaw.includes('postre')) categoryName = currentLanguage === 'es' ? "Postres y Panaderías" : "Desserts and Bakeries";
+
             // SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA
             promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría ${categoryName} en Nuevo Progreso. **Tu respuesta debe ser en ${langText}.**`;
             
