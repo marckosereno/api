@@ -1,5 +1,5 @@
 // ====================================================================
-// Archivo: chat.js (Versión 9.13 - Habilitar Negritas en Conversacional - FIX de Seguimiento)
+// Archivo: chat.js (Versión 9.14 - FIX de Blindaje de Contexto Urbano)
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -317,7 +317,7 @@ async function getPlaceDetails(query, currentLanguage) {
 
 
 // =======================================================
-// 2. Instrucción de Sistema BASE (OPTIMIZADA V9.13)
+// 2. Instrucción de Sistema BASE (OPTIMIZADA V9.14)
 // =======================================================
 
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
@@ -325,6 +325,7 @@ Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 **REGLA DE ESTRICTO CUMPLIMIENTO:** Si la solicitud del usuario es para un LUGAR o CATEGORÍA, DEBES responder **EXCLUSIVAMENTE con un formato JSON**. Está **PROHIBIDO** responder en texto plano conversacional en estos casos, a menos que se te indique explícitamente en el protocolo.
 **NOTA CRÍTICA DE CLASIFICACIÓN:** Tu clasificación debe ser precisa. No asumas que todas las búsquedas son restaurantes. Usa las categorías más específicas posibles (Spa, Tienda de Ropa, Clínica Dental, Taquería, etc.).
 **REGLA CRÍTICA DE CONTEXTO:** Si el usuario solicita un **LUGAR ESPECÍFICO** (ej: "Farmacia Guadalajara", "El Cuñao"), DEBES IGNORAR CUALQUIER CATEGORÍA PREVIA del chat. Debes clasificar la nueva solicitud desde CERO, de forma independiente.
+**REGLA CRÍTICA DE BLINDAJE URBANO:** Si un lugar se menciona junto a una ciudad o estado mexicano (ej: 'Velvet Café Chihuahua'), debes asumir que la intención del usuario es la *CALLE* o *UBICACIÓN LOCAL* en Nuevo Progreso que lleva ese nombre. **NUNCA DEBES DEVOLVER INFORMACIÓN DE UNA CIUDAD EXTERNA (Chihuahua, Monterrey, etc.)**, incluso si el RAG te sugiere ese contexto. Si el lugar no se encuentra en Nuevo Progreso, USA el FORMATO DE FALLO (place_not_found).
 **REGLA CRÍTICA DE MENCIÓN HÍBRIDA:** Si el prompt del usuario contiene el token **${MENTION_TOKEN}**, significa que el usuario está preguntando por el lugar asociado a ese token. Tu tarea es:
     1.  Identificar la pregunta del usuario (ej: "¿Está abierto mañana?").
     2.  Responder **directamente a esa pregunta** en modo conversacional (Texto Plano).
@@ -646,10 +647,10 @@ export default async function handler(req, res) {
                             if (placeData && !isNameMiscorrelated) {
                                 // **LÓGICA NORMAL: USAR RE-PROMPT con GOOGLE SEARCH RAG (Reseñas)**
                                 
-                                // 🟢 OPTIMIZACIÓN DEL RAG: Se añade el blindaje de comillas y fallback simple.
+                                // 🟢 OPTIMIZACIÓN DEL RAG: Se añade el blindaje de comillas y el nuevo blindaje geográfico.
                                 let placePrompt = currentLanguage === 'es' 
-                                    ? `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder. La categoría es: ${enrichedFicha.placeCategory}. **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **CRÍTICO: Extrae 1-2 frases CLAVE de reseñas REALES. Si citas, usa comillas dobles. Si no encuentras reseñas relevantes, DEJA el campo 'description' como un simple texto de fallback (ej: 'Servicios de alta calidad en la zona céntrica').** La descripción debe ser corta, estar basada en las reseñas encontradas, y enfocada en lo que dicen los clientes. **CRÍTICO: Evita las frases de inicio repetitivas como 'Se comenta que' o 'Según las reseñas'. Responde en ${langText}.** Solo usa la descripción que el RAG te proporciona.`
-                                    : `The user asked for "${placeNameSearch}". Generate the PLACE CARD JSON to respond. The category is: ${enrichedFicha.placeCategory}. **USE YOUR GOOGLE SEARCH TOOL** to search the query: "reviews for ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **CRITICAL: Extract 1-2 KEY phrases from REAL reviews. If you quote, use double quotes. If you cannot find relevant reviews, LEAVE the 'description' field as a simple fallback text (e.g., 'High quality services in the downtown area').** The description must be short, based on the reviews found, and focused on what customers say. **CRITICAL: Avoid repetitive starting phrases like 'It is commented that' or 'According to reviews'. Respond in ${langText}.** Only use the description provided by the RAG.`;
+                                    ? `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder. La categoría es: ${enrichedFicha.placeCategory}. **CRÍTICO: Al buscar reseñas, DEBES IGNORAR CUALQUIER CONTEXTO GEOGRÁFICO EXTERNO A NUEVO PROGRESO, TAMAULIPAS.** **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **CRÍTICO: Extrae 1-2 frases CLAVE de reseñas REALES. Si citas, usa comillas dobles. Si no encuentras reseñas relevantes, DEJA el campo 'description' como un simple texto de fallback (ej: 'Servicios de alta calidad en la zona céntrica').** La descripción debe ser corta, estar basada en las reseñas encontradas, y enfocada en lo que dicen los clientes. **CRÍTICO: Evita las frases de inicio repetitivas como 'Se comenta que' o 'Según las reseñas'. Responde en ${langText}.** Solo usa la descripción que el RAG te proporciona.`
+                                    : `The user asked for "${placeNameSearch}". Generate the PLACE CARD JSON to respond. The category is: ${enrichedFicha.placeCategory}. **CRITICAL: When searching for reviews, you MUST IGNORE ANY GEOGRAPHICAL CONTEXT EXTERNAL TO NUEVO PROGRESO, TAMAULIPAS.** **USE YOUR GOOGLE SEARCH TOOL** to search the query: "reviews for ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **CRITICAL: Extract 1-2 KEY phrases from REAL reviews. If you quote, use double quotes. If you cannot find relevant reviews, LEAVE the 'description' field as a simple fallback text (e.g., 'High quality services in the downtown area').** The description must be short, based on the reviews found, and focused on what customers say. **CRITICAL: Avoid repetitive starting phrases like 'It is commented that' or 'According to reviews'. Respond in ${langText}.** Only use the description provided by the RAG.`;
 
 
                                 // Usar un nuevo chat para no contaminar el historial principal
