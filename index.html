@@ -1049,12 +1049,9 @@ padding-top:0px;
         src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBGmgdkbqtCnIe7nWZYUKk9aAKWI6rKAFM&libraries=places&callback=initChatUI">
     </script>
 
-    
- <script>
-
     // --- BLOQUE JAVASCRIPT: SETUP Y UTILIDADES ---
     
-    // **NOTA: Debe coincidir con el endpoint de Vercel/backend**
+    // NOTA: Debe coincidir con el endpoint de Vercel/backend
     const BACKEND_URL = "/api/chat"; 
     const MAX_CHAT_RESULTS = 4; // Límite de resultados mostrado en texto plano (DEBE COINCIDIR CON CHAT.JS)
     
@@ -1064,16 +1061,16 @@ padding-top:0px;
     let languageMenuVisible = false; 
     let isBotTyping = false; // NUEVA variable de estado del bot
 
-    // 🛑 NUEVAS VARIABLES GLOBALES PARA LA FUNCIÓN DE BÚSQUEDA DIRECTA (SPS)
-    let isSPSMode = false; // 🛑 CAMBIO DE NOMBRE DE VARIABLE
-    let autocompleteService; // 🛑 CRÍTICO: Usaremos AutocompleteService en lugar de Autocomplete
+    // NUEVAS VARIABLES GLOBALES PARA LA FUNCIÓN DE BÚSQUEDA DIRECTA (SPS)
+    let isSPSMode = false; // CAMBIO DE NOMBRE DE VARIABLE
+    let autocompleteService; // CRÍTICO: Usaremos AutocompleteService en lugar de Autocomplete
     
     // VARIABLES GLOBALES PARA EL PROTOCOLO DE RECOMENDACIÓN LOCAL
     let lastTotalCount = 0; // Para guardar el conteo total de la última recomendación
     let lastApiQuery = null; // Para guardar el query de Places para el chip
 
     // ----------------------------------------------------
-    // 🛑 VARIABLES GLOBALES PARA LA CARACTERÍSTICA MENTION (@)
+    // VARIABLES GLOBALES PARA LA CARACTERÍSTICA MENTION (@)
     // ----------------------------------------------------
     let isMentionMode = false; // Bandera para saber si el usuario acaba de escribir '@'
     let currentMentionPlace = null; // { placeId: string, textName: string, query: string }
@@ -1097,7 +1094,7 @@ window.addEventListener('orientationchange', setAppHeight);
 
     // Referencias a Elementos del DOM
     const inputElement = document.getElementById('user-input');
-    // 🛑 CRÍTICO: El botón de enviar ahora es #send-message-button
+    // CRÍTICO: El botón de enviar ahora es #send-message-button
     const sendButton = document.getElementById('send-message-button'); 
     const messageContainer = document.getElementById('message-container');
     const appAlertContainer = document.getElementById('app-alert-container');
@@ -1126,9 +1123,9 @@ window.addEventListener('orientationchange', setAppHeight);
     const dynamicChipsGroup = document.getElementById('dynamic-chips-group');
     const dynamicChipsList = document.getElementById('dynamic-chips-list');
     
-    // 🛑 NUEVAS REFERENCIAS PARA CHIPS DE AUTOCOMPLETADO
+    // NUEVAS REFERENCIAS PARA CHIPS DE AUTOCOMPLETADO
     const autocompleteChipsGroupContainer = document.getElementById('autocomplete-chips-group-container');
-    // 🛑 NUEVA REFERENCIA CRÍTICA: La barra de búsqueda completa
+    // NUEVA REFERENCIA CRÍTICA: La barra de búsqueda completa
     const mapSearchBar = document.getElementById('map-search-bar'); 
 
 
@@ -1136,14 +1133,14 @@ window.addEventListener('orientationchange', setAppHeight);
     const userTypingBubble = document.getElementById('user-typing-bubble');
     const modelTypingBubble = document.getElementById('model-typing-bubble'); 
     
-    // 🛑 NUEVAS REFERENCIAS PARA EL MODO BÚSQUEDA DIRECTA (SPS)
+    // NUEVAS REFERENCIAS PARA EL MODO BÚSQUEDA DIRECTA (SPS)
     const toggleButton = document.getElementById('toggle-mode-button');
     const toggleIcon = document.getElementById('toggle-icon');
-    // 🛑 NUEVA REFERENCIA CRÍTICA: El texto del botón Action Chip
+    // NUEVA REFERENCIA CRÍTICA: El texto del botón Action Chip
     const toggleText = document.getElementById('toggle-text');
 
 
-    // 🛑 NUEVO: Objeto de mapeo de Subcategorías (Clave: Query del Chip de Categoría General)
+    // NUEVO: Objeto de mapeo de Subcategorías (Clave: Query del Chip de Categoría General)
     const SUBCATEGORIES_MAP = {
         // --- CATEGORÍA SALUD Y ESTÉTICA ---
         "Dime sobre la Categoría Salud y Estética en Progreso": [
@@ -1180,8 +1177,8 @@ window.addEventListener('orientationchange', setAppHeight);
         es: {
             header: "PROGRESO TOUR GUIDE",
             placeholder: "Pregúntale al mapa",
-            searchPlaceholder: "Nombre del lugar o negocio...", // 🛑 CAMBIO DE TEXTO
-            goButton: "Enviar", // 🛑 CAMBIO DE TEXTO
+            searchPlaceholder: "Nombre del lugar o negocio...", // CAMBIO DE TEXTO
+            goButton: "Enviar", // CAMBIO DE TEXTO
             loadingStatus: "Respondiendo tu petición...", 
             categories: "✨️ Categorías",
             language: "🧢 Idioma",
@@ -1198,7 +1195,7 @@ window.addEventListener('orientationchange', setAppHeight);
             btnPhone: "Llamar Ahora 📞",
             btnReview: "Reseñas ⭐",
             btnWebsite: "Sitio Web/Redes 🌐", 
-            // 🛑 NUEVO: Textos para el Action Chip de Modo
+            // NUEVO: Textos para el Action Chip de Modo
             spsMode: "Modo Pro ●Activado 🦾",
             chatMode: "Modo Chat 💬",
             mentionPlaceholder: (name) => `Conversando sobre ${name}...`
@@ -1206,8 +1203,8 @@ window.addEventListener('orientationchange', setAppHeight);
         en: {
             header: "PROGRESO TOUR GUIDE",
             placeholder: "Ask the map",
-            searchPlaceholder: "Enter the business name...", // 🛑 CAMBIO DE TEXTO
-            goButton: "Send", // 🛑 CAMBIO DE TEXTO
+            searchPlaceholder: "Enter the business name...", // CAMBIO DE TEXTO
+            goButton: "Send", // CAMBIO DE TEXTO
             loadingStatus: "Processing your request...", 
             categories: "✨️ Categories",
             language: "🧢 Language",
@@ -1224,7 +1221,7 @@ window.addEventListener('orientationchange', setAppHeight);
             btnPhone: "Call Now 📞",
             btnReview: "Reviews ⭐",
             btnWebsite: "Website/Social 🌐", 
-            // 🛑 NUEVO: Textos para el Action Chip de Modo
+            // NUEVO: Textos para el Action Chip de Modo
             spsMode: "Pro Mode ●Active 🦾",
             chatMode: "Chat Mode 💬",
             mentionPlaceholder: (name) => `Conversing about ${name}...`
@@ -1258,7 +1255,7 @@ window.addEventListener('orientationchange', setAppHeight);
         chatHistory = []; 
         localStorage.removeItem('chatHistory'); 
         
-        // **IMPORTANTE**: Limpiar el mensaje-container y dejar solo las burbujas de typing
+        // IMPORTANTE: Limpiar el mensaje-container y dejar solo las burbujas de typing
         if (messageContainer) {
             // Obtener las referencias de las burbujas de typing
             const typingBubbles = [userTypingBubble, modelTypingBubble];
@@ -1282,7 +1279,7 @@ window.addEventListener('orientationchange', setAppHeight);
         // OCULTAR BOTONES DE ACCIÓN RÁPIDA
         quickActionFullList.classList.add('hidden');
         dynamicChipsGroup.classList.add('hidden'); // Ocultar chips dinámicos
-        // 🛑 NUEVO: Ocultar chips de autocompletado
+        // NUEVO: Ocultar chips de autocompletado
         autocompleteChipsGroupContainer.classList.add('hidden');
         autocompleteChipsGroupContainer.innerHTML = '';
 
@@ -1290,10 +1287,10 @@ window.addEventListener('orientationchange', setAppHeight);
         lastTotalCount = 0;
         lastApiQuery = null;
         
-        // 🛑 NUEVO: Si está en modo SPS, volver a modo chat
+        // NUEVO: Si está en modo SPS, volver a modo chat
         if (isSPSMode) toggleSPSMode();
         
-        // 🛑 NUEVO: Resetear estado de Mención
+        // NUEVO: Resetear estado de Mención
         resetMentionMode();
         
         // Aseguramos que el placeholder se restablezca
@@ -1319,7 +1316,7 @@ window.addEventListener('orientationchange', setAppHeight);
             // Si hay un error de parseo, aseguramos que el historial esté vacío
             chatHistory = []; 
         }
-        // 3. ⚠️ CORRECCIÓN DE ERROR CLAVE: Asegurar que chatHistory esté listo.
+        // CORRECCIÓN DE ERROR CLAVE: Asegurar que chatHistory esté listo.
         if (!loaded) {
             chatHistory = []; 
         }
@@ -1363,7 +1360,7 @@ window.addEventListener('orientationchange', setAppHeight);
         return hours + ':' + minutesStr + ' ' + ampm;
     }
     
-    // 🛑 NUEVA FUNCIÓN: Verificar si el usuario está cerca del fondo
+    // NUEVA FUNCIÓN: Verificar si el usuario está cerca del fondo
     function isScrolledToBottom() {
         if (!messageContainer) return true;
         // Permite un margen de 200px para considerarse "cerca del fondo"
@@ -1376,7 +1373,7 @@ window.addEventListener('orientationchange', setAppHeight);
     // FUNCIÓN DE ALERTA MEJORADA CON CONTROL DE PREFERENCIAS
     function alertUser(m, t='i', preferenceType = 'news') {
         
-        // 🛑 NUEVO: Si no es un error y la preferencia está desactivada, salir.
+        // NUEVO: Si no es un error y la preferencia está desactivada, salir.
         if (t !== 'error' && !notificationPreferences[preferenceType]) {
             console.log(`Notificación de tipo "${preferenceType}" deshabilitada por el usuario. Mensaje: ${m}`);
             return; 
@@ -1442,7 +1439,7 @@ window.addEventListener('orientationchange', setAppHeight);
     }
     
     // ----------------------------------------------------
-    // 🛑 NUEVA FUNCIÓN: Resetear el modo de Mención (@)
+    // NUEVA FUNCIÓN: Resetear el modo de Mención (@)
     // ----------------------------------------------------
     function resetMentionMode() {
         isMentionMode = false;
@@ -1454,13 +1451,11 @@ window.addEventListener('orientationchange', setAppHeight);
         autocompleteChipsGroupContainer.innerHTML = '';
     }
 
-    // --- Funciones de INTERFAZ CORE MODIFICADAS PARA EL PROBLEMA DEL TECLADO ---
 
-    // 🛑 FUNCIÓN MEJORADA: Scroll instantáneo más robusto usando la barra de búsqueda como target
     function handleInputFocus() {
         if (!inputElement || !messageContainer || !document.getElementById('bottom-bar-search-wrapper')) return;
 
-        // **PASO CLAVE 1:** Scroll instantáneo del contenedor de la barra completa a la vista.
+        // PASO CLAVE 1: Scroll instantáneo del contenedor de la barra completa a la vista.
         // Esto le dice al navegador que muestre este elemento justo encima del teclado.
         // CRÍTICO: Usamos 'bottom-bar-search-wrapper' que es el contenedor que flota
         const bottomBarWrapper = document.getElementById('bottom-bar-search-wrapper');
@@ -1470,7 +1465,7 @@ window.addEventListener('orientationchange', setAppHeight);
             block: 'end' // Scroll para que el final del elemento quede a la vista
         });
 
-        // **PASO CLAVE 2 (Timeout):** Chrome/Android a menudo requiere un breve retraso
+        // PASO CLAVE 2 (Timeout): Chrome/Android a menudo requiere un breve retraso
         // para que la reubicación del viewport por el teclado se complete.
         setTimeout(() => {
              // 2a. Scroll del contenedor de mensajes al fondo
@@ -1519,7 +1514,7 @@ window.addEventListener('orientationchange', setAppHeight);
         if (isSPSMode) { 
             inputElement.placeholder = UI_STRINGS[currentLanguage].searchPlaceholder;
         } else if (currentMentionPlace) {
-             // 🛑 NUEVO: Si estamos en modo Mención, restaurar el placeholder de Mención
+             // NUEVO: Si estamos en modo Mención, restaurar el placeholder de Mención
              inputElement.placeholder = UI_STRINGS[currentLanguage].mentionPlaceholder(currentMentionPlace.textName);
         } else {
             inputElement.placeholder = UI_STRINGS[currentLanguage].placeholder;
@@ -1537,7 +1532,7 @@ window.addEventListener('orientationchange', setAppHeight);
         if (!isBotTyping) {
             userTypingBubble.classList.add('show');
             
-            // 🛑 CAMBIO CRÍTICO: SCROLL CONDICIONAL
+            // CAMBIO CRÍTICO: SCROLL CONDICIONAL
             if (isScrolledToBottom()) {
                 scrollToBottom(); 
             }
@@ -1601,14 +1596,14 @@ window.addEventListener('orientationchange', setAppHeight);
             autocompleteChipsGroupContainer.classList.add('hidden');
             autocompleteChipsGroupContainer.innerHTML = '';
             
-            // 🛑 CRÍTICO: El listener DEBE QUEDARSE, pero su lógica se vuelve dual (SPS/Mention)
+            // CRÍTICO: El listener DEBE QUEDARSE, pero su lógica se vuelve dual (SPS/Mention)
             // No lo removemos para que la lógica de Mención lo use.
         }
         inputElement.value = '';
         inputElement.focus();
     }
     
-    // 🛑 FUNCIÓN MODIFICADA: Ahora maneja la lógica dual de SPS y Mención (@).
+    // FUNCIÓN MODIFICADA: Ahora maneja la lógica dual de SPS y Mención (@).
     function handleAutocompleteInput(e) {
         const input = e.target.value;
         const inputTrimmed = input.trim();
@@ -1662,7 +1657,7 @@ window.addEventListener('orientationchange', setAppHeight);
         }
     }
     
-    // 🛑 NUEVA FUNCIÓN: Renderiza los chips de autocompletado y el chip de atribución
+    // NUEVA FUNCIÓN: Renderiza los chips de autocompletado y el chip de atribución
     function renderAutocompleteChips(predictions, status) {
         autocompleteChipsGroupContainer.innerHTML = '';
         
@@ -1690,7 +1685,7 @@ window.addEventListener('orientationchange', setAppHeight);
             chip.dataset.placeId = prediction.place_id;
             chip.dataset.description = prediction.description; // Guardamos la descripción completa
             
-            // 🛑 CRÍTICO: El handler de click es onPlaceSelected
+            // CRÍTICO: El handler de click es onPlaceSelected
             chip.onclick = () => onPlaceSelected({ 
                 name: chipText, // Usamos el texto visible del chip
                 place_id: prediction.place_id,
@@ -1730,9 +1725,9 @@ window.addEventListener('orientationchange', setAppHeight);
         autocompleteChipsGroupContainer.innerHTML = '';
 
         if (isSPSMode) { 
-            // 🛑 MODO SPS (BÚSQUEDA DIRECTA)
+            // MODO SPS (BÚSQUEDA DIRECTA)
             
-            // a. Mostrar la acción del usuario
+            // a. Mostrar la acción del usuario (CORRECCIÓN: Se usa ** para negrita en el historial)
             chatHistory.push({ 
                 role: 'user', 
                 text: currentLanguage === 'es' 
@@ -1753,7 +1748,7 @@ window.addEventListener('orientationchange', setAppHeight);
             showLoadingIndicator(); 
             
         } else if (isMentionMode) {
-            // 🛑 MODO MENCION (@)
+            // MODO MENCION (@)
             
             // a. Guardar el objeto del lugar
             currentMentionPlace = { 
@@ -1780,7 +1775,6 @@ window.addEventListener('orientationchange', setAppHeight);
         }
     }
 
-    // --- Funciones de INTERACCIÓN (SIN CAMBIOS EN LÓGICA) ---
 
     function vibrateDevice() {
         if ("vibrate" in navigator) {
@@ -1822,7 +1816,7 @@ window.addEventListener('orientationchange', setAppHeight);
         hideChipGroup(languageChipsGroup, languageChips);
         languageMenuVisible = false;
         
-        // 🛑 CRÍTICO: Actualizar el placeholder y el texto del Action Chip
+        // CRÍTICO: Actualizar el placeholder y el texto del Action Chip
         if (isSPSMode) {
              inputElement.placeholder = strings.searchPlaceholder;
         } else if (currentMentionPlace) {
@@ -1863,7 +1857,7 @@ window.addEventListener('orientationchange', setAppHeight);
         
         // Ocultar chips de autocompletado y resetear mención si no estamos en modo SPS
         if (!isSPSMode) {
-            resetMentionMode(); // 🛑 NUEVO
+            resetMentionMode(); // NUEVO
         }
        
         lastTotalCount = 0;
@@ -1922,9 +1916,10 @@ window.addEventListener('orientationchange', setAppHeight);
         if (m.role === 'user') { 
             w.className = 'flex justify-end mb-2'; 
             timeSpan = timeStr ? `<div class="user-timestamp-container"><span class="timestamp">${timeStr}</span></div>` : '';
+            // El texto del usuario no necesita marcado a menos que sea el resultado de una acción
             w.innerHTML = `
                 <div class="flex flex-col items-end">
-                    <div class="user-bubble bg-black text-white p-3 shadow-md">${m.text}</div>
+                    <div class="user-bubble bg-black text-white p-3 shadow-md">${marked.parse(m.text)}</div>
                     ${timeSpan}
                 </div>
             `; 
@@ -1958,14 +1953,13 @@ window.addEventListener('orientationchange', setAppHeight);
                 }
                 
                 // 1. Contenido de la burbuja (COMBINANDO IMAGEN Y TEXTO)
-                w.innerHTML = ` 
-    <div class="flex flex-col items-start">
-        <div class="model-bubble-wrapper ..."> 
-            <div class="model-bubble">${marked.parse(m.text)}</div> 
-        </div> 
-        ${timeSpan} 
-    </div>
-`; 
+                // Se usa marked.parse aquí para que el **negrita** funcione en las fichas
+                content = `
+                    <div class="model-bubble-wrapper">
+                         ${imageHTML}
+                         <div class="model-bubble">${marked.parse(m.text)}</div>
+                    </div>
+                `;
 
                 
                 if (m.type !== 'place_not_found') {
@@ -1988,7 +1982,7 @@ window.addEventListener('orientationchange', setAppHeight);
                             </div>
                         `;
                     } else {
-                        // 🛑 LÓGICA DE BOTONES DE ACCIÓN PARA FICHAS ENRIQUECIDAS
+                        // LÓGICA DE BOTONES DE ACCIÓN PARA FICHAS ENRIQUECIDAS
                         
                         const isPlace = m.type === 'place';
                         const isHealthPlace = m.isHealthPlace === true; // Nuevo check de salud
@@ -2055,7 +2049,7 @@ window.addEventListener('orientationchange', setAppHeight);
                             actionsBar = '';
                         }
                     }
-                } // 🛑 Fin del IF CRÍTICO: m.type !== 'place_not_found'
+                } // Fin del IF CRÍTICO: m.type !== 'place_not_found'
                 
                 w.innerHTML = `
                     <div class="flex flex-col items-start">
@@ -2066,8 +2060,9 @@ window.addEventListener('orientationchange', setAppHeight);
                 `;
 
             } else {
-                // 🛑 HTML MODIFICADO: Usamos el wrapper para el estilo de color para texto plano
-                content = `<div class="model-bubble-wrapper p-3 pb-4 shadow-md">${m.text || ''}</div>`;
+                // HTML MODIFICADO: Usamos el wrapper para el estilo de color para texto plano
+                // Se usa marked.parse aquí también para el texto plano que pueda tener negritas
+                content = `<div class="model-bubble-wrapper p-3 pb-4 shadow-md">${marked.parse(m.text) || ''}</div>`;
                 w.innerHTML = `
                     <div class="flex flex-col items-start">
                         ${content}
@@ -2079,7 +2074,7 @@ window.addEventListener('orientationchange', setAppHeight);
         return w;
     }
     
-    // 🛑 NUEVA FUNCIÓN: Adjuntar listeners a los sub-chips dinámicamente creados
+    // NUEVA FUNCIÓN: Adjuntar listeners a los sub-chips dinámicamente creados
     function attachSubMenuListeners() {
         // Selecciona chips de SUBMENÚ (glass-chip)
         const subMenuChips = messageContainer.querySelectorAll('.action-bar-container .glass-chip');
@@ -2096,7 +2091,7 @@ window.addEventListener('orientationchange', setAppHeight);
             chip.classList.add('listener-attached');
         });
         
-        // 🛑 NUEVA LÓGICA: Adjuntar listeners a los botones de ACCIÓN (blue-glass-chip)
+        // NUEVA LÓGICA: Adjuntar listeners a los botones de ACCIÓN (blue-glass-chip)
         const actionButtons = messageContainer.querySelectorAll('.action-bar-container .blue-glass-chip');
         
         actionButtons.forEach(button => {
@@ -2122,7 +2117,7 @@ window.addEventListener('orientationchange', setAppHeight);
                 } else if (action === 'REVIEW' && this.getAttribute('data-review-url')) {
                     window.open(this.getAttribute('data-review-url'), '_blank');
                     alertUser(currentLanguage === 'es' ? 'Abriendo reseña en nueva ventana.' : 'Opening review in new window.', 'i', 'news');
-                } else if (action === 'WEBSITE' && this.getAttribute('data-website-url')) { // 🛑 NUEVA ACCIÓN
+                } else if (action === 'WEBSITE' && this.getAttribute('data-website-url')) { // NUEVA ACCIÓN
                     window.open(this.getAttribute('data-website-url'), '_blank');
                     alertUser(currentLanguage === 'es' ? 'Abriendo sitio web en nueva ventana.' : 'Opening website in new window.', 'i', 'news');
                 }
@@ -2131,7 +2126,7 @@ window.addEventListener('orientationchange', setAppHeight);
             button.classList.add('listener-attached');
         });
         
-        // 🛑 NUEVA LÓGICA: Adjuntar listeners al contenedor <a> de la imagen.
+        // NUEVA LÓGICA: Adjuntar listeners al contenedor <a> de la imagen.
         const imageLinks = messageContainer.querySelectorAll('.image-link');
         imageLinks.forEach(link => {
             const img = link.querySelector('.stacked-photo');
@@ -2159,7 +2154,7 @@ window.addEventListener('orientationchange', setAppHeight);
             
             scrollToBottom();
             
-            // 🛑 NUEVO: Adjuntar listeners a los chips y botones después de renderizar
+            // NUEVO: Adjuntar listeners a los chips y botones después de renderizar
             attachSubMenuListeners(); 
         }
     }
@@ -2217,12 +2212,10 @@ window.addEventListener('orientationchange', setAppHeight);
         scrollToBottom();
     }
 
-
-    // --- CÓDIGO DE CONEXIÓN AL BACKEND (ACTUALIZADO PARA RECIBIR PLACE ID) ---
-
-    async function getGeminiResponse(userPrompt, chatHistoryForAPI, placeId = null) { // 🛑 NUEVO: placeId como argumento
+    async function getGeminiResponse(userPrompt, chatHistoryForAPI, placeId = null) { // NUEVO: placeId como argumento
         
         const historyForAPI = chatHistoryForAPI.map(m => {
+            // CORRECCIÓN: Usamos el texto del historial, ya que el marcado es solo para display
             const textContent = m.isStructured && m.description ? m.description : m.text;
             
             return {
@@ -2239,7 +2232,7 @@ window.addEventListener('orientationchange', setAppHeight);
                     history: historyForAPI, 
                     userPrompt: userPrompt, 
                     currentLanguage: currentLanguage,
-                    directSearchQuery: placeId // 🛑 NUEVO: Envío del Place ID si existe
+                    directSearchQuery: placeId // NUEVO: Envío del Place ID si existe
                 }) 
             });
 
@@ -2260,18 +2253,18 @@ window.addEventListener('orientationchange', setAppHeight);
     }
 
     // --- Lógica Principal del Chatbot (handleSend) ---
-    async function handleSend(userPromptInput = null, placeIdForDirectSearch = null) { // 🛑 NUEVO: placeIdForDirectSearch
+    async function handleSend(userPromptInput = null, placeIdForDirectSearch = null) { // NUEVO: placeIdForDirectSearch
         
         const isSPSorDirect = placeIdForDirectSearch !== null;
         
         let userPrompt = userPromptInput || inputElement.value.trim();
         if (!userPrompt) return;
         
-        // 🛑 CRÍTICO: Si está en modo SPS y se dispara un Enter, lo ignoramos (debe usar onPlaceSelected)
+        // CRÍTICO: Si está en modo SPS y se dispara un Enter, lo ignoramos (debe usar onPlaceSelected)
         if (isSPSMode && !isSPSorDirect) return; 
         
         // ----------------------------------------------------
-        // 🛑 LÓGICA DE ENVÍO DE MENTION (@)
+        // LÓGICA DE ENVÍO DE MENTION (@)
         // ----------------------------------------------------
         let placeIdForAPI = placeIdForDirectSearch; // Por defecto, es el de SPS
         
@@ -2327,10 +2320,10 @@ window.addEventListener('orientationchange', setAppHeight);
         const startIndex = Math.max(0, previousHistory.length - MAX_HISTORY_TO_SEND);
         const limitedHistory = previousHistory.slice(startIndex);
         
-        // 🛑 CRÍTICO: Pasamos el Place ID, si existe (puede ser de SPS o de Mención)
+        // CRÍTICO: Pasamos el Place ID, si existe (puede ser de SPS o de Mención)
         let modelResponseText = await getGeminiResponse(userPrompt, limitedHistory, placeIdForAPI); 
         
-        // **IMPORTANTE**: Ocultar el estado de carga tan pronto como recibimos la respuesta.
+        // IMPORTANTE: Ocultar el estado de carga tan pronto como recibimos la respuesta.
         hideLoadingIndicator(); 
 
         if (modelResponseText === null) {
@@ -2384,7 +2377,7 @@ window.addEventListener('orientationchange', setAppHeight);
                     if (finalMessage.text.length < 5) finalMessage.text = modelResponseText;
                 }
                 
-                // 🛑 LÓGICA CLAVE: Control de Subcategorías. 
+                // LÓGICA CLAVE: Control de Subcategorías. 
                 // Solo si el prompt ES UNA CATEGORÍA PRINCIPAL, inyectamos el menúKey.
                 
                 let shouldAddMenuKey = SUBCATEGORIES_MAP[userPrompt];
@@ -2393,7 +2386,7 @@ window.addEventListener('orientationchange', setAppHeight);
                 if (fichasParaMostrar.length > 0) {
                     // Si hay fichas, el primer mensaje es el texto conversacional (si existe)
                     if (conversationText.length > 0) {
-                        // 🟢 FIX 1.1: Empujar el texto conversacional antes de las fichas
+                        // FIX 1.1: Empujar el texto conversacional antes de las fichas
                         chatHistory.push({ role: 'model', text: conversationText, timestamp: new Date(), isStructured: false });
                     }
                     
@@ -2415,10 +2408,10 @@ window.addEventListener('orientationchange', setAppHeight);
                             placePhone: ficha.placePhone || null, 
                             mapUrl: ficha.mapUrl || null,
                             reviewUrl: ficha.reviewUrl || null,
-                            websiteUrl: ficha.websiteUrl || null, // 🛑 NUEVO: Propiedad Website/Social
+                            websiteUrl: ficha.websiteUrl || null, // NUEVO: Propiedad Website/Social
                             categoryName: ficha.categoryName || null,
-                            isHealthPlace: ficha.isHealthPlace || false, // 🛑 NUEVO: Propiedad isHealthPlace
-                            menuKey: menuKey, // <--- PROPIEDAD CLAVE AÑADIDA (SÓLO si es categoría principal)
+                            isHealthPlace: ficha.isHealthPlace || false, // NUEVO: Propiedad isHealthPlace
+                            menuKey: menuKey, // <-- PROPIEDAD CLAVE AÑADIDA (SÓLO si es categoría principal)
                             imageUrl: ficha.imageUrl || null, // <-- ¡NUEVA PROPIEDAD DE IMAGEN!
                             timestamp: new Date()
                         });
@@ -2438,10 +2431,10 @@ window.addEventListener('orientationchange', setAppHeight);
                         }
                     });
 
-                    // 🟢 FIX 1.2: El return debe estar aquí para el caso multi-ficha/ficha simple, si hubo conversacionText antes.
+                    // FIX 1.2: El return debe estar aquí para el caso multi-ficha/ficha simple, si hubo conversacionText antes.
                     saveHistory(); 
                     if (typeof renderChat === 'function') renderChat();
-                    return; // 🛑 FINALIZA la ejecución de handleSend
+                    return; // FINALIZA la ejecución de handleSend
                 }
                 
                 // Si no hay fichas, el finalMessage ya tiene el texto plano (o la recomendación local).
@@ -2457,7 +2450,7 @@ window.addEventListener('orientationchange', setAppHeight);
 
         chatHistory.push(finalMessage); // <- Añade el mensaje final de texto plano/recomendación
 
-        // 🟢 FIX 2.1: Limpiamos los estados de las variables globales ANTES de reasignar
+        // FIX 2.1: Limpiamos los estados de las variables globales ANTES de reasignar
         lastTotalCount = 0;
         lastApiQuery = null;
         
@@ -2484,7 +2477,7 @@ window.addEventListener('orientationchange', setAppHeight);
         } else if (totalCount > MAX_CHAT_RESULTS && apiQuery) {
             // Caso de Recomendación Local Forzada (Texto Plano) con más de 4 resultados
             
-            // 🟢 FIX 2.2: Guardar en las variables globales para el listener del botón
+            // FIX 2.2: Guardar en las variables globales para el listener del botón
             lastTotalCount = totalCount;
             lastApiQuery = apiQuery;
             
@@ -2508,29 +2501,29 @@ window.addEventListener('orientationchange', setAppHeight);
     
     // --- Event Listeners e Inicio (ACTUALIZADO) ---
     
-    // 🛑 Listener del Botón de Enviar (Solo modo Chat)
+    // Listener del Botón de Enviar (Solo modo Chat)
     if (sendButton) sendButton.addEventListener('click', () => {
         if (!isSPSMode) handleSend(); 
     });
     
-    // 🛑 Listener de la Tecla Enter (Solo modo Chat)
+    // Listener de la Tecla Enter (Solo modo Chat)
     if (inputElement) inputElement.addEventListener('keypress', function(e) { 
         if (e.key === 'Enter' && !isSPSMode) { 
             handleSend(); 
         } 
     });
     
-    // 🛑 Listener del Botón de Alternar Modo (SPS)
+    // Listener del Botón de Alternar Modo (SPS)
     if (toggleButton) toggleButton.addEventListener('click', toggleSPSMode);
 
 
     // NUEVO LISTENER: Para el efecto de escritura del usuario y habilitar/deshabilitar el botón
     if (inputElement) {
         
-        // 🛑 CRÍTICO: ADICIÓN DEL LISTENER PARA EL FOCO DEL INPUT (SOLUCIÓN AL PROBLEMA DE SCROLL)
+        // CRÍTICO: ADICIÓN DEL LISTENER PARA EL FOCO DEL INPUT (SOLUCIÓN AL PROBLEMA DE SCROLL)
         inputElement.addEventListener('focus', handleInputFocus);
         
-        // 🛑 CRÍTICO: ADICIÓN DEL LISTENER PARA EL MODO MENTION (@) Y SPS.
+        // CRÍTICO: ADICIÓN DEL LISTENER PARA EL MODO MENTION (@) Y SPS.
         // El listener 'input' ahora se usa para: 
         // 1. Detección de '@' y activación del Autocompletado/Mention.
         // 2. Control de la burbuja de typing (solo si no es SPS/Mention).
@@ -2612,7 +2605,7 @@ window.addEventListener('orientationchange', setAppHeight);
 
             if (lastApiQuery) {
                 
-                // 🛑 LÓGICA DUAL: El botón usa la consulta API completa para buscar en Google (Local + Genérica).
+                // LÓGICA DUAL: El botón usa la consulta API completa para buscar en Google (Local + Genérica).
                 
                 // 1. Codificar el query completo (ej: 'Taquerías y Tacos en Nuevo Progreso')
                 const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(lastApiQuery + " Nuevo Progreso Tamps")}`;
@@ -2691,7 +2684,7 @@ window.addEventListener('orientationchange', setAppHeight);
     window.initChatUI = function() {
         console.log("Google Maps API (Places) cargada.");
         
-        // 🛑 CRÍTICO: Inicializar AutocompleteService aquí
+        // CRÍTICO: Inicializar AutocompleteService aquí
         if (window.google && window.google.maps && google.maps.places) {
             autocompleteService = new google.maps.places.AutocompleteService();
             console.log("Google Maps AutocompleteService inicializado.");
@@ -2717,7 +2710,7 @@ window.addEventListener('orientationchange', setAppHeight);
         toggleSPSMode(); // Se inicializa en modo normal (chat)
         hideLoadingIndicator(); 
         
-        // 🛑 NUEVO: Resetear el modo Mención
+        // NUEVO: Resetear el modo Mención
         resetMentionMode();
 
         // 6. Mensaje de bienvenida inicial (solo si el historial está vacío)
@@ -2739,6 +2732,7 @@ window.addEventListener('orientationchange', setAppHeight);
         }
     });
     </script>
+
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </body>
 </html>
