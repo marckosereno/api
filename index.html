@@ -14,6 +14,31 @@
 
 
 <style>
+
+/* Nuevo CSS para soportar contenido Markdown procesado (Negritas, Listas, Párrafos) */
+.model-bubble p {
+    margin-bottom: 0.5em; 
+    line-height: 1.4;
+}
+.model-bubble ul, .model-bubble ol {
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+    padding-left: 1.5em;
+    /* CRÍTICO: Asegura que los bullets y números se vean */
+    list-style-position: outside; 
+}
+.model-bubble {
+    /* Asegura que la burbuja se comporte como bloque para contener el HTML generado */
+    display: block; 
+    overflow-wrap: break-word; 
+    white-space: normal;
+}
+/* 🛑 CRÍTICO: Esta es la regla para las negritas 🛑 */
+.model-bubble strong {
+    font-weight: 800; /* Negrita extra */
+    color: #1a202c; 
+}
+
         /* Estilo base */
         html, body { 
             font-family:FH Oscar Test Medium; 
