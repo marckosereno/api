@@ -1,5 +1,5 @@
 // ====================================================================
-// Archivo: chat.js (Versión 9.8 - FIX Planificación Conversacional)
+// Archivo: chat.js (Versión 9.9 - MODO CONVERSACIONAL PURO)
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -317,7 +317,7 @@ async function getPlaceDetails(query, currentLanguage) {
 
 
 // =======================================================
-// 2. Instrucción de Sistema BASE (OPTIMIZADA V9.8)
+// 2. Instrucción de Sistema BASE (OPTIMIZADA V9.9)
 // =======================================================
 
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
@@ -551,15 +551,15 @@ export default async function handler(req, res) {
         // 🛑 NUEVO: Patrón para detectar solicitudes de PLANIFICACIÓN GENERAL/RUTA
         const planningPattern = new RegExp(`(a donde ir primero|que hacer primero|ruta|orden de actividades|sugerencia de plan|plan de viaje|que visitar)s?`, 'i');
 
-        // 1. Lógica de intercepción de PLANIFICACIÓN (FIX SOLICITADO)
+        // 1. Lógica de intercepción de PLANIFICACIÓN (FIX SOLICITADO - MODO CONVERSACIONAL PURO)
         if (userPrompt.match(planningPattern)) {
     
-            console.log("PROTOCOLO PLANIFICACIÓN GENERAL ACTIVADO.");
+            console.log("PROTOCOLO PLANIFICACIÓN GENERAL ACTIVADO - FORZANDO CONVERSACIONAL PURO.");
             
-            // CRÍTICO: Instrucción para generar primero un 'conversationText' sin asteriscos y luego las 3 fichas.
+            // CRÍTICO: Esta instrucción ahora anula el modo ficha y fuerza texto plano.
             promptToSend = currentLanguage === 'es'
-                ? `El usuario pide un plan de viaje, una ruta o un orden de actividades. DEBES usar el MODO MULTI-FICHA de CATEGORÍA para responder. **PRIMERO, genera un mensaje conversacional (Texto Plano) con una introducción amigable de 3 a 4 líneas que explique el plan turístico típico (Salud, Compras, Comida) sin usar asteriscos (*).** Luego, genera 3 fichas de 'category' (Salud y Estética, Tiendas y Compras, y Comida y Restaurantes) y envuélvelas en un único JSON 'isMultiStructured'. La respuesta debe ser en ${langText}.`
-                : `The user asks for a travel plan, route, or order of activities. YOU MUST use the MULTI-STRUCTURED CATEGORY CARD MODE to respond. **FIRST, generate a conversational message (Plain Text) with a friendly 3-4 line introduction explaining the typical tourist plan (Health, Shopping, Food) without using asterisks (*).** Then, generate 3 'category' cards (Health and Aesthetics, Shopping and Stores, and Food and Restaurants) and wrap them in a single 'isMultiStructured' JSON. The response must be in ${langText}.`;
+                ? `El usuario pide una sugerencia de plan de viaje, ruta u orden de actividades. **IGNORA TODAS LAS REGLAS DE JSON/FICHAS Y RESPONDE ÚNICAMENTE CON TEXTO CONVERSACIONAL Y EN TEXTO PLANO (MODO CONVERSACIONAL)**. Da una sugerencia amable de 3 a 5 líneas sobre el orden lógico de una visita (Salud, Compras, Comida). Puedes usar puntos, guiones (-) o saltos de línea. **NO USES ASTERSICOS (*)**.`
+                : `The user asks for a travel plan, route, or order of activities. **IGNORE ALL JSON/CARD RULES AND RESPOND ONLY WITH CONVERSATIONAL PLAIN TEXT (CONVERSATIONAL MODE)**. Give a friendly 3 to 5-line suggestion on the logical order of a visit (Health, Shopping, Food). You may use dots, dashes (-), or line breaks. **DO NOT USE ASTERISKS (*)**.`;
 
             
         } else {
@@ -602,6 +602,8 @@ export default async function handler(req, res) {
         let finalResponseData = { responseText: modelResponseText };
 
         // Lógica de ENRIQUECIMIENTO con Places API
+        // Esta lógica intentará parsear y enriquecer. Si la respuesta es texto plano (como en la sugerencia), 
+        // pasará directamente a 'finalResponseData.responseText = modelResponseText' ya sea por fallo de parseo o por no ser un JSON.
         try {
             const jsonStart = modelResponseText.indexOf('{');
             const jsonEnd = modelResponseText.lastIndexOf('}');
@@ -611,8 +613,6 @@ export default async function handler(req, res) {
                 const parsedJson = JSON.parse(jsonString);
                 
                 let fichasToProcess = parsedJson.isStructured ? [parsedJson] : (parsedJson.isMultiStructured ? parsedJson.response : []);
-                
-                // 🛑 CRÍTICO: Si es isMultiStructured, usamos 'response' para la lista de fichas (siguiendo el patrón original del usuario), sino asumimos un array simple con el parsedJson
 
                 if (fichasToProcess.length > 0) {
                     
@@ -720,14 +720,7 @@ export default async function handler(req, res) {
                         ? { isMultiStructured: true, response: enrichedFichas, conversationText: parsedJson.conversationText || '' }
                         : enrichedFichas[0];
                     
-                    // 🛑 CRÍTICO: Si es Multi-estructurado, asegurarse de devolver el texto conversacional en el formato correcto
-                    if (parsedJson.isMultiStructured) {
-                         // El JSON devuelto al frontend ahora será un objeto con 'isMultiStructured: true', 'response', y 'conversationText'
-                         finalResponseData.responseText = JSON.stringify(finalResponseJson);
-                    } else {
-                        finalResponseData.responseText = JSON.stringify(finalResponseJson);
-                    }
-                    
+                    finalResponseData.responseText = JSON.stringify(finalResponseJson);
 
                 } else {
                     finalResponseData.responseText = modelResponseText; 
@@ -735,7 +728,7 @@ export default async function handler(req, res) {
             }
         } catch (jsonError) {
             console.error("Fallo en el parseo o enriquecimiento del JSON.", jsonError);
-            finalResponseData.responseText = modelResponseText; 
+            finalResponseData.responseText = modelResponseText; // <--- Aquí el texto plano se devuelve
         }
 
         res.status(200).json(finalResponseData);
