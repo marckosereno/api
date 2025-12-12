@@ -1,5 +1,5 @@
 // ====================================================================
-// Archivo: chat.js (Versión 9.2 - Anti-Alucinación/RAG Reforzado)
+// Archivo: chat.js (Versión 9.3 - Anti-Alucinación de Ubicación)
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -61,7 +61,7 @@ const placesClient = new PlacesClient({});
 
 
 // =======================================================
-// 🛑 SOLUCIÓN CRÍTICA: DEFINICIÓN DE FUNCIONES AUXILIARES (Para corregir ReferenceError)
+// 🛑 DEFINICIÓN DE FUNCIONES AUXILIARES
 // =======================================================
 
 /**
@@ -89,7 +89,6 @@ function areNamesSimilar(name1, name2) {
 /**
  * 🛠️ Genera una descripción dinámica usando Gemini (re-prompt).
  * (Función generateDynamicDescription)
- * 🛑 NOTA: ESTA FUNCIÓN AHORA SÓLO SE USA PARA SPS/MENCIÓN DIRECTA, NO PARA CHAT NORMAL.
  */
 async function generateDynamicDescription(name, category, isHealth, currentLanguage) {
     const langText = currentLanguage === 'es' ? 'español' : 'inglés';
@@ -142,8 +141,8 @@ async function getPlaceDetails(searchName, currentLanguage) {
             name: result.name,
             place_id: result.place_id,
             isHealthPlace: isHealthPlaceType(result.types),
-            // 🛑 FIX: Corregido el formato del mapUrl
-            mapUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(result.name + GEOGRAPHIC_CONTEXT)}&query_place_id=${result.place_id}`,
+            // FIX: Corregido el formato del mapUrl
+            mapUrl: `https://www.google.com/maps/search/?api=1&query=$${encodeURIComponent(result.name + GEOGRAPHIC_CONTEXT)}&query_place_id=${result.place_id}`,
             // NOTA: Se necesitaría una llamada a Place Details para obtener teléfono, sitio web e imágenes completos. 
             // Para simplificar, asumimos que este dato se llenará con la búsqueda completa.
             phone: null,
@@ -198,7 +197,7 @@ async function getFullPlaceDetails(placeId, currentLanguage) {
         const isHealth = isHealthPlaceType(result.types);
         
         // Generación de URL de mapa y reseñas
-        const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(result.name)}&query_place_id=${placeId}`;
+        const mapUrl = `https://www.google.com/maps/search/?api=1&query=$${encodeURIComponent(result.name)}&query_place_id=${placeId}`;
         const reviewUrl = `https://search.google.com/local/reviews?placeid=${placeId}`; // URL de reseñas directa
         
         let imageUrl = null;
@@ -242,15 +241,19 @@ Tu misión es asistir a turistas.
 **REGLAS CLAVE DE RESPUESTA Y FORMATO (CRÍTICO):**
 1.  **Formato Estructurado (JSON):** Cuando el usuario pida información específica (un lugar, o un listado/categoría), DEBES responder con una o más fichas JSON estructuradas.
 2.  **Formato Conversacional (Texto Plano):** Para saludos, preguntas generales, fallos, o mensajes de chat normales, responde en texto plano.
-3.  **Localización:** NUNCA hables de lugares fuera de Nuevo Progreso, Tamaulipas, México. Si no encuentras algo, sugiere una categoría o un lugar conocido.
+3.  **Localización (CRÍTICO):** NUNCA afirmes que un lugar se encuentra en Nuevo Progreso a menos que tengas confirmación del Place API. Si el Place API no devuelve un resultado, DEBES asumir que el lugar está fuera de tu jurisdicción (el área de 15km alrededor de Nuevo Progreso). Si el lugar no existe en Places API, NUNCA LO INVENTES; simplemente di que no lo puedes encontrar en el área. Si respondes con una ficha, usa el nombre devuelto por Places API.
 4.  **Tono:** Siempre eres profesional, amigable y muy útil.
 5.  **IDIOMA:** Responde SIEMPRE en {LANG_PLACEHOLDER}.
 6.  **Multi-Ficha:** Si proporcionas más de una ficha (ej. "dame ideas para el día"), usa el formato 'isMultiStructured: true'.
 7.  **Campos Health/Privacy:** Si un lugar es de salud/médico (dental, farmacia, clínica), el campo 'isHealthPlace' debe ser 'true' y DEBES OMITIR su número de teléfono y sitio web del JSON.
 
 **FORMATOS JSON PERMITIDOS:**
-// ... (El resto de BASE_SYSTEM_INSTRUCTION sin cambios) ...
-   // El texto conversacional debe ir en "conversationText" y NO debe ser la respuesta principal.`;
+{
+    "type": "place" | "category" | "place_not_found",
+    //... (Otros campos)
+}
+//...
+El texto conversacional debe ir en "conversationText" y NO debe ser la respuesta principal.`;
 
 
 // Ahora, el manejador principal (handler) puede ver todas las funciones definidas arriba.
@@ -269,9 +272,11 @@ export default async function handler(req, res) {
         
         // Traducciones para mensajes de fallo/notificaciones
         const translations = { // <-- El segundo error (translations) se resolvió aquí.
+            // MODIFICADO para ser más enfático: el lugar no se pudo verificar en Nuevo Progreso.
             notFoundDirect: currentLanguage === 'es' 
-                ? `No se pudo encontrar o recuperar detalles completos para el lugar: **{query}** en **Nuevo Progreso** dentro del rango de 15km. Por favor, verifica el nombre o intenta con el modo chat. 📍`
-                : `Could not find or retrieve complete details for the place: **{query}** in **Nuevo Progreso** within the 15km range. Please check the name or try chat mode. 📍`,
+                ? `Disculpa, no pudimos verificar o encontrar los detalles completos para el lugar: **{query}** en nuestra área de cobertura de **Nuevo Progreso** (15km). Intenta con otra búsqueda. 📍`
+                : `Sorry, we could not verify or retrieve complete details for the place: **{query}** in our **Nuevo Progreso** coverage area (15km). Please try another search. 📍`,
+            // MODIFICADO para ser más enfático: el lugar no se encontró.
             notFoundGeofence: currentLanguage === 'es'
                 ? `Disculpa, no se encontró un lugar llamado **{query}** ubicado en Nuevo Progreso (Rango 15km).`
                 : `Sorry, a place called **{query}** located in Nuevo Progreso (15km Range) was not found.`,
@@ -330,7 +335,7 @@ export default async function handler(req, res) {
                     const failedFicha = {
                         type: "place_not_found", 
                         placeToSearch: directSearchQuery, 
-                        // Usar traducción para el mensaje de fallo
+                        // Usar traducción para el mensaje de fallo (VERSION 9.3)
                         description: translations.notFoundDirect.replace('{query}', directSearchQuery),
                         isStructured: true
                     };
@@ -379,8 +384,8 @@ export default async function handler(req, res) {
                 } else {
                     // Si el Place ID de la mención no funciona, devolvemos un error conversacional
                     const failedMessage = currentLanguage === 'es'
-                        ? "Disculpa, no pude encontrar la información para el lugar mencionado. ¿Podrías intentar la búsqueda directa (⚡️)?"
-                        : "Sorry, I couldn't find the information for the mentioned place. Could you try the direct search (⚡️)?";
+                        ? "Disculpa, no pude encontrar la información para el lugar mencionado dentro de nuestra área de cobertura. ¿Podrías intentar la búsqueda directa (⚡️)?"
+                        : "Sorry, I couldn't find the information for the mentioned place within our coverage area. Could you try the direct search (⚡️)?";
                     return res.status(200).json({ responseText: failedMessage });
                 }
             }
@@ -487,7 +492,7 @@ export default async function handler(req, res) {
                 const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
                 const parsedJson = JSON.parse(jsonString);
                 
-                // 🛑 Usamos 'data' para el multi-structured si es necesario, aunque en tu código era 'response'
+                // Usamos 'data' para el multi-structured si es necesario, aunque en tu código era 'response'
                 let fichasToProcess = parsedJson.isStructured ? [parsedJson] : (parsedJson.isMultiStructured ? (parsedJson.response || parsedJson.data) : []);
 
                 if (fichasToProcess.length > 0) {
@@ -575,7 +580,7 @@ export default async function handler(req, res) {
                                 enrichedFicha = {
                                     type: "place_not_found", 
                                     placeToSearch: placeNameSearch, 
-                                    // 🛑 CRÍTICO: Usar traducción para el mensaje de fallo
+                                    // 🛑 CRÍTICO: Usar traducción para el mensaje de fallo (VERSION 9.3)
                                     description: translations.notFoundGeofence.replace('{query}', placeNameSearch),
                                     isStructured: true
                                 };
@@ -586,7 +591,7 @@ export default async function handler(req, res) {
                              const categorySearch = ficha.categoryName.replace(/en Progreso/i, '').trim();
                              const mapUrlQuery = categorySearch + GEOGRAPHIC_CONTEXT;
                              
-                             const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapUrlQuery)}`; // Formato correcto para query de categoría
+                             const mapUrl = `https://www.google.com/maps/search/?api=1&query=$${encodeURIComponent(mapUrlQuery)}`; // Formato correcto para query de categoría
                              
                              enrichedFicha.mapUrl = mapUrl; 
                         }
