@@ -1,5 +1,5 @@
 // ====================================================================
-// Archivo: chat.js (Versión 9.6 - Detección de Categoría Standalone)
+// Archivo: chat.js (Versión 9.7 - Chips de Categoría Concisos)
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -479,10 +479,11 @@ export default async function handler(req, res) {
             
             // Traducción de categorías forzada para el prompt RAG
             if (categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('taco')) categoryName = currentLanguage === 'es' ? "Taquerías y Tacos" : "Taco Stands and Taquerias";
-            // 🟢 V9.6: Añadido Antojitos
+            // V9.6: Añadido Antojitos
             else if (categoryKeyRaw.includes('antojito') || categoryKeyRaw.includes('comida')) categoryName = currentLanguage === 'es' ? "Antojitos Mexicanos y Comida Local" : "Mexican Snacks and Local Food";
             else if (categoryKeyRaw.includes('restaurante')) categoryName = currentLanguage === 'es' ? "Restaurantes y Comida Internacional" : "Restaurants and International Food";
             else if (categoryKeyRaw.includes('barbacoa')) categoryName = currentLanguage === 'es' ? "Barbacoa y Birria" : "Barbacoa and Birria";
+            // V9.7: Ajuste del nombre de la categoría para ser más conciso
             else if (categoryKeyRaw.includes('artesania') || categoryKeyRaw.includes('souvenirs') || categoryKeyRaw.includes('tienda')) categoryName = currentLanguage === 'es' ? "Tiendas de Artesanías y Compras" : "Handicraft and Shopping";
             else if (categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia') || categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('spa') || categoryKeyRaw.includes('masajes')) categoryName = currentLanguage === 'es' ? "Salud y Estética" : "Health and Aesthetics";
             else if (categoryKeyRaw.includes('bares') || categoryKeyRaw.includes('bebidas')) categoryName = currentLanguage === 'es' ? "Bares y Vida Nocturna" : "Bars and Nightlife";
@@ -490,8 +491,10 @@ export default async function handler(req, res) {
             else if (categoryKeyRaw.includes('desayuno')) categoryName = currentLanguage === 'es' ? "Lugares de Desayuno y Café" : "Breakfast and Coffee Places";
             else if (categoryKeyRaw.includes('postre')) categoryName = currentLanguage === 'es' ? "Postres y Panaderías" : "Desserts and Bakeries";
 
-            // SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA
-            promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría ${categoryName} en Nuevo Progreso. **Tu respuesta debe ser en ${langText}.**`;
+            // 🟢 CAMBIO V9.7: Instrucción CRÍTICA para que los 'items' sean CONCISOS y ACCIONABLES (Chips)
+            promptToSend = currentLanguage === 'es' 
+                ? `El usuario pidió un resumen de la categoría: ${categoryName}. DEBES responder con el JSON de FICHA DE CATEGORÍA ("type": "category"). **CRÍTICO: El arreglo "items" DEBE contener 8 subcategorías principales que sean CONCISAS y ACCIONABLES, adecuadas para usarse como botones o chips de navegación (ej. "Clínicas Dentales", "Tiendas de Piel"). No incluyas descripciones largas ni texto entre paréntesis en los items.** El resumen general de la descripción debe ser amigable. Responde SOLO con el JSON completo en ${langText}.`
+                : `The user requested a summary of the category: ${categoryName}. YOU MUST respond with the CATEGORY CARD JSON ("type": "category"). **CRITICAL: The "items" array MUST contain 8 concise and actionable main subcategories, suitable for use as navigation buttons or chips (e.g., "Dental Clinics", "Leather Shops"). Do not include long descriptions or text in parentheses in the items.** The general description should be friendly. Respond ONLY with the complete JSON in ${langText}.`;
             
             console.log("PROTOCOLO CATEGORÍA GENERAL ACTIVADO para:", categoryName);
         }
