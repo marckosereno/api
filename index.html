@@ -59,7 +59,7 @@ font-weight:200;
 line-height:0.5cm;
 font-family:FH Oscar Test Medium;
         }
-        .user-bubble { border-radius: 18px 18px 0 18px; max-width: 90% }
+        .user-bubble { border-radius: 18px 18px 0 18px; max-width: 90%;line-height:1.2; }
         /* 🛑 CAMBIO CLAVE 1: Eliminamos el estilo anterior de la burbuja del modelo, ahora usa el wrapper */
         .model-bubble { border-radius: 18px 18px 18px 0; max-width: 90%; padding-left:8px; backgroud-color: transparent;font-size:16px; line-height:16px;}
         
@@ -70,9 +70,13 @@ font-family:FH Oscar Test Medium;
             color: #373737; /* Texto negro */
             border-radius: 18px 18px 18px 0;
             padding: 12px; /* Mantiene el padding uniforme de la burbuja */
-            box-sha: 0 4px 6px rgba(0, 0, 0, 0.6);
+            
             max-width: 91%;
             width: fit-content;
+        }
+
+.model-bubble-wrapper strong {
+            font-weight:800;
         }
 
         .action-bar-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 10px; padding-bottom: 5px }
