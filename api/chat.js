@@ -1,5 +1,5 @@
 // ====================================================================
-// Archivo: chat.js (Versión 9.12 - MODO CONVERSACIONAL GENERALIZADO)
+// Archivo: chat.js (Versión 9.13 - Habilitar Negritas en Conversacional)
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -317,14 +317,14 @@ async function getPlaceDetails(query, currentLanguage) {
 
 
 // =======================================================
-// 2. Instrucción de Sistema BASE (OPTIMIZADA V9.12)
+// 2. Instrucción de Sistema BASE (OPTIMIZADA V9.13)
 // =======================================================
 
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 **REGLA DE ESTRICTO CUMPLIMIENTO:** Si la solicitud del usuario es para un LUGAR o CATEGORÍA, DEBES responder **EXCLUSIVAMENTE con un formato JSON**. Está **PROHIBIDO** responder en texto plano conversacional en estos casos, a menos que se te indique explícitamente en el protocolo.
 **NOTA CRÍTICA DE CLASIFICACIÓN:** Tu clasificación debe ser precisa. No asumas que todas las búsquedas son restaurantes. Usa las categorías más específicas posibles (Spa, Tienda de Ropa, Clínica Dental, Taquería, etc.).
-**REGLA CRÍTICA DE CONTEXTO:** Si el usuario solicita un **LUGAR ESPECÍFICO** (ej. "Farmacia Guadalajara", "El Cuñao"), DEBES IGNORAR CUALQUIER CATEGORÍA PREVIA del chat. Debes clasificar la nueva solicitud desde CERO, de forma independiente.
+**REGLA CRÍTICA DE CONTEXTO:** Si el usuario solicita un **LUGAR ESPECÍFICO** (ej: "Farmacia Guadalajara", "El Cuñao"), DEBES IGNORAR CUALQUIER CATEGORÍA PREVIA del chat. Debes clasificar la nueva solicitud desde CERO, de forma independiente.
 **REGLA CRÍTICA DE MENCIÓN HÍBRIDA:** Si el prompt del usuario contiene el token **${MENTION_TOKEN}**, significa que el usuario está preguntando por el lugar asociado a ese token. Tu tarea es:
     1.  Identificar la pregunta del usuario (ej: "¿Está abierto mañana?").
     2.  Responder **directamente a esa pregunta** en modo conversacional (Texto Plano).
@@ -357,7 +357,7 @@ REGLAS DE FORMATO:
      "placeToSearch": "Nombre Exacto a buscar en Places API", 
      "placeCategory": "Clasificación general del lugar, ej: Clínica Dental, Restaurante",
      "isHealthPlace": true/false, 
-     "description": "Descripción corta de **máximo 3 oraciones**.",
+     "description": "Descripción corta de **máximo 3 oraciones**. (No usar Markdown aquí, solo texto simple)",
      "isStructured": true
    }
    
@@ -365,7 +365,7 @@ REGLAS DE FORMATO:
    {
      "type": "category", 
      "categoryName": "Nombre de la Categoría",
-     "description": "Resumen de la categoría...",
+     "description": "Resumen de la categoría... (No usar Markdown aquí, solo texto simple)",
      "isStructured": true
    }
 
@@ -379,7 +379,7 @@ REGLAS DE FORMATO:
    
    // REGLA CLAVE: Si la respuesta requiere MÚLTIPLAS FICHAS, debes envolver todas las fichas en un array y añadir la propiedad "isMultiStructured": true.
    // El texto conversacional debe ir en "conversationText" y NO debe ser la respuesta principal.
-   // CRÍTICO: El texto de 'conversationText' NO debe usar el caracter asterisco (*).`;
+   // CRÍTICO: El texto de 'conversationText' NO debe usar el caracter asterisco (*) o doble asterisco (**) porque no se espera Markdown en el JSON.`;
 
 // =VELOCIDAD DE MAPAS (Función Auxiliar)=====================================
 const speedTestUrl = (mapUrlQuery) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapUrlQuery)}`;
@@ -561,8 +561,8 @@ export default async function handler(req, res) {
             
             // CRÍTICO: Esta instrucción ahora anula el modo ficha y fuerza texto plano para cualquier pregunta de planificación o seguimiento.
             promptToSend = currentLanguage === 'es'
-                ? `El usuario pide una sugerencia general, un plan de viaje, una ruta u orden de actividades. **IGNORA TODAS LAS REGLAS DE JSON/FICHAS Y RESPONDE ÚNICAMENTE CON TEXTO CONVERSACIONAL Y EN TEXTO PLANO (MODO CONVERSACIONAL)**. Responde amablemente y continúa la conversación. Puedes usar puntos, guiones (-) o saltos de línea. **NO USES ASTERSICOS (*)**.`
-                : `The user asks for a general suggestion, travel plan, route, or order of activities. **IGNORE ALL JSON/CARD RULES AND RESPOND ONLY WITH CONVERSATIONAL PLAIN TEXT (CONVERSATIONAL MODE)**. Respond kindly and continue the conversation. You may use dots, dashes (-), or line breaks. **DO NOT USE ASTERISKS (*)**.`;
+                ? `El usuario pide una sugerencia general, un plan de viaje, una ruta u orden de actividades. **IGNORA TODAS LAS REGLAS DE JSON/FICHAS Y RESPONDE ÚNICAMENTE CON TEXTO CONVERSACIONAL Y EN TEXTO PLANO (MODO CONVERSACIONAL)**. Responde amablemente y continúa la conversación. Puedes usar puntos, guiones (-) o saltos de línea. **CRÍTICO: Para hacer énfasis, DEBES resaltar las frases importantes en negrita usando el formato de doble asterisco (**).**`
+                : `The user asks for a general suggestion, travel plan, route, or order of activities. **IGNORE ALL JSON/CARD RULES AND RESPOND ONLY WITH CONVERSATIONAL PLAIN TEXT (CONVERSATIONAL MODE)**. Respond kindly and continue the conversation. You may use dots, dashes (-), or line breaks. **CRITICAL: To provide emphasis, you MUST highlight important phrases in bold using the double asterisk (**) format.**`;
 
             
         } else {
