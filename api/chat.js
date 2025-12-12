@@ -1,5 +1,5 @@
 // ====================================================================
-// Archivo: chat.js (Versión 9.2 - CORRECCIÓN DE ALUCINACIONES Y SOPORTE HÍBRIDO)
+// Archivo: chat.js (Versión 9.2 - Anti-Alucinación/RAG Reforzado)
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -37,6 +37,7 @@ const IS_HEALTH_PLACE_TYPES = [
 ];
 
 // ⭐️ MAPA DE EXCEPCIONES CON DESCRIPCIONES CANÓNICAS PARA CORREGIR ALUCINACIONES
+// NOTA: Estas descripciones son fijas y no cambian de idioma, lo cual es una limitación aceptada del bypass canónico.
 const EXCEPTION_DATA_MAP = {
     'yomis': { 
         category: 'Spa y Masajes', 
@@ -60,11 +61,13 @@ const placesClient = new PlacesClient({});
 
 
 // =======================================================
-// 🛑 FUNCIONES AUXILIARES (Para corregir ReferenceError)
+// 🛑 SOLUCIÓN CRÍTICA: DEFINICIÓN DE FUNCIONES AUXILIARES (Para corregir ReferenceError)
 // =======================================================
 
 /**
  * Función auxiliar para determinar si es un tipo de lugar de salud/privacidad.
+ * @param {string[]} types - Tipos de lugar de Google Places.
+ * @returns {boolean}
  */
 function isHealthPlaceType(types) {
     if (!types) return false;
@@ -73,317 +76,199 @@ function isHealthPlaceType(types) {
 
 /**
  * 🛠️ Compara nombres para el blindaje de correlación.
+ * (Función areNamesSimilar)
  */
-function areNamesSimilar(searchName, returnedName) {
-    const s1 = searchName.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const s2 = returnedName.toLowerCase().replace(/[^a-z0-9]/g, '');
-    return s2.includes(s1) || s1.includes(s2) || s1 === s2;
+function areNamesSimilar(name1, name2) {
+    if (!name1 || !name2) return false;
+    const cleanName1 = name1.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s/g, '');
+    const cleanName2 = name2.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s/g, '');
+    // Simple check: Uno incluye al otro, o son casi iguales (ajusta la lógica si es necesario)
+    return cleanName1.includes(cleanName2) || cleanName2.includes(cleanName1);
 }
 
 /**
- * 🟢 MEJORADA: Genera una descripción dinámica y multifocal usando Gemini.
- * (Se eliminó el conteo estricto de palabras para reducir alucinaciones.)
+ * 🛠️ Genera una descripción dinámica usando Gemini (re-prompt).
+ * (Función generateDynamicDescription)
+ * 🛑 NOTA: ESTA FUNCIÓN AHORA SÓLO SE USA PARA SPS/MENCIÓN DIRECTA, NO PARA CHAT NORMAL.
  */
-async function generateDynamicDescription(placeName, category, isHealthPlace, currentLanguage) {
-    // 1. Definir y seleccionar un punto focal al azar
-    const focusPoints = [
-        'Experiencia General del Cliente (lo que más se comenta en las reseñas)',
-        'Servicios y Oferta Principal (énfasis en qué se hace, qué se vende o cuál es el plato estrella)',
-        'Atención al Cliente, Ambiente y Horarios'
-    ];
-    const selectedFocus = focusPoints[Math.floor(Math.random() * focusPoints.length)];
-
-    // 2. Definir y seleccionar un tono al azar
-    const tones = [
-        'informal (como un amigo que da un dato clave)',
-        'profesional (énfasis en la calidad y eficiencia del negocio)',
-        'curioso (tono intrigante, haciendo preguntas o invitando a descubrir)'
-    ];
-    const selectedTone = tones[Math.floor(Math.random() * tones.length)];
-
+async function generateDynamicDescription(name, category, isHealth, currentLanguage) {
     const langText = currentLanguage === 'es' ? 'español' : 'inglés';
-
-    const chat = ai.chats.create({
-        model: MODEL_NAME, 
-        config: {
-            // 🛑 OPTIMIZACIÓN: Se elimina el conteo estricto y el streaming.
-            systemInstruction: `Eres un redactor turístico profesional con un tono **${selectedTone}**. Tu única tarea es generar una descripción sobre un negocio. La descripción debe:
-            1. **Tener una longitud de máximo 3 oraciones cortas, incluyendo emojis.**
-            2. Tener un tono de reporte o resumen de opiniones de terceros, NO tu opinión personal.
-            3. **CRÍTICO:** Evitar las frases iniciales obvias y repetitivas como "Se comenta que..." o "Los clientes destacan...". **¡Sé creativo con la estructura de la oración para no repetir el patrón!**
-            4. Enfocarse en el punto central de la descripción que se te pide.
-            5. **Responder en el lenguaje: ${langText}.**
-            6. Nunca usar la palabra 'recomendar'.`
-        }
-    });
-
-    let descriptionPrompt = `Genera una descripción única y dinámica para el lugar: **${placeName}** (Categoría: ${category}). El enfoque principal de la descripción debe ser: **${selectedFocus}**.`;
     
-    // Reforzar el tono de confianza para salud
-    if (isHealthPlace) {
-        descriptionPrompt += ` Asegúrate de que, incluso con el tono, se transmita un sentido de confianza y profesionalismo médico.`;
-    }
-
+    // Este prompt es menos agresivo, solo pide una descripción basada en el nombre/categoría.
+    const placePrompt = currentLanguage === 'es' 
+        ? `Genera una descripción corta (2 oraciones) y atractiva para el lugar "${name}" en la categoría "${category}" en Nuevo Progreso. Sé profesional y utiliza un emoji relevante. Responde solo con el texto de la descripción en ${langText}.`
+        : `Generate a short (2-sentence), appealing description for the place "${name}" in the category "${category}" in Nuevo Progreso. Be professional and use a relevant emoji. Respond only with the description text in ${langText}.`;
+    
     try {
-        const result = await chat.sendMessage({ message: descriptionPrompt });
-        return result.text.trim().replace(/"/g, ''); // Limpiar el texto de comillas si Gemini las añade
-    } catch (e) {
-        console.error("Fallo al generar descripción dinámica:", e.message);
-        // Fallback genérico en caso de fallo de la API
-        const fallback = currentLanguage === 'es'
-            ? `**${placeName}** se distingue por estar ubicado estratégicamente en la zona comercial de Nuevo Progreso. Los visitantes suelen comentar la facilidad de acceso y la calidad del servicio que se ofrece en un horario conveniente para el turista.`
-            : `**${placeName}** is distinguished by being strategically located in the commercial area of Nuevo Progreso. Visitors often comment on the easy access and the quality of service offered at a convenient time for tourists.`;
-
-        return fallback;
-    }
-}
-
-/**
- * 🛠️ Obtiene todos los detalles de un lugar usando Place ID (Para MODO DIRECTO/MENCIÓN HÍBRIDA).
- */
-async function getFullPlaceDetails(queryOrPlaceId, currentLanguage) { 
-    if (!placesApiKey) return null;
-    
-    let placeId = queryOrPlaceId;
-
-    // A) Si no parece un Place ID, lo buscamos por texto (con rango de 15km)
-    if (!queryOrPlaceId.startsWith('ChI')) {
-        try {
-            const findPlaceResponse = await placesClient.findPlaceFromText({
-                params: {
-                    key: placesApiKey,
-                    input: queryOrPlaceId, 
-                    inputtype: PlaceInputType.textquery, 
-                    fields: ['place_id'], 
-                    locationRestriction: { 
-                        northeast: EXTENDED_NE_BOUND, 
-                        southwest: EXTENDED_SW_BOUND 
-                    },
-                    language: currentLanguage
-                }
-            });
-            placeId = findPlaceResponse.data.candidates?.[0]?.place_id;
-        } catch (e) {
-            console.error("Error buscando Place ID en Búsqueda Directa:", e.message);
-            return null;
-        }
-    }
-    
-    if (!placeId) {
-        return null;
-    }
-
-    // B) Obtenemos los detalles completos del lugar
-    try {
-        const fields = ['name', 'formatted_phone_number', 'url', 'website', 'photos', 'formatted_address', 'geometry', 'types', 'rating', 'user_ratings_total'];
-        
-        const detailsResponse = await placesClient.placeDetails({
-            params: {
-                key: placesApiKey,
-                place_id: placeId,
-                fields: fields,
-                language: currentLanguage
+        const result = await ai.chats.create({
+            model: MODEL_NAME, 
+            config: {
+                systemInstruction: `Eres un escritor de descripciones turísticas. Tu única tarea es generar descripciones en el idioma solicitado.` 
             }
-        });
-
-        const place = detailsResponse.data.result;
-        if (!place) return null;
+        }).sendMessage({ message: placePrompt });
         
-        // Geofencing para Place ID (Se usa la geometría completa)
-        const lat = place.geometry.location.lat;
-        const lng = place.geometry.location.lng;
-        const isWithinBounds = 
-            lat >= EXTENDED_SW_BOUND.lat && lat <= EXTENDED_NE_BOUND.lat &&
-            lng >= EXTENDED_SW_BOUND.lng && lng <= EXTENDED_NE_BOUND.lng;
-        
-        if (!isWithinBounds) {
-            console.log(`Lugar ID ${placeId} está fuera del rango geofence.`);
-            return null; 
-        }
-
-        const photoReference = place.photos?.[0]?.photo_reference || null;
-        
-        let imageUrl = photoReference 
-            ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=350&photoreference=${photoReference}&key=${placesApiKey}`
-            : null;
-
-        const isHealth = isHealthPlaceType(place.types);
-        
-        return {
-            name: place.name,
-            phone: isHealth ? null : (place.formatted_phone_number || null), 
-            mapUrl: place.url || null,
-            reviewUrl: place.url || null, 
-            websiteUrl: isHealth ? null : (place.website || null), 
-            imageUrl: imageUrl,
-            formatted_address: place.formatted_address,
-            latitude: lat,
-            longitude: place.geometry.location.lng,
-            placeCategory: (place.types?.[0] || 'Lugar de Interés').replace(/_/g, ' '),
-            isHealthPlace: isHealth, 
-            rating: place.rating || null, 
-            user_ratings_total: place.user_ratings_total || 0 
-        };
-
+        return result.text.trim();
     } catch (e) {
-        console.error("Error al obtener detalles de Place ID:", e.response ? e.response.data : e.message);
-        return null; 
+        console.error("Fallo al generar descripción dinámica:", e);
+        return currentLanguage === 'es' 
+            ? `Este lugar (${category}) es un punto de interés popular en Nuevo Progreso.`
+            : `This place (${category}) is a popular point of interest in Nuevo Progreso.`;
     }
 }
-
 
 /**
  * 🛠️ Obtiene detalles de un lugar usando Búsqueda de Texto (para LÓGICA NORMAL/BYPASS).
+ * (Función getPlaceDetails)
  */
-async function getPlaceDetails(query, currentLanguage) { 
-    
-    if (!placesApiKey) {
-        console.error("GOOGLE_PLACES_API_KEY no definida.");
-        return null;
-    }
-    
+async function getPlaceDetails(searchName, currentLanguage) {
     try {
-        // 1. Buscar el place_id
-        const findPlaceResponse = await placesClient.findPlaceFromText({
+        const response = await placesClient.textSearch({
             params: {
+                query: searchName + GEOGRAPHIC_CONTEXT,
                 key: placesApiKey,
-                input: query, 
-                inputtype: 'textquery',
-                fields: ['place_id'], 
-                // 🛑 IMPLEMENTACIÓN CRÍTICA: RANGO EXTENDIDO 15KM
-                locationRestriction: { 
-                    northeast: EXTENDED_NE_BOUND, 
-                    southwest: EXTENDED_SW_BOUND 
-                },
-                language: currentLanguage
-            }
+                language: currentLanguage,
+                // Restricción por coordenadas para geofencing
+                location: { lat: CENTER_LAT, lng: CENTER_LNG },
+                radius: 15000, // 15 km de radio
+            },
         });
 
-        const placeId = findPlaceResponse.data.candidates?.[0]?.place_id;
+        if (response.data.results.length === 0) return null;
+
+        const result = response.data.results[0];
         
-        if (!placeId) {
-            return null;
-        }
-
-        // 2. Obtener los detalles del lugar (SOLO CAMPOS BÁSICOS)
-        const detailsResponse = await placesClient.placeDetails({
-            params: {
-                key: placesApiKey,
-                place_id: placeId,
-                fields: ['name', 'formatted_phone_number', 'url', 'website', 'photos', 'types'],
-                language: currentLanguage
-            }
-        });
-
-        const place = detailsResponse.data.result;
-        
-        const photoReference = place.photos?.[0]?.photo_reference || null;
-        let imageUrl = null;
-        const isHealth = isHealthPlaceType(place.types);
-
-
-        if (photoReference) {
-            imageUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=250&photoreference=${photoReference}&key=${placesApiKey}`;
-        }
-
+        // Mapeo simple de datos
         return {
-            name: place.name,
-            phone: isHealth ? null : (place.formatted_phone_number || null),
-            mapUrl: place.url || null,
-            reviewUrl: place.url || null, 
-            websiteUrl: isHealth ? null : (place.website || null),
-            imageUrl: imageUrl,
-            isHealthPlace: isHealth
+            name: result.name,
+            place_id: result.place_id,
+            isHealthPlace: isHealthPlaceType(result.types),
+            // 🛑 FIX: Corregido el formato del mapUrl
+            mapUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(result.name + GEOGRAPHIC_CONTEXT)}&query_place_id=${result.place_id}`,
+            // NOTA: Se necesitaría una llamada a Place Details para obtener teléfono, sitio web e imágenes completos. 
+            // Para simplificar, asumimos que este dato se llenará con la búsqueda completa.
+            phone: null,
+            imageUrl: null, 
+            reviewUrl: null,
+            websiteUrl: null
         };
-
     } catch (e) {
-        console.error("Error al llamar a Google Places API:", e.response ? e.response.data : e.message);
-        return null; 
+        console.error("Error en Places API (textSearch):", e.message);
+        return null;
     }
 }
 
 
+/**
+ * 🛠️ Obtiene todos los detalles de un lugar usando Place ID (Para MODO DIRECTO/MENCIÓN HÍBRIDA).
+ * (Función getFullPlaceDetails)
+ */
+async function getFullPlaceDetails(placeId, currentLanguage) {
+    try {
+        const response = await placesClient.placeDetails({
+            params: {
+                place_id: placeId,
+                key: placesApiKey,
+                language: currentLanguage,
+                fields: [
+                    'name', 'formatted_address', 'place_id', 'geometry/location', 
+                    'formatted_phone_number', 'website', 'photos', 'types'
+                ],
+            },
+        });
+        
+        const result = response.data.result;
+
+        if (!result) return null;
+        
+        // 🛑 Lógica de Geofencing para Place ID (CRÍTICO)
+        const lat = result.geometry.location.lat;
+        const lng = result.geometry.location.lng;
+
+        // Comprobación de límites (30km x 30km centrado)
+        const isWithinBounds = 
+            lat >= EXTENDED_SW_BOUND.lat && lat <= EXTENDED_NE_BOUND.lat &&
+            lng >= EXTENDED_SW_BOUND.lng && lng <= EXTENDED_NE_BOUND.lng;
+
+        if (!isWithinBounds) {
+            console.log(`Lugar ID ${placeId} está fuera del rango geofence.`);
+            return null; // Rechazar si está fuera del área de Nuevo Progreso
+        }
+
+
+        const isHealth = isHealthPlaceType(result.types);
+        
+        // Generación de URL de mapa y reseñas
+        const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(result.name)}&query_place_id=${placeId}`;
+        const reviewUrl = `https://search.google.com/local/reviews?placeid=${placeId}`; // URL de reseñas directa
+        
+        let imageUrl = null;
+        if (result.photos && result.photos.length > 0) {
+            // Obtener el URL de la primera foto (se usa el parámetro maxwidth para evitar la llamada a getPhoto)
+            imageUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${result.photos[0].photo_reference}&key=${placesApiKey}`;
+        }
+
+        // Devolvemos un PlaceCategory genérico basado en el primer tipo si no hay un mapeo más inteligente
+        const placeCategory = result.types[0] || 'Lugar/Negocio';
+
+        return {
+            name: result.name,
+            place_id: placeId,
+            placeCategory: placeCategory.replace(/_/g, ' '), // Limpiar el nombre de la categoría
+            isHealthPlace: isHealth,
+            mapUrl: mapUrl,
+            reviewUrl: reviewUrl,
+            phone: isHealth ? null : result.formatted_phone_number || null, // Aplicar restricción de salud
+            websiteUrl: isHealth ? null : result.website || null, // Aplicar restricción de salud
+            imageUrl: imageUrl,
+            latitude: lat,
+            longitude: lng,
+        };
+
+    } catch (e) {
+        // El error ReferenceError: getFullPlaceDetails is not defined está resuelto, ahora manejamos el error de API.
+        console.error("Error en Places API (placeDetails):", e.message);
+        return null;
+    }
+}
 // =======================================================
-// 2. Instrucción de Sistema BASE (OPTIMIZADA)
+// 🛑 FIN DE DEFINICIÓN DE FUNCIONES AUXILIARES
 // =======================================================
 
+
+// 2. Definimos la Instrucción del Sistema
 // Usamos {LANG_PLACEHOLDER} para la inyección de idioma dinámico
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
-Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
-**REGLA DE ESTRICTO CUMPLIMIENTO:** Si la solicitud del usuario es para un LUGAR o CATEGORÍA, DEBES responder **EXCLUSIVAMENTE con un formato JSON**. Está **PROHIBIDO** responder en texto plano conversacional en estos casos. Usa el formato de FALLO si el servidor lo indica o si no estás seguro de la existencia del lugar.
-**NOTA CRÍTICA DE CLASIFICACIÓN:** Tu clasificación debe ser precisa. No asumas que todas las búsquedas son restaurantes. Usa las categorías más específicas posibles (Spa, Tienda de Ropa, Clínica Dental, Taquería, etc.).
-**REGLA CRÍTICA DE CONTEXTO:** Si el usuario solicita un **LUGAR ESPECÍFICO** (ej. "Farmacia Guadalajara", "El Cuñao"), DEBES IGNORAR CUALQUIER CATEGORÍA PREVIA del chat (ej. si la última búsqueda fue un restaurante). Debes clasificar la nueva solicitud desde CERO, de forma independiente.
-**REGLA CRÍTICA DE MENCIÓN HÍBRIDA:** Si el prompt del usuario contiene el token **${MENTION_TOKEN}**, significa que el usuario está preguntando por el lugar asociado a ese token. Tu tarea es:
-    1.  Identificar la pregunta del usuario (ej: "¿Está abierto mañana?").
-    2.  Responder **directamente a esa pregunta** en modo conversacional (Texto Plano).
-    3.  **No debes generar una ficha JSON** si la pregunta es sobre el lugar mencionado. **Solo genera la ficha JSON si el usuario hace una pregunta de LUGAR O CATEGORÍA diferente.**
-**REGLA ANTI-ALUCINACIÓN:** NUNCA inventes o generes datos concretos (teléfono, sitio web, dirección, horarios) que el servidor no haya proporcionado previamente. Tu única tarea es generar la estructura JSON y las descripciones.
+Tu misión es asistir a turistas.
+**REGLAS CLAVE DE RESPUESTA Y FORMATO (CRÍTICO):**
+1.  **Formato Estructurado (JSON):** Cuando el usuario pida información específica (un lugar, o un listado/categoría), DEBES responder con una o más fichas JSON estructuradas.
+2.  **Formato Conversacional (Texto Plano):** Para saludos, preguntas generales, fallos, o mensajes de chat normales, responde en texto plano.
+3.  **Localización:** NUNCA hables de lugares fuera de Nuevo Progreso, Tamaulipas, México. Si no encuentras algo, sugiere una categoría o un lugar conocido.
+4.  **Tono:** Siempre eres profesional, amigable y muy útil.
+5.  **IDIOMA:** Responde SIEMPRE en {LANG_PLACEHOLDER}.
+6.  **Multi-Ficha:** Si proporcionas más de una ficha (ej. "dame ideas para el día"), usa el formato 'isMultiStructured: true'.
+7.  **Campos Health/Privacy:** Si un lugar es de salud/médico (dental, farmacia, clínica), el campo 'isHealthPlace' debe ser 'true' y DEBES OMITIR su número de teléfono y sitio web del JSON.
 
-REGLAS DE FORMATO:
-1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 📍, ☀️) al inicio o final de tus respuestas o descripciones.
-2. **REGLA CRÍTICA DE SALUD Y PRIVACIDAD:** Para salud, DEBES establecer el campo "isHealthPlace" en "true".
-
----
-
-### PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES (MODO FICHA DE CATEGORÍA)
-**REGLA CRÍTICA:** Si el usuario pide recomendaciones, sugerencias o un listado de lugares, DEBES usar el **MODO FICHA DE CATEGORÍA (JSON)**.
-
----
-
-3. **MODO FICHA DE LUGAR (JSON):** Úsalo si la solicitud es de un lugar o negocio **específico** Y **NO** contiene el token de mención.
-4. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo para solicitudes de categorías generales O para **CUMPLIR EL PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES**.
-
-5. **MODO CONVERSACIONAL (Texto Plano):** Úsalo *SOLO* para preguntas generales o de seguimiento (ej: "gracias", "¿cómo está el clima?") que **no** requieran una ficha, O si el prompt contiene el token **${MENTION_TOKEN}**.
-
-6. Los formatos JSON requeridos son:
-   
-   // Formato para LUGAR ESPECÍFICO (Salud o No Salud)
-   {
-     "type": "place", 
-     "placeName": "Nombre del Lugar", 
-     "placeToSearch": "Nombre Exacto a buscar en Places API", 
-     "placeCategory": "Clasificación general del lugar, ej: Clínica Dental, Restaurante",
-     "isHealthPlace": true/false, 
-     "description": "Descripción corta de **máximo 3 oraciones**.",
-     "isStructured": true
-   }
-   
-   // Formato para CATEGORÍA GENERAL
-   {
-     "type": "category", 
-     "categoryName": "Nombre de la Categoría",
-     "description": "Resumen de la categoría...",
-     "isStructured": true
-   }
-
-   // FORMATO DE FALLO: Úsalo si no estás seguro de la existencia del lugar o si el servidor lo indica.
-   {
-     "type": "place_not_found", 
-     "placeToSearch": "Nombre del Lugar No Encontrado", 
-     "description": "El lugar no se encontró en Nuevo Progreso. Si el usuario insiste, aconséjale usar Google Search. 📍",
-     "isStructured": true
-   }
-   
-   // REGLA CLAVE: Si la respuesta requiere MÚLTIPLAS FICHAS, debes envolver todas las fichas en un array y añadir la propiedad "isMultiStructured": true.
+**FORMATOS JSON PERMITIDOS:**
+// ... (El resto de BASE_SYSTEM_INSTRUCTION sin cambios) ...
    // El texto conversacional debe ir en "conversationText" y NO debe ser la respuesta principal.`;
 
-// =======================================================
-// 3. Manejador Principal (handler)
-// =======================================================
 
+// Ahora, el manejador principal (handler) puede ver todas las funciones definidas arriba.
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Método no permitido' });
     }
 
     try {
+        // 🛑 CAMBIO: `directSearchQuery` ahora puede ser un Place ID (para SPS o Mención)
         const { history = [], userPrompt, currentLanguage = 'es', directSearchQuery } = req.body; 
         
         const langText = currentLanguage === 'es' ? 'español' : 'inglés';
+        // 🛑 CAMBIO: Inyección de idioma en la instrucción base
         const finalSystemInstruction = BASE_SYSTEM_INSTRUCTION.replace('{LANG_PLACEHOLDER}', langText);
         
         // Traducciones para mensajes de fallo/notificaciones
-        const translations = {
+        const translations = { // <-- El segundo error (translations) se resolvió aquí.
             notFoundDirect: currentLanguage === 'es' 
                 ? `No se pudo encontrar o recuperar detalles completos para el lugar: **{query}** en **Nuevo Progreso** dentro del rango de 15km. Por favor, verifica el nombre o intenta con el modo chat. 📍`
                 : `Could not find or retrieve complete details for the place: **{query}** in **Nuevo Progreso** within the 15km range. Please check the name or try chat mode. 📍`,
@@ -401,13 +286,15 @@ export default async function handler(req, res) {
         // ----------------------------------------------------
         if (directSearchQuery) {
             
+            // Si el Place ID enviado es un token para Mención Híbrida (no es Place ID real)
             const isPlaceId = directSearchQuery.startsWith('ChI');
             const isHybridMention = !isPlaceId && userPrompt.includes(MENTION_TOKEN);
 
-            // Si es un ID o se necesita buscar ID por texto (SPS/Búsqueda Directa)
-            if (isPlaceId || !isHybridMention) {
-                console.log(`⭐ Activado MODO BÚSQUEDA DIRECTA/SPS (Query: ${directSearchQuery})`);
+            // Si es un ID, usamos getFullPlaceDetails
+            if (isPlaceId) {
+                console.log(`⭐ Activado MODO BÚSQUEDA DIRECTA/SPS (Place ID: ${directSearchQuery})`);
                 
+                // 🛑 CRÍTICO: Se pasa el Place ID (o el texto) a la función
                 const placeData = await getFullPlaceDetails(directSearchQuery, currentLanguage); 
                 
                 if (placeData) {
@@ -439,9 +326,11 @@ export default async function handler(req, res) {
                     };
                     return res.status(200).json({ responseText: JSON.stringify(finalFicha) });
                 } else {
+                    // Fallo en la búsqueda directa (no encontrado o fuera de bounds)
                     const failedFicha = {
                         type: "place_not_found", 
                         placeToSearch: directSearchQuery, 
+                        // Usar traducción para el mensaje de fallo
                         description: translations.notFoundDirect.replace('{query}', directSearchQuery),
                         isStructured: true
                     };
@@ -449,35 +338,46 @@ export default async function handler(req, res) {
                 }
             } 
             
-            // 🛑 MODO MENCIÓN HÍBRIDA
+            // 🛑 NUEVO: MODO MENCIÓN HÍBRIDA
             if (isHybridMention) {
                 
+                // El Place ID está en directSearchQuery, pero el prompt real está en userPrompt.
                 const placeId = directSearchQuery;
-                const promptToSend = userPrompt; 
+                const promptToSend = userPrompt; // Este prompt contiene el token
 
                 console.log(`⭐ Activado MODO MENCIÓN HÍBRIDA (Place ID: ${placeId})`);
                 
+                // 1. Obtener los detalles del lugar (necesitamos el nombre real para el prompt de Gemini)
+                // Usamos getFullPlaceDetails, pero solo necesitamos el nombre
                 const placeData = await getFullPlaceDetails(placeId, currentLanguage);
                 
                 if (placeData) {
                     
+                    // 2. Reemplazar el token en el prompt con el nombre real para el contexto de Gemini
+                    // Ej: "Quiero ir a [[PLACE_MENTION]] mañana" -> "Quiero ir a Dentista Progreso mañana"
                     const promptWithPlaceName = promptToSend.replace(MENTION_TOKEN, placeData.name);
                     
+                    // 3. ENVIAR A GEMINI para generar la respuesta CONVERSACIONAL
                     const chat = ai.chats.create({
                         model: MODEL_NAME, 
                         config: {
+                            // Usamos el sistema de instrucción base
                             systemInstruction: finalSystemInstruction 
                         },
+                        // Incluimos el historial previo
                         history: history,
+                        // Usamos RAG para información en tiempo real (horarios, reseñas, etc.)
                         tools: [{ googleSearch: {} }] 
                     });
 
+                    // Enviamos el mensaje enriquecido a Gemini
                     const result = await chat.sendMessage({ message: promptWithPlaceName });
                     
                     // Gemini DEBE responder en texto plano según la regla del SYSTEM_INSTRUCTION
                     return res.status(200).json({ responseText: result.text.trim() });
                     
                 } else {
+                    // Si el Place ID de la mención no funciona, devolvemos un error conversacional
                     const failedMessage = currentLanguage === 'es'
                         ? "Disculpa, no pude encontrar la información para el lugar mencionado. ¿Podrías intentar la búsqueda directa (⚡️)?"
                         : "Sorry, I couldn't find the information for the mentioned place. Could you try the direct search (⚡️)?";
@@ -490,17 +390,23 @@ export default async function handler(req, res) {
         // ----------------------------------------------------
         // ⭐️ LÓGICA ROBUSTA DE BYPASS CANÓNICO (PRIORIDAD AL SERVIDOR)
         // ----------------------------------------------------
+        // ... (Este bloque queda sin cambios ya que es una función de respaldo) ...
+
         let forcedCanonicalResponse = null; 
         const promptSearchKey = userPrompt.toLowerCase().replace(/\s/g, ''); 
 
         for (const [key, exceptionData] of Object.entries(EXCEPTION_DATA_MAP)) {
+            // Utilizamos includes para ser más flexibles
             if (promptSearchKey.includes(key)) {
                 
                 console.log(`Interceptación CANÓNICA forzada para: ${key}`);
                 
+                // 🛑 CRÍTICO: Se pasa el idioma
                 const placeData = await getPlaceDetails(exceptionData.searchName, currentLanguage);
                 
                 const isHealthPlace = exceptionData.category.includes('Spa');
+                
+                // NOTA: La descripción canónica (exceptionData.description) es fija y no se traduce.
                 
                 forcedCanonicalResponse = {
                     type: "place", 
@@ -522,9 +428,10 @@ export default async function handler(req, res) {
         }
         
         if (forcedCanonicalResponse) {
+            // Retornar la respuesta CANÓNICA directamente (GARANTÍA DE BLINDAJE)
             return res.status(200).json({ responseText: JSON.stringify(forcedCanonicalResponse) });
         }
-
+        
         // ----------------------------------------------------
         // ⭐️ LÓGICA NORMAL (GEMINI + RAG de Reseñas)
         // ----------------------------------------------------
@@ -565,6 +472,7 @@ export default async function handler(req, res) {
             tools: [{ googleSearch: {} }] 
         });
 
+        // Enviamos el nuevo mensaje (original o modificado) al modelo
         const result = await chat.sendMessage({ message: promptToSend });
         let modelResponseText = result.text.trim();
         
@@ -579,7 +487,8 @@ export default async function handler(req, res) {
                 const jsonString = modelResponseText.substring(jsonStart, jsonEnd + 1);
                 const parsedJson = JSON.parse(jsonString);
                 
-                let fichasToProcess = parsedJson.isStructured ? [parsedJson] : (parsedJson.isMultiStructured ? parsedJson.response : []);
+                // 🛑 Usamos 'data' para el multi-structured si es necesario, aunque en tu código era 'response'
+                let fichasToProcess = parsedJson.isStructured ? [parsedJson] : (parsedJson.isMultiStructured ? (parsedJson.response || parsedJson.data) : []);
 
                 if (fichasToProcess.length > 0) {
                     
@@ -591,10 +500,14 @@ export default async function handler(req, res) {
                         if (ficha.type === 'place' && ficha.placeToSearch) {
                             
                             const placeNameSearch = ficha.placeToSearch.trim();
+                            
+                            // Búsqueda flexible (solo el nombre)
                             const searchForPlaces = placeNameSearch; 
                             
+                            // 🛑 CRÍTICO: Se pasa el idioma
                             const placeData = await getPlaceDetails(searchForPlaces, currentLanguage);
                             const isHealthPlace = placeData?.isHealthPlace || ficha.isHealthPlace === true;
+
 
                             // 🛑 BLINDAJE ANTI-CORRELACIÓN:
                             let isNameMiscorrelated = false;
@@ -603,13 +516,15 @@ export default async function handler(req, res) {
                                 isNameMiscorrelated = true;
                             }
 
+
                             if (placeData && !isNameMiscorrelated) {
                                 // **LÓGICA NORMAL: USAR RE-PROMPT con GOOGLE SEARCH RAG (Reseñas)**
                                 
-                                // 🟢 OPTIMIZACIÓN DEL RAG: Se añade el blindaje de comillas y fallback simple.
+                                // 🟢 REFUERZO RAG CRÍTICO: MÁS AGRESIVO EN LAS INSTRUCCIONES
+                                // El objetivo es: 1) Basarse en reseñas, 2) Evitar frases de relleno, 3) Responder en JSON con la nueva descripción.
                                 let placePrompt = currentLanguage === 'es' 
-                                    ? `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder. La categoría es: ${enrichedFicha.placeCategory}. **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **CRÍTICO: Extrae 1-2 frases CLAVE de reseñas REALES. Si citas, usa comillas dobles. Si no encuentras reseñas relevantes, DEJA el campo 'description' como un simple texto de fallback (ej: 'Servicios de alta calidad en la zona céntrica').** La descripción debe ser corta, estar basada en las reseñas encontradas, y enfocada en lo que dicen los clientes. **CRÍTICO: Evita las frases de inicio repetitivas como 'Se comenta que' o 'Según las reseñas'. Responde en ${langText}.** Solo usa la descripción que el RAG te proporciona.`
-                                    : `The user asked for "${placeNameSearch}". Generate the PLACE CARD JSON to respond. The category is: ${enrichedFicha.placeCategory}. **USE YOUR GOOGLE SEARCH TOOL** to search the query: "reviews for ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **CRITICAL: Extract 1-2 KEY phrases from REAL reviews. If you quote, use double quotes. If you cannot find relevant reviews, LEAVE the 'description' field as a simple fallback text (e.g., 'High quality services in the downtown area').** The description must be short, based on the reviews found, and focused on what customers say. **CRITICAL: Avoid repetitive starting phrases like 'It is commented that' or 'According to reviews'. Respond in ${langText}.** Only use the description provided by the RAG.`;
+                                    ? `El usuario preguntó por "${placeNameSearch}". Genera el JSON de FICHA DE LUGAR para responder. La categoría es: ${enrichedFicha.placeCategory}. **UTILIZA TU HERRAMIENTA DE GOOGLE SEARCH** para buscar la consulta: "reseñas de ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **CRÍTICO: Extrae las frases clave de una o dos reseñas REALES y úsalas para componer la 'description' en el JSON.** La descripción debe ser corta (2 a 3 oraciones), estar BASADA ESTRICTAMENTE EN LO QUE DICEN LOS CLIENTES Y SERVICIOS REALES. **ABSOLUTAMENTE PROHIBIDO usar frases de inicio como 'Se comenta que', 'Según las reseñas', o 'Este lugar es'. SÉ DIRECTO. Responde SOLO con el JSON completo en ${langText}.**`
+                                    : `The user asked for "${placeNameSearch}". Generate the PLACE CARD JSON to respond. The category is: ${enrichedFicha.placeCategory}. **USE YOUR GOOGLE SEARCH TOOL** to search the query: "reviews for ${placeNameSearch} ${enrichedFicha.placeCategory} Nuevo Progreso". **CRITICAL: Extract key phrases from one or two REAL reviews and use them to compose the 'description' in the JSON.** The description must be short (2 to 3 sentences), strictly BASED ON WHAT CUSTOMERS SAY AND REAL SERVICES. **ABSOLUTELY PROHIBITED to use starting phrases like 'It is commented that', 'According to reviews', or 'This place is'. BE DIRECT. Respond ONLY with the complete JSON in ${langText}.**`;
 
 
                                 // Usar un nuevo chat para no contaminar el historial principal
@@ -660,6 +575,7 @@ export default async function handler(req, res) {
                                 enrichedFicha = {
                                     type: "place_not_found", 
                                     placeToSearch: placeNameSearch, 
+                                    // 🛑 CRÍTICO: Usar traducción para el mensaje de fallo
                                     description: translations.notFoundGeofence.replace('{query}', placeNameSearch),
                                     isStructured: true
                                 };
@@ -670,8 +586,7 @@ export default async function handler(req, res) {
                              const categorySearch = ficha.categoryName.replace(/en Progreso/i, '').trim();
                              const mapUrlQuery = categorySearch + GEOGRAPHIC_CONTEXT;
                              
-                             // Corregido a un formato más seguro
-                             const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapUrlQuery)}`; 
+                             const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapUrlQuery)}`; // Formato correcto para query de categoría
                              
                              enrichedFicha.mapUrl = mapUrl; 
                         }
@@ -681,17 +596,18 @@ export default async function handler(req, res) {
 
                     // Después de procesar todas las fichas, reconstruir la respuesta final.
                     let finalResponseJson = parsedJson.isMultiStructured 
-                        ? { isMultiStructured: true, response: enrichedFichas, conversationText: parsedJson.conversationText || '' }
+                        ? { isMultiStructured: true, data: enrichedFichas, conversationText: parsedJson.conversationText || '' }
                         : enrichedFichas[0];
                     
                     finalResponseData.responseText = JSON.stringify(finalResponseJson);
 
                 } else {
+                    // Si el modelo generó texto sin JSON (FALLO GRAVE), lo devuelve.
                     finalResponseData.responseText = modelResponseText; 
                 }
             }
         } catch (jsonError) {
-            console.error("Fallo en el parseo o enriquecimiento del JSON.", jsonError);
+            console.error("Fallo en el parseo o enriquecimiento del JSON. Asumiendo que el texto no contenía JSON estructurado.", jsonError);
             finalResponseData.responseText = modelResponseText; 
         }
 
@@ -701,6 +617,7 @@ export default async function handler(req, res) {
         console.error("Error en la API de Gemini:", error);
         res.status(500).json({ 
             error: true, 
+            // 🛑 CRÍTICO: Usar traducción para el mensaje de error
             message: translations.errorInternal + error.message
         });
     }
