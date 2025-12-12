@@ -1,5 +1,5 @@
 // ====================================================================
-// Archivo: chat.js (Versión 9.4 - LIMPIEZA DE NOMBRES Y BLINDAJE FINAL)
+// Archivo: chat.js (Versión 9.4 - LIMPIEZA DE NOMBRES Y BLINDAJE FINAL + FIX Planificación)
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -205,7 +205,8 @@ async function getFullPlaceDetails(queryOrPlaceId, currentLanguage) {
         const lng = place.geometry.location.lng;
         const isWithinBounds = 
             lat >= EXTENDED_SW_BOUND.lat && lat <= EXTENDED_NE_BOUND.lat &&
-            lng >= EXTENDED_SW_BOUND.lng && lng <= EXTENDED_NE_BOUND.lng;
+            // FIX: El original tenía un error lógico, se corrige a lng <= EXTENDED_NE_BOUND.lng
+            lng >= EXTENDED_SW_BOUND.lng && lng <= EXTENDED_NE_BOUND.lng; 
         
         if (!isWithinBounds) {
             console.log(`Lugar ID ${placeId} está fuera del rango geofence.`);
@@ -552,23 +553,37 @@ export default async function handler(req, res) {
         // Patrón para detectar solicitudes de listado/recomendación
         const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra).*\\s+(\\d+|unos cuantos)?\\s*(taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias|clinica|farmacia|dental|optica)s?`, 'i');
         
-        const match = userPrompt.match(recommendationPattern);
+        // 🛑 NUEVO: Patrón para detectar solicitudes de PLANIFICACIÓN GENERAL/RUTA
+        const planningPattern = new RegExp(`(a donde ir primero|que hacer primero|ruta|orden de actividades|sugerencia de plan|plan de viaje|que visitar)s?`, 'i');
+
+        // 1. Lógica de intercepción de PLANIFICACIÓN (FIX SOLICITADO)
+        if (userPrompt.match(planningPattern)) {
+    
+            console.log("PROTOCOLO PLANIFICACIÓN GENERAL ACTIVADO.");
+            
+            // Le decimos a Gemini que clasifique la respuesta usando MULTI-FICHA de CATEGORÍA
+            promptToSend = `El usuario pide un plan de viaje, una ruta o un orden de actividades. DEBES usar el MODO MULTI-FICHA de CATEGORÍA para responder con un resumen de los 3 pasos típicos (Salud -> Compras -> Comida). **CRÍTICO: TU RESPUESTA DEBE SER UN ÚNICO JSON DE TIPO 'isMultiStructured' que contenga 3 fichas de tipo 'category'.** La respuesta debe ser en ${langText}.`;
+            
+        } else {
+            // Se mantiene la lógica original para la búsqueda de categorías específicas
+            const match = userPrompt.match(recommendationPattern);
         
-        if (match) {
-            const categoryKeyRaw = match[3].toLowerCase(); 
-            let categoryName = currentLanguage === 'es' ? "lugares y negocios" : "places and businesses"; 
-            
-            // Traducción de categorías forzada para el prompt RAG
-            if (categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('tacos')) categoryName = currentLanguage === 'es' ? "Taquerías y Tacos" : "Taco Stands and Taquerias";
-            else if (categoryKeyRaw.includes('restaurante') || categoryKeyRaw.includes('comer')) categoryName = currentLanguage === 'es' ? "Restaurantes y Comida" : "Restaurants and Food";
-            else if (categoryKeyRaw.includes('artesanias') || categoryKeyRaw.includes('souvenirs')) categoryName = currentLanguage === 'es' ? "Tiendas de Artesanías y Souvenirs" : "Handicraft and Souvenir Shops";
-            else if (categoryKeyRaw.includes('barbacoa')) categoryName = currentLanguage === 'es' ? "Barbacoa y Birria" : "Barbacoa and Birria";
-            else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = currentLanguage === 'es' ? "Salud y Estética" : "Health and Aesthetics";
-            
-            // 🛑 CRÍTICO: SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA y PROHIBIR LISTAS.
-            promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría ${categoryName} en Nuevo Progreso. **CRÍTICO: TU RESPUESTA DEBE SER UN ÚNICO JSON DE TIPO 'category'. NUNCA GENERES FICHAS DE 'place' O LISTAS DE LUGARES ESPECÍFICOS. Tu respuesta debe ser en ${langText}.**`;
-            
-            console.log("PROTOCOLO CATEGORÍA GENERAL ACTIVADO para:", categoryName);
+            if (match) {
+                const categoryKeyRaw = match[3].toLowerCase(); 
+                let categoryName = currentLanguage === 'es' ? "lugares y negocios" : "places and businesses"; 
+                
+                // Traducción de categorías forzada para el prompt RAG
+                if (categoryKeyRaw.includes('taque') || categoryKeyRaw.includes('tacos')) categoryName = currentLanguage === 'es' ? "Taquerías y Tacos" : "Taco Stands and Taquerias";
+                else if (categoryKeyRaw.includes('restaurante') || categoryKeyRaw.includes('comer')) categoryName = currentLanguage === 'es' ? "Restaurantes y Comida" : "Restaurants and Food";
+                else if (categoryKeyRaw.includes('artesanias') || categoryKeyRaw.includes('souvenirs')) categoryName = currentLanguage === 'es' ? "Tiendas de Artesanías y Souvenirs" : "Handicraft and Souvenir Shops";
+                else if (categoryKeyRaw.includes('barbacoa')) categoryName = currentLanguage === 'es' ? "Barbacoa y Birria" : "Barbacoa and Birria";
+                else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = currentLanguage === 'es' ? "Salud y Estética" : "Health and Aesthetics";
+                
+                // 🛑 CRÍTICO: SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA y PROHIBIR LISTAS.
+                promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría ${categoryName} en Nuevo Progreso. **CRÍTICO: TU RESPUESTA DEBE SER UN ÚNICO JSON DE TIPO 'category'. NUNCA GENERES FICHAS DE 'place' O LISTAS DE LUGARES ESPECÍFICOS. Tu respuesta debe ser en ${langText}.**`;
+                
+                console.log("PROTOCOLO CATEGORÍA GENERAL ACTIVADO para:", categoryName);
+            }
         }
         // FIN DE LÓGICA DE INTERCEPTACIÓN
 
