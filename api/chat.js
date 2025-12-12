@@ -1,5 +1,5 @@
 // ====================================================================
-// Archivo: chat.js (Versión 9.4 - LIMPIEZA DE NOMBRES Y BLINDAJE FINAL + FIX Planificación)
+// Archivo: chat.js (Versión 9.8 - FIX Planificación Conversacional)
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -82,13 +82,9 @@ function areNamesSimilar(searchName, returnedName) {
 
 /**
  * 🟢 NUEVO: Función auxiliar para limpiar el nombre del lugar.
- * Elimina comas, números de calle o términos geográficos genéricos que Place API a veces adjunta.
  */
 function cleanPlaceName(name) {
     if (!name) return null;
-    // Expresión para eliminar texto después de una coma, o Nuevo Progreso (si ya está)
-    // Ejemplo: "Tienda de Tacos, Calle Principal 123" -> "Tienda de Tacos"
-    // Ejemplo: "Hospital General, Nuevo Progreso" -> "Hospital General"
     let cleanName = name.replace(/,\s*\w+\s*\d+.*$|,\s*Nuevo Progreso.*$/i, '').trim();
     return cleanName;
 }
@@ -205,7 +201,6 @@ async function getFullPlaceDetails(queryOrPlaceId, currentLanguage) {
         const lng = place.geometry.location.lng;
         const isWithinBounds = 
             lat >= EXTENDED_SW_BOUND.lat && lat <= EXTENDED_NE_BOUND.lat &&
-            // FIX: El original tenía un error lógico, se corrige a lng <= EXTENDED_NE_BOUND.lng
             lng >= EXTENDED_SW_BOUND.lng && lng <= EXTENDED_NE_BOUND.lng; 
         
         if (!isWithinBounds) {
@@ -322,15 +317,14 @@ async function getPlaceDetails(query, currentLanguage) {
 
 
 // =======================================================
-// 2. Instrucción de Sistema BASE (OPTIMIZADA V9.4)
+// 2. Instrucción de Sistema BASE (OPTIMIZADA V9.8)
 // =======================================================
 
-// Usamos {LANG_PLACEHOLDER} para la inyección de idioma dinámico
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
-**REGLA DE ESTRICTO CUMPLIMIENTO:** Si la solicitud del usuario es para un LUGAR o CATEGORÍA, DEBES responder **EXCLUSIVAMENTE con un formato JSON**. Está **PROHIBIDO** responder en texto plano conversacional en estos casos. Usa el formato de FALLO si el servidor lo indica o si no estás seguro de la existencia del lugar.
+**REGLA DE ESTRICTO CUMPLIMIENTO:** Si la solicitud del usuario es para un LUGAR o CATEGORÍA, DEBES responder **EXCLUSIVAMENTE con un formato JSON**. Está **PROHIBIDO** responder en texto plano conversacional en estos casos, a menos que se te indique explícitamente en el protocolo.
 **NOTA CRÍTICA DE CLASIFICACIÓN:** Tu clasificación debe ser precisa. No asumas que todas las búsquedas son restaurantes. Usa las categorías más específicas posibles (Spa, Tienda de Ropa, Clínica Dental, Taquería, etc.).
-**REGLA CRÍTICA DE CONTEXTO:** Si el usuario solicita un **LUGAR ESPECÍFICO** (ej. "Farmacia Guadalajara", "El Cuñao"), DEBES IGNORAR CUALQUIER CATEGORÍA PREVIA del chat (ej. si la última búsqueda fue un restaurante). Debes clasificar la nueva solicitud desde CERO, de forma independiente.
+**REGLA CRÍTICA DE CONTEXTO:** Si el usuario solicita un **LUGAR ESPECÍFICO** (ej. "Farmacia Guadalajara", "El Cuñao"), DEBES IGNORAR CUALQUIER CATEGORÍA PREVIA del chat. Debes clasificar la nueva solicitud desde CERO, de forma independiente.
 **REGLA CRÍTICA DE MENCIÓN HÍBRIDA:** Si el prompt del usuario contiene el token **${MENTION_TOKEN}**, significa que el usuario está preguntando por el lugar asociado a ese token. Tu tarea es:
     1.  Identificar la pregunta del usuario (ej: "¿Está abierto mañana?").
     2.  Responder **directamente a esa pregunta** en modo conversacional (Texto Plano).
@@ -352,7 +346,7 @@ REGLAS DE FORMATO:
 3. **MODO FICHA DE LUGAR (JSON):** Úsalo si la solicitud es de un lugar o negocio **específico** Y **NO** contiene el token de mención.
 4. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo para solicitudes de categorías generales O para **CUMPLIR EL PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES**.
 
-5. **MODO CONVERSACIONAL (Texto Plano):** Úsalo *SOLO* para preguntas generales o de seguimiento (ej: "gracias", "¿cómo está el clima?") que **no** requieran una ficha, O si el prompt contiene el token **${MENTION_TOKEN}**.
+5. **MODO CONVERSACIONAL (Texto Plano):** Úsalo *SOLO* para preguntas generales o de seguimiento (ej: "gracias", "¿cómo está el clima?") que **no** requieran una ficha, O si el prompt contiene el token **${MENTION_TOKEN}**, O si la solicitud es de **PLANIFICACIÓN/RUTA GENERAL**.
 
 6. Los formatos JSON requeridos son:
    
@@ -384,7 +378,8 @@ REGLAS DE FORMATO:
    }
    
    // REGLA CLAVE: Si la respuesta requiere MÚLTIPLAS FICHAS, debes envolver todas las fichas en un array y añadir la propiedad "isMultiStructured": true.
-   // El texto conversacional debe ir en "conversationText" y NO debe ser la respuesta principal.`;
+   // El texto conversacional debe ir en "conversationText" y NO debe ser la respuesta principal.
+   // CRÍTICO: El texto de 'conversationText' NO debe usar el caracter asterisco (*).`;
 
 // =======================================================
 // 3. Manejador Principal (handler)
@@ -561,8 +556,11 @@ export default async function handler(req, res) {
     
             console.log("PROTOCOLO PLANIFICACIÓN GENERAL ACTIVADO.");
             
-            // Le decimos a Gemini que clasifique la respuesta usando MULTI-FICHA de CATEGORÍA
-            promptToSend = `El usuario pide un plan de viaje, una ruta o un orden de actividades. DEBES usar el MODO MULTI-FICHA de CATEGORÍA para responder con un resumen de los 3 pasos típicos (Salud -> Compras -> Comida). **CRÍTICO: TU RESPUESTA DEBE SER UN ÚNICO JSON DE TIPO 'isMultiStructured' que contenga 3 fichas de tipo 'category'.** La respuesta debe ser en ${langText}.`;
+            // CRÍTICO: Instrucción para generar primero un 'conversationText' sin asteriscos y luego las 3 fichas.
+            promptToSend = currentLanguage === 'es'
+                ? `El usuario pide un plan de viaje, una ruta o un orden de actividades. DEBES usar el MODO MULTI-FICHA de CATEGORÍA para responder. **PRIMERO, genera un mensaje conversacional (Texto Plano) con una introducción amigable de 3 a 4 líneas que explique el plan turístico típico (Salud, Compras, Comida) sin usar asteriscos (*).** Luego, genera 3 fichas de 'category' (Salud y Estética, Tiendas y Compras, y Comida y Restaurantes) y envuélvelas en un único JSON 'isMultiStructured'. La respuesta debe ser en ${langText}.`
+                : `The user asks for a travel plan, route, or order of activities. YOU MUST use the MULTI-STRUCTURED CATEGORY CARD MODE to respond. **FIRST, generate a conversational message (Plain Text) with a friendly 3-4 line introduction explaining the typical tourist plan (Health, Shopping, Food) without using asterisks (*).** Then, generate 3 'category' cards (Health and Aesthetics, Shopping and Stores, and Food and Restaurants) and wrap them in a single 'isMultiStructured' JSON. The response must be in ${langText}.`;
+
             
         } else {
             // Se mantiene la lógica original para la búsqueda de categorías específicas
@@ -613,6 +611,8 @@ export default async function handler(req, res) {
                 const parsedJson = JSON.parse(jsonString);
                 
                 let fichasToProcess = parsedJson.isStructured ? [parsedJson] : (parsedJson.isMultiStructured ? parsedJson.response : []);
+                
+                // 🛑 CRÍTICO: Si es isMultiStructured, usamos 'response' para la lista de fichas (siguiendo el patrón original del usuario), sino asumimos un array simple con el parsedJson
 
                 if (fichasToProcess.length > 0) {
                     
@@ -720,7 +720,14 @@ export default async function handler(req, res) {
                         ? { isMultiStructured: true, response: enrichedFichas, conversationText: parsedJson.conversationText || '' }
                         : enrichedFichas[0];
                     
-                    finalResponseData.responseText = JSON.stringify(finalResponseJson);
+                    // 🛑 CRÍTICO: Si es Multi-estructurado, asegurarse de devolver el texto conversacional en el formato correcto
+                    if (parsedJson.isMultiStructured) {
+                         // El JSON devuelto al frontend ahora será un objeto con 'isMultiStructured: true', 'response', y 'conversationText'
+                         finalResponseData.responseText = JSON.stringify(finalResponseJson);
+                    } else {
+                        finalResponseData.responseText = JSON.stringify(finalResponseJson);
+                    }
+                    
 
                 } else {
                     finalResponseData.responseText = modelResponseText; 
