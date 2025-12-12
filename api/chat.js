@@ -1,5 +1,5 @@
 // ====================================================================
-// Archivo: chat.js (Versión 9.9 - MODO CONVERSACIONAL PURO)
+// Archivo: chat.js (Versión 9.11 - REFUERZO DE SEGUIMIENTO CONVERSACIONAL)
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -201,7 +201,7 @@ async function getFullPlaceDetails(queryOrPlaceId, currentLanguage) {
         const lng = place.geometry.location.lng;
         const isWithinBounds = 
             lat >= EXTENDED_SW_BOUND.lat && lat <= EXTENDED_NE_BOUND.lat &&
-            lng >= EXTENDED_SW_BOUND.lng && lng <= EXTENDED_NE_BOUND.lng; 
+            lng >= EXTENDED_SW_BOUND.lng && lng >= EXTENDED_SW_BOUND.lng; 
         
         if (!isWithinBounds) {
             console.log(`Lugar ID ${placeId} está fuera del rango geofence.`);
@@ -317,7 +317,7 @@ async function getPlaceDetails(query, currentLanguage) {
 
 
 // =======================================================
-// 2. Instrucción de Sistema BASE (OPTIMIZADA V9.9)
+// 2. Instrucción de Sistema BASE (OPTIMIZADA V9.11)
 // =======================================================
 
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
@@ -346,7 +346,7 @@ REGLAS DE FORMATO:
 3. **MODO FICHA DE LUGAR (JSON):** Úsalo si la solicitud es de un lugar o negocio **específico** Y **NO** contiene el token de mención.
 4. **MODO FICHA DE CATEGORÍA (JSON):** Úsalo para solicitudes de categorías generales O para **CUMPLIR EL PROTOCOLO DE RESTRICCIÓN DE RECOMENDACIONES**.
 
-5. **MODO CONVERSACIONAL (Texto Plano):** Úsalo *SOLO* para preguntas generales o de seguimiento (ej: "gracias", "¿cómo está el clima?") que **no** requieran una ficha, O si el prompt contiene el token **${MENTION_TOKEN}**, O si la solicitud es de **PLANIFICACIÓN/RUTA GENERAL**.
+5. **MODO CONVERSACIONAL (Texto Plano):** Úsalo *SOLO* para preguntas generales o de seguimiento (ej: "gracias", "¿cómo está el clima?") que **no** requieran una ficha, O si el prompt contiene el token **${MENTION_TOKEN}**, O si la solicitud es de **PLANIFICACIÓN/RUTA GENERAL O SEGUIMIENTO CONVERSACIONAL**.
 
 6. Los formatos JSON requeridos son:
    
@@ -380,6 +380,9 @@ REGLAS DE FORMATO:
    // REGLA CLAVE: Si la respuesta requiere MÚLTIPLAS FICHAS, debes envolver todas las fichas en un array y añadir la propiedad "isMultiStructured": true.
    // El texto conversacional debe ir en "conversationText" y NO debe ser la respuesta principal.
    // CRÍTICO: El texto de 'conversationText' NO debe usar el caracter asterisco (*).`;
+
+// =VELOCIDAD DE MAPAS (Función Auxiliar)=====================================
+const speedTestUrl = (mapUrlQuery) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapUrlQuery)}`;
 
 // =======================================================
 // 3. Manejador Principal (handler)
@@ -548,8 +551,8 @@ export default async function handler(req, res) {
         // Patrón para detectar solicitudes de listado/recomendación
         const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra).*\\s+(\\d+|unos cuantos)?\\s*(taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias|clinica|farmacia|dental|optica)s?`, 'i');
         
-        // 🛑 NUEVO: Patrón para detectar solicitudes de PLANIFICACIÓN GENERAL/RUTA
-        const planningPattern = new RegExp(`(a donde ir primero|que hacer primero|ruta|orden de actividades|sugerencia de plan|plan de viaje|que visitar)s?`, 'i');
+        // 🛑 NUEVO: Patrón para detectar solicitudes de PLANIFICACIÓN GENERAL/RUTA y SEGUIMIENTO CONVERSACIONAL
+        const planningPattern = new RegExp(`(a donde ir primero|que hacer primero|ruta|orden de actividades|sugerencia de plan|plan de viaje|que visitar|que me sugieres|que sugieres|que hago ahora|siguiente paso)s?`, 'i');
 
         // 1. Lógica de intercepción de PLANIFICACIÓN (FIX SOLICITADO - MODO CONVERSACIONAL PURO)
         if (userPrompt.match(planningPattern)) {
@@ -577,8 +580,11 @@ export default async function handler(req, res) {
                 else if (categoryKeyRaw.includes('barbacoa')) categoryName = currentLanguage === 'es' ? "Barbacoa y Birria" : "Barbacoa and Birria";
                 else if (categoryKeyRaw.includes('dental') || categoryKeyRaw.includes('optica') || categoryKeyRaw.includes('clinica') || categoryKeyRaw.includes('farmacia')) categoryName = currentLanguage === 'es' ? "Salud y Estética" : "Health and Aesthetics";
                 
-                // 🛑 CRÍTICO: SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA y PROHIBIR LISTAS.
-                promptToSend = `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder con un resumen general de la categoría ${categoryName} en Nuevo Progreso. **CRÍTICO: TU RESPUESTA DEBE SER UN ÚNICO JSON DE TIPO 'category'. NUNCA GENERES FICHAS DE 'place' O LISTAS DE LUGARES ESPECÍFICOS. Tu respuesta debe ser en ${langText}.**`;
+                // 🛑 CRÍTICO: SOBRESCRIBIMOS el prompt para FORZAR el MODO FICHA DE CATEGORÍA
+                // PERO REQUERIMOS que la 'description' sea un texto CONVERSACIONAL.
+                promptToSend = currentLanguage === 'es'
+                    ? `El usuario pidió una recomendación o lista de ${categoryName}. DEBES usar el MODO FICHA DE CATEGORÍA (JSON) para responder. **CRÍTICO: El campo 'description' DEBE contener un texto de 3-4 líneas totalmente CONVERSACIONAL y amable que introduzca al usuario a la categoría ${categoryName} y sus opciones en Nuevo Progreso. Nunca uses la palabra 'recomendar' ni asteriscos (*).** NUNCA GENERES FICHAS DE 'place' O LISTAS DE LUGARES ESPECÍFICOS. Tu respuesta debe ser un ÚNICO JSON de tipo 'category'.`
+                    : `The user asked for a recommendation or list of ${categoryName}. You MUST use the CATEGORY CARD MODE (JSON) to respond. **CRITICAL: The 'description' field MUST contain a fully CONVERSATIONAL and friendly text of 3-4 lines that introduces the user to the ${categoryName} category and its options in Nuevo Progreso. Never use the word 'recommend' or asterisks (*).** NEVER GENERATE 'place' CARDS OR LISTS OF SPECIFIC PLACES. Your response must be a SINGLE 'category' type JSON.`;
                 
                 console.log("PROTOCOLO CATEGORÍA GENERAL ACTIVADO para:", categoryName);
             }
@@ -707,7 +713,7 @@ export default async function handler(req, res) {
                              const mapUrlQuery = categorySearch + GEOGRAPHIC_CONTEXT;
                              
                              // 🟢 URL de búsqueda de Google Maps estándar
-                             const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapUrlQuery)}`; 
+                             const mapUrl = speedTestUrl(mapUrlQuery);
                              
                              enrichedFicha.mapUrl = mapUrl; 
                         }
