@@ -2227,7 +2227,6 @@ window.addEventListener('orientationchange', setAppHeight);
             return null;
         }
     }
-
     // --- Lógica Principal del Chatbot (handleSend) ---
     async function handleSend(userPromptInput = null, placeIdForDirectSearch = null) { // 🛑 NUEVO: placeIdForDirectSearch
         
@@ -2307,7 +2306,7 @@ window.addEventListener('orientationchange', setAppHeight);
             return;
         }
 
-        
+                
         let finalMessage = { role: 'model', text: modelResponseText, timestamp: new Date(), isStructured: false };
         let totalCount = 0; 
         let apiQuery = null; 
@@ -2328,8 +2327,9 @@ window.addEventListener('orientationchange', setAppHeight);
                 let conversationText = modelResponseText.replace(jsonString, '').trim();
 
                 // 1. Manejo de Múltiples Fichas (NUEVO)
-                if (parsedJson.isMultiStructured === true && Array.isArray(parsedJson.response)) {
-                    fichasParaMostrar = parsedJson.response;
+                // 🛑 CORRECCIÓN APLICADA AQUÍ: Se cambió `parsedJson.response` a `parsedJson.data`
+                if (parsedJson.isMultiStructured === true && Array.isArray(parsedJson.data)) {
+                    fichasParaMostrar = parsedJson.data; 
                     if (parsedJson.conversationText) conversationText = parsedJson.conversationText;
                 } 
                 // 2. Manejo de Respuesta Estructurada Única
@@ -2384,11 +2384,11 @@ window.addEventListener('orientationchange', setAppHeight);
                             placePhone: ficha.placePhone || null, 
                             mapUrl: ficha.mapUrl || null,
                             reviewUrl: ficha.reviewUrl || null,
-                            websiteUrl: ficha.websiteUrl || null, // 🛑 NUEVO: Propiedad Website/Social
+                            websiteUrl: ficha.websiteUrl || null, 
                             categoryName: ficha.categoryName || null,
-                            isHealthPlace: ficha.isHealthPlace || false, // 🛑 NUEVO: Propiedad isHealthPlace
+                            isHealthPlace: ficha.isHealthPlace || false, 
                             menuKey: menuKey, // <--- PROPIEDAD CLAVE AÑADIDA (SÓLO si es categoría principal)
-                            imageUrl: ficha.imageUrl || null, // <-- ¡NUEVA PROPIEDAD DE IMAGEN!
+                            imageUrl: ficha.imageUrl || null, 
                             timestamp: new Date()
                         });
                         
@@ -2412,6 +2412,72 @@ window.addEventListener('orientationchange', setAppHeight);
                     if (typeof renderChat === 'function') renderChat();
                     return; // 🛑 FINALIZA la ejecución de handleSend
                 }
+                
+                // Si no hay fichas, el finalMessage ya tiene el texto plano (o la recomendación local).
+
+            }
+        } catch (e) {
+            console.error("Error al parsear JSON estructurado, de chip o array:", e);
+            // Si hay error de parseo, cae a texto plano (modelResponseText)
+            finalMessage.text = modelResponseText;
+        }
+
+        // *** FIN DE LA LÓGICA DE PROCESAMIENTO DE RESPUESTA ***
+
+        chatHistory.push(finalMessage); // <- Añade el mensaje final de texto plano/recomendación
+
+        // 🟢 FIX 2.1: Limpiamos los estados de las variables globales ANTES de reasignar
+        lastTotalCount = 0;
+        lastApiQuery = null;
+        
+        // --- LÓGICA DE ACTIVACIÓN DE CHIPS Y ALERTA ---
+        
+        if (dynamicChipsData && dynamicChipsData.length > 0) {
+            // Caso de CHIPS DINÁMICOS O SUBCATEGORÍAS FORZADAS
+            renderDynamicChips(dynamicChipsData);
+            quickActionFullList.classList.add('hidden'); // Asegurar que el otro chip esté oculto
+            
+        } else if (finalMessage.isStructured) {
+            // Caso de FICHA ESTRUCTURADA (SOLO SI LLEGÓ UNA AQUÍ, si no, ya salió antes)
+            const isPlace = finalMessage.type === 'place';
+            const entityName = finalMessage.placeName || finalMessage.categoryName;
+
+            const alertText = isPlace 
+                ? UI_STRINGS[currentLanguage].alertStructured(entityName)
+                : UI_STRINGS[currentLanguage].alertCategory(entityName);
+
+            if (typeof alertUser === 'function') alertUser(alertText, "i", "reminders");
+            
+            quickActionFullList.classList.add('hidden');
+
+        } else if (totalCount > MAX_CHAT_RESULTS && apiQuery) {
+            // Caso de Recomendación Local Forzada (Texto Plano) con más de 4 resultados
+            
+            // 🟢 FIX 2.2: Guardar en las variables globales para el listener del botón
+            lastTotalCount = totalCount;
+            lastApiQuery = apiQuery;
+            
+            // Actualizar el texto del botón con el conteo
+            btnViewAllPlaces.innerHTML = currentLanguage === 'es' 
+                ? `➡️ Ver todos los ${totalCount} lugares` 
+                : `➡️ View all ${totalCount} places`;
+
+            // Mostrar el botón de acción rápida
+            quickActionFullList.classList.remove('hidden');
+
+        } else {
+            // Otros casos de texto plano (ej. preguntas generales, menos de 4 resultados, o error)
+            quickActionFullList.classList.add('hidden');
+        }
+        
+        saveHistory(); 
+        
+        if (typeof renderChat === 'function') renderChat();
+    }
+
+
+
+
                 
                 // Si no hay fichas, el finalMessage ya tiene el texto plano (o la recomendación local).
 
