@@ -1,5 +1,5 @@
 // ====================================================================
-// Archivo: chat.js (Versión 9.11 - REFUERZO DE SEGUIMIENTO CONVERSACIONAL)
+// Archivo: chat.js (Versión 9.12 - MODO CONVERSACIONAL GENERALIZADO)
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -317,7 +317,7 @@ async function getPlaceDetails(query, currentLanguage) {
 
 
 // =======================================================
-// 2. Instrucción de Sistema BASE (OPTIMIZADA V9.11)
+// 2. Instrucción de Sistema BASE (OPTIMIZADA V9.12)
 // =======================================================
 
 const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
@@ -548,25 +548,25 @@ export default async function handler(req, res) {
         
         let promptToSend = userPrompt;
 
-        // Patrón para detectar solicitudes de listado/recomendación
+        // Patrón para detectar solicitudes de listado/recomendación (ESTE SÍ DEBE GENERAR JSON)
         const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra).*\\s+(\\d+|unos cuantos)?\\s*(taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias|clinica|farmacia|dental|optica)s?`, 'i');
         
-        // 🛑 NUEVO: Patrón para detectar solicitudes de PLANIFICACIÓN GENERAL/RUTA y SEGUIMIENTO CONVERSACIONAL
-        const planningPattern = new RegExp(`(a donde ir primero|que hacer primero|ruta|orden de actividades|sugerencia de plan|plan de viaje|que visitar|que me sugieres|que sugieres|que hago ahora|siguiente paso)s?`, 'i');
+        // 🛑 NUEVO: Patrón para detectar CUALQUIER pregunta de planificación o seguimiento general
+        const generalConversationalPattern = new RegExp(`(a donde ir|que hacer|ruta|orden de actividades|sugerencia de plan|plan de viaje|que visitar|que me sugieres|que sugieres|que hago ahora|siguiente paso|que me recomiendas|que hay|a dónde voy)s?`, 'i');
 
-        // 1. Lógica de intercepción de PLANIFICACIÓN (FIX SOLICITADO - MODO CONVERSACIONAL PURO)
-        if (userPrompt.match(planningPattern)) {
+        // 1. Lógica de intercepción de CONVERSACIÓN GENERAL (FIX: A dónde ir / Sugerencias de seguimiento)
+        if (userPrompt.match(generalConversationalPattern)) {
     
-            console.log("PROTOCOLO PLANIFICACIÓN GENERAL ACTIVADO - FORZANDO CONVERSACIONAL PURO.");
+            console.log("PROTOCOLO CONVERSACIONAL GENERAL ACTIVADO - FORZANDO TEXTO PLANO.");
             
-            // CRÍTICO: Esta instrucción ahora anula el modo ficha y fuerza texto plano.
+            // CRÍTICO: Esta instrucción ahora anula el modo ficha y fuerza texto plano para cualquier pregunta de planificación o seguimiento.
             promptToSend = currentLanguage === 'es'
-                ? `El usuario pide una sugerencia de plan de viaje, ruta u orden de actividades. **IGNORA TODAS LAS REGLAS DE JSON/FICHAS Y RESPONDE ÚNICAMENTE CON TEXTO CONVERSACIONAL Y EN TEXTO PLANO (MODO CONVERSACIONAL)**. Da una sugerencia amable de 3 a 5 líneas sobre el orden lógico de una visita (Salud, Compras, Comida). Puedes usar puntos, guiones (-) o saltos de línea. **NO USES ASTERSICOS (*)**.`
-                : `The user asks for a travel plan, route, or order of activities. **IGNORE ALL JSON/CARD RULES AND RESPOND ONLY WITH CONVERSATIONAL PLAIN TEXT (CONVERSATIONAL MODE)**. Give a friendly 3 to 5-line suggestion on the logical order of a visit (Health, Shopping, Food). You may use dots, dashes (-), or line breaks. **DO NOT USE ASTERISKS (*)**.`;
+                ? `El usuario pide una sugerencia general, un plan de viaje, una ruta u orden de actividades. **IGNORA TODAS LAS REGLAS DE JSON/FICHAS Y RESPONDE ÚNICAMENTE CON TEXTO CONVERSACIONAL Y EN TEXTO PLANO (MODO CONVERSACIONAL)**. Responde amablemente y continúa la conversación. Puedes usar puntos, guiones (-) o saltos de línea. **NO USES ASTERSICOS (*)**.`
+                : `The user asks for a general suggestion, travel plan, route, or order of activities. **IGNORE ALL JSON/CARD RULES AND RESPOND ONLY WITH CONVERSATIONAL PLAIN TEXT (CONVERSATIONAL MODE)**. Respond kindly and continue the conversation. You may use dots, dashes (-), or line breaks. **DO NOT USE ASTERISKS (*)**.`;
 
             
         } else {
-            // Se mantiene la lógica original para la búsqueda de categorías específicas
+            // Se mantiene la lógica original para la búsqueda de categorías específicas (QUE SÍ DEBEN GENERAR JSON DE CATEGORÍA)
             const match = userPrompt.match(recommendationPattern);
         
             if (match) {
