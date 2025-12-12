@@ -1,5 +1,5 @@
 // ====================================================================
-// Archivo: chat.js (Versión 9.13 - Habilitar Negritas en Conversacional)
+// Archivo: chat.js (Versión 9.13 - Habilitar Negritas en Conversacional - FIX de Seguimiento)
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -552,8 +552,8 @@ export default async function handler(req, res) {
         const recommendationPattern = new RegExp(`(dime|recomienda|sugiere|dame|busca|quiero|lista|muestra).*\\s+(\\d+|unos cuantos)?\\s*(taquería|restaurante|tienda|barbacoa|lugar|souvenirs|artesanias|clinica|farmacia|dental|optica)s?`, 'i');
         
         // 🛑 NUEVO: Patrón para detectar CUALQUIER pregunta de planificación o seguimiento general
-        // 🟢 FIX DE IDIOMA CONVERSACIONAL (ESPAÑOL + INGLÉS)
-        const generalConversationalPattern = new RegExp(`(a donde ir|que hacer|ruta|orden de actividades|sugerencia de plan|plan de viaje|que visitar|que me sugieres|que sugieres|que hago ahora|siguiente paso|que me recomiendas|que hay|a dónde voy|what to do|where to go|travel plan|what to suggest|suggestions|next step|what next|where to visit|things to do|route)s?`, 'i');
+        // 🟢 FIX DE IDIOMA CONVERSACIONAL (ESPAÑOL + INGLÉS + SEGUIMIENTO)
+        const generalConversationalPattern = new RegExp(`(a donde ir|que hacer|ruta|orden de actividades|sugerencia de plan|plan de viaje|que visitar|que me sugieres|que sugieres|que hago ahora|siguiente paso|que me recomiendas|que hay|a dónde voy|what to do|where to go|travel plan|what to suggest|suggestions|next step|what next|where to visit|things to do|route|que mas hay|que mas hago|que mas|entonces que)s?`, 'i');
 
         // 1. Lógica de intercepción de CONVERSACIÓN GENERAL (FIX: A dónde ir / Sugerencias de seguimiento)
         if (userPrompt.match(generalConversationalPattern)) {
