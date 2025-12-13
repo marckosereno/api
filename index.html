@@ -1190,8 +1190,8 @@ window.addEventListener('orientationchange', setAppHeight);
     // Objeto de Traducción y textos de chips (ACTUALIZADO PARA SPS)
     const UI_STRINGS = {
         es: {
-            header: "PROGRESO TOUR GUIDE",
-            placeholder: "Pregúntale al mapa",
+            header: "Hi Marco!",
+            placeholder: "Pregúntarle a Marco!",
             searchPlaceholder: "Nombre del lugar o negocio...", // CAMBIO DE TEXTO
             goButton: "Enviar", // CAMBIO DE TEXTO
             loadingStatus: "Respondiendo tu petición...", 
@@ -1849,7 +1849,7 @@ window.addEventListener('orientationchange', setAppHeight);
         document.getElementById('btn-comollegar').textContent = strings.getThere;
         document.getElementById('btn-info').textContent = strings.info;
 
-        const categoryChipTexts = [strings.chipHealth, strings.chipShopping, strings.chipEntertainment, strings.chipDental];
+        const categoryChipTexts = [strings.chipHealth, strings.chipShopping, strings.chipEntertainment, strings.chipRestaurant];
         categoryChips.forEach((chip, index) => {
             chip.textContent = categoryChipTexts[index];
         });
