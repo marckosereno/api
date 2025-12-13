@@ -1055,10 +1055,12 @@ padding-top:0px;
         src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBGmgdkbqtCnIe7nWZYUKk9aAKWI6rKAFM&libraries=places&callback=initChatUI">
     </script>
 
-    <script>
+   <script>
 
     const BACKEND_URL = "/api/chat"; 
     const MAX_CHAT_RESULTS = 4; // Límite de resultados mostrado en texto plano (DEBE COINCIDIR CON CHAT.JS)
+    // Constante para la URL base de Buy Me a Coffee
+    const BMC_BASE_URL = "https://www.buymeacoffee.com/marckosereno"; // NUEVA CONSTANTE
     
     let chatHistory = [];
     let currentLanguage = 'es'; 
@@ -1571,6 +1573,82 @@ window.addEventListener('orientationchange', setAppHeight);
         }
     }
     
+    /**
+     * Genera y renderiza una respuesta persuasiva del bot con chips de donación.
+     * @param {string} currentLanguage - Idioma actual ('es' o 'en').
+     */
+    function generateCoffeePromptResponse(currentLanguage) {
+        const isEs = currentLanguage === 'es';
+        
+        // 1. --- Mensaje Persuasivo del Bot ---
+        const persuasiveText = isEs
+            ? "¡Gracias por preguntar! Mantener esta guía en línea requiere mucha energía. **Si te he sido útil, un pequeño apoyo es un gran impulso.** ¡Te lo agradezco de antemano! 😊"
+            : "Thanks for asking! Keeping this guide online requires a lot of energy. **If I've been helpful, a small contribution is a huge boost.** Thank you in advance! 😊";
+        
+        // 2. --- Definición de los Chips de Monto ---
+        // Usamos el parámetro "?set_quantity=" para fijar el monto
+        const coffeeChips = [
+            { label: isEs ? "☕ 1 Café" : "☕ 1 Coffee", quantity: 1, color: '#FFDD00' },
+            { label: isEs ? "☕ x2 (Recarga)" : "☕ x2 (Recharge)", quantity: 2, color: '#FFB800' },
+            { label: isEs ? "☕ x3 (Desarrollo)" : "☕ x3 (Development)", quantity: 3, color: '#FF9100' },
+            { label: isEs ? "✨ Monto Libre" : "✨ Custom Amount", quantity: "", color: '#f0f0f0', fontColor: '#333333' }, 
+        ];
+
+        // 3. --- Creación del HTML para los Chips ---
+        const chipsHTML = coffeeChips.map(chip => {
+            const url = chip.quantity 
+                ? `${BMC_BASE_URL}?set_quantity=${chip.quantity}` 
+                : BMC_BASE_URL;
+            
+            const style = `background-color: ${chip.color}; color: ${chip.fontColor || '#000000'};`;
+            
+            // Usamos la misma estructura de chip que en las action bars
+            return `
+                <a href="${url}" target="_blank" rel="noopener noreferrer" 
+                   class="action-chip coffee-chip-amount flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer transition"
+                   style="${style} margin-right: 8px; text-decoration: none; border: 1px solid #000000;">
+                    ${chip.label}
+                </a>
+            `;
+        }).join('');
+
+        // 4. --- Ensamblaje de la Respuesta Final (Estructura de Burbuja del Bot) ---
+        // Creamos el mensaje completo con el texto y los chips de acción en una burbuja de respuesta
+        const finalResponseHTML = `
+            <div class="flex flex-col items-start w-full mb-2">
+                <div class="model-bubble-wrapper">
+                     <div class="model-bubble">${marked.parse(persuasiveText)}</div>
+                </div>
+                <div class="action-bar-container mt-2">
+                    <div class="inline-flex flex-wrap space-x-2 p-1">
+                        ${chipsHTML}
+                    </div>
+                </div>
+                <div class="model-timestamp-container"><span class="timestamp">${formatTime(new Date())}</span></div>
+            </div>
+        `;
+
+        // 5. --- Añadir al DOM ---
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = finalResponseHTML;
+
+        if (messageContainer) {
+            // Insertar la estructura completa (texto + chips de acción) antes del indicador de typing
+            messageContainer.insertBefore(tempDiv.firstChild, modelTypingBubble); 
+        }
+        
+        // 6. --- Actualizar historial de chat y scroll ---
+        // Nota: El historial se guarda como texto plano del mensaje principal, sin los chips.
+        chatHistory.push({ 
+            role: 'model', 
+            text: persuasiveText, 
+            timestamp: new Date(), 
+            isStructured: false 
+        });
+        saveHistory();
+
+        scrollToBottom();
+    }
     // --- NUEVAS FUNCIONES PARA EL MODO BÚSQUEDA DIRECTA (SPS MODE) ---
     
     /**
@@ -1874,7 +1952,7 @@ window.addEventListener('orientationchange', setAppHeight);
         
         // Ocultar chips de autocompletado y resetear mención si no estamos en modo SPS
         if (!isSPSMode) {
-            resetMentionMode(); // NUEVO
+            resetMentionMode();
         }
        
         lastTotalCount = 0;
@@ -1913,6 +1991,14 @@ window.addEventListener('orientationchange', setAppHeight);
             }
         } else if (action === 'CLEAR_HISTORY') { 
             clearChatHistory();
+            return;
+        } else if (action === 'COFFEE') { // <-- ¡NUEVO CASO AÑADIDO!
+            // 1. Limpia cualquier menú abierto
+            if (categoriesVisible) { hideChipGroup(categoryChipsGroup, categoryChips); categoriesVisible = false; }
+            if (languageMenuVisible) { hideChipGroup(languageChipsGroup, languageChips); languageMenuVisible = false; }
+            
+            // 2. Llama a la nueva función que genera la respuesta del bot con los chips de monto
+            generateCoffeePromptResponse(currentLanguage);
             return;
         } else {
             if (query) {
@@ -2749,6 +2835,7 @@ window.addEventListener('orientationchange', setAppHeight);
         }
     });
     </script>
+
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </body>
