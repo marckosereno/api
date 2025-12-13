@@ -1640,16 +1640,10 @@ window.addEventListener('orientationchange', setAppHeight);
         `;
 
         // 5. --- Añadir al DOM ---
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = finalResponseHTML;
-
-        if (messageContainer) {
-            // Insertar la estructura completa (texto + chips de acción) antes del indicador de typing
-            messageContainer.insertBefore(tempDiv.firstChild, modelTypingBubble); 
-        }
+        // Nota: Ya no se añade directamente al DOM aquí. Se añade al historial y renderChat lo hace.
         
-        // 6. --- Actualizar historial de chat y scroll ---
-        // Nota: El historial se guarda como texto plano del mensaje principal, sin los chips.
+        // 6. --- Actualizar historial de chat ---
+        // El historial se guarda como texto plano del mensaje principal, sin los chips.
         chatHistory.push({ 
             role: 'model', 
             text: persuasiveText, 
@@ -1657,8 +1651,6 @@ window.addEventListener('orientationchange', setAppHeight);
             isStructured: false 
         });
         saveHistory();
-
-        scrollToBottom();
     }
     // --- NUEVAS FUNCIONES PARA EL MODO BÚSQUEDA DIRECTA (SPS MODE) ---
     
@@ -2003,13 +1995,18 @@ window.addEventListener('orientationchange', setAppHeight);
         } else if (action === 'CLEAR_HISTORY') { 
             clearChatHistory();
             return;
-        } else if (action === 'COFFEE') { // <-- ¡NUEVO CASO AÑADIDO!
+        } else if (action === 'COFFEE') { // <-- CASO CORREGIDO!
             // 1. Limpia cualquier menú abierto
             if (categoriesVisible) { hideChipGroup(categoryChipsGroup, categoryChips); categoriesVisible = false; }
             if (languageMenuVisible) { hideChipGroup(languageChipsGroup, languageChips); languageMenuVisible = false; }
             
             // 2. Llama a la nueva función que genera la respuesta del bot con los chips de monto
             generateCoffeePromptResponse(currentLanguage);
+            
+            // 3. CRÍTICO: Forzar el renderizado completo del historial para mostrar el nuevo mensaje
+            if (typeof renderChat === 'function') {
+                 renderChat(); 
+            }
             return;
         } else {
             if (query) {
@@ -2248,6 +2245,18 @@ window.addEventListener('orientationchange', setAppHeight);
                 // El listener ya está implícito en la etiqueta <a>, solo aseguramos el efecto 'active'
                 img.classList.add('listener-attached');
             }
+        });
+
+        // NUEVA LÓGICA: Adjuntar listeners a los chips de DONACIÓN (coffee-chip-amount)
+        const coffeeChips = messageContainer.querySelectorAll('.action-bar-container .coffee-chip-amount');
+        coffeeChips.forEach(chip => {
+            if (chip.classList.contains('listener-attached')) return;
+            
+            // Usamos un listener solo para el efecto de vibración, la navegación es manejada por el <a>
+            chip.addEventListener('click', function() {
+                vibrateDevice();
+            });
+            chip.classList.add('listener-attached');
         });
 
     }
