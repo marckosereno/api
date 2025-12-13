@@ -354,7 +354,7 @@ Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 **REGLA ANTI-CONFIDENCIA:** Al clasificar un lugar, **nunca confirmes su existencia** de forma conversacional (ej: 'Sí, existe...') dentro del JSON. Tu única tarea es clasificar para que el servidor procese la búsqueda.
 
 REGLAS DE FORMATO:
-1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 📍, ☀️) al inicio o final de tus respuestas o descripciones.
+1. **Responde exclusivamente en {LANG_PLACEHOLDER}** y **utiliza emojis relevantes** (ej: 🛍️, 🌮, 🔥, ☀️) al inicio o final de tus respuestas o descripciones.
 2. **REGLA CRÍTICA DE SALUD Y PRIVACIDAD:** Para salud, DEBES establecer el campo "isHealthPlace" en "true".
 
 ---
@@ -394,7 +394,7 @@ REGLAS DE FORMATO:
    {
      "type": "place_not_found", 
      "placeToSearch": "Nombre del Lugar No Encontrado", 
-     "description": "El lugar no se encontró en Nuevo Progreso. Si el usuario insiste, aconséjale usar Google Search. 📍",
+     "description": "El lugar no se encontró en Nuevo Progreso, intenta etiquetar (@) un lugar para asegurarte que exista...",
      "isStructured": true
    }
    
