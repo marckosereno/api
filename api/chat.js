@@ -1,5 +1,5 @@
 // ====================================================================
-// Archivo: chat.js (Versión 9.14 - FIX de Blindaje de Contexto Urbano)
+// Archivo: chat.js (Versión 9.15 - FIX de Ambigüedad/La Nochesita + Fotos Aleatorias)
 // ====================================================================
 
 import { GoogleGenAI } from '@google/genai';
@@ -36,7 +36,7 @@ const IS_HEALTH_PLACE_TYPES = [
     'veterinary_care'
 ];
 
-// ⭐️ MAPA DE EXCEPCIONES CON DESCRIPCIONES CANÓNICAS PARA CORREGIR ALUCINACIONES
+// ⭐️ MAPA DE EXCEPCIONES CON DESCRIPCIONES CANÓNICAS PARA CORREGIR ALUCINACIONES (¡AÑADIDO "LA NOCHESITA"!)
 const EXCEPTION_DATA_MAP = {
     'yomis': { 
         category: 'Spa y Masajes', 
@@ -47,7 +47,12 @@ const EXCEPTION_DATA_MAP = {
         category: 'Tienda de Ropa y Accesorios', 
         description: 'Pinkys es una tienda de ropa y accesorios que ofrece las últimas tendencias de moda para damas y caballeros, con un enfoque en estilos casuales y de temporada.',
         searchName: 'Pinkys Fashion'
-    }, 
+    },
+    'lanochesita': { // 🟢 NUEVA EXCEPCIÓN
+        category: 'Tienda de Abarrotes y Miscelánea', 
+        description: 'La Nochesita es una tienda de abarrotes muy conocida por la zona, ideal para compras rápidas, bebidas frías y botanas, con un horario conveniente para el turista.',
+        searchName: 'Tienda de Abarrotes La Nochesita Nuevo Progreso'
+    }
 };
 
 // 🛑 Token de Mención (Debe coincidir con el frontend)
@@ -208,8 +213,16 @@ async function getFullPlaceDetails(queryOrPlaceId, currentLanguage) {
             return null; 
         }
 
-        const photoReference = place.photos?.[0]?.photo_reference || null;
+        const photosArray = place.photos || [];
+        let photoReference = null;
         
+        // 🟢 MODIFICACIÓN: Elegir una referencia aleatoria si hay más de una (máximo 5)
+        if (photosArray.length > 0) {
+            const maxIndex = Math.min(photosArray.length, 5);
+            const randomIndex = Math.floor(Math.random() * maxIndex);
+            photoReference = photosArray[randomIndex].photo_reference;
+        }
+
         let imageUrl = photoReference 
             ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=350&photoreference=${photoReference}&key=${placesApiKey}`
             : null;
@@ -287,11 +300,18 @@ async function getPlaceDetails(query, currentLanguage) {
 
         const place = detailsResponse.data.result;
         
-        const photoReference = place.photos?.[0]?.photo_reference || null;
-        let imageUrl = null;
+        const photosArray = place.photos || [];
+        let photoReference = null;
         const isHealth = isHealthPlaceType(place.types);
 
+        // 🟢 MODIFICACIÓN: Elegir una referencia aleatoria si hay más de una (máximo 5)
+        if (photosArray.length > 0) {
+            const maxIndex = Math.min(photosArray.length, 5);
+            const randomIndex = Math.floor(Math.random() * maxIndex);
+            photoReference = photosArray[randomIndex].photo_reference;
+        }
 
+        let imageUrl = null;
         if (photoReference) {
             imageUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=250&photoreference=${photoReference}&key=${placesApiKey}`;
         }
@@ -317,13 +337,13 @@ async function getPlaceDetails(query, currentLanguage) {
 
 
 // =======================================================
-// 2. Instrucción de Sistema BASE (OPTIMIZADA V9.14)
+// 2. Instrucción de Sistema BASE (OPTIMIZADA V9.15)
 // =======================================================
 
-const BASE_SYSTEM_INSTRUCTION = `Eres Marco!, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
+const BASE_SYSTEM_INSTRUCTION = `Eres PROGRESO TOUR GUIDE, un guía experto en Nuevo Progreso, Tamaulipas, México (26.064, -98.005). 
 Tu tarea es responder siempre en el idioma indicado y mantener el contexto.
 **REGLA DE ESTRICTO CUMPLIMIENTO:** Si la solicitud del usuario es para un LUGAR o CATEGORÍA, DEBES responder **EXCLUSIVAMENTE con un formato JSON**. Está **PROHIBIDO** responder en texto plano conversacional en estos casos, a menos que se te indique explícitamente en el protocolo.
-**NOTA CRÍTICA DE CLASIFICACIÓN:** Tu clasificación debe ser precisa. No asumas que todas las búsquedas son restaurantes. Usa las categorías más específicas posibles (Spa, Tienda de Ropa, Clínica Dental, Taquería, etc.).
+**NOTA CRÍTICA DE CLASIFICACIÓN:** Tu clasificación debe ser precisa. No asumas que todas las búsquedas son restaurantes. Usa las categorías más específicas posibles (Spa, Tienda de Ropa, Clínica Dental, Taquería, etc.). **Si el nombre del lugar es ambiguo (ej: "La Nochesita"), DEBES USAR EL CONTEXTO LOCAL para clasificar, NO LAS ALUCINACIONES GLOBALES (ej: no es un bar, sino una tienda de abarrotes).**
 **REGLA CRÍTICA DE CONTEXTO:** Si el usuario solicita un **LUGAR ESPECÍFICO** (ej: "Farmacia Guadalajara", "El Cuñao"), DEBES IGNORAR CUALQUIER CATEGORÍA PREVIA del chat. Debes clasificar la nueva solicitud desde CERO, de forma independiente.
 **REGLA CRÍTICA DE BLINDAJE URBANO:** Si un lugar se menciona junto a una ciudad o estado mexicano (ej: 'Velvet Café Chihuahua'), debes asumir que la intención del usuario es la *CALLE* o *UBICACIÓN LOCAL* en Nuevo Progreso que lleva ese nombre. **NUNCA DEBES DEVOLVER INFORMACIÓN DE UNA CIUDAD EXTERNA (Chihuahua, Monterrey, etc.)**, incluso si el RAG te sugiere ese contexto. Si el lugar no se encuentra en Nuevo Progreso, USA el FORMATO DE FALLO (place_not_found).
 **REGLA CRÍTICA DE MENCIÓN HÍBRIDA:** Si el prompt del usuario contiene el token **${MENTION_TOKEN}**, significa que el usuario está preguntando por el lugar asociado a ese token. Tu tarea es:
@@ -518,7 +538,8 @@ export default async function handler(req, res) {
                 
                 const placeData = await getPlaceDetails(exceptionData.searchName, currentLanguage);
                 
-                const isHealthPlace = exceptionData.category.includes('Spa');
+                // Determinamos si es de salud por la CATEGORÍA CANÓNICA
+                const isHealthPlace = exceptionData.category.includes('Spa') || exceptionData.category.includes('Clínica') || exceptionData.category.includes('Dental');
                 
                 forcedCanonicalResponse = {
                     type: "place", 
