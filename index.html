@@ -1137,7 +1137,110 @@ padding-top:0px;
     };
 
     const UI_STRINGS = {
-        // ... (todo igual que antes)
+    es: {
+        historyCleared: 'Historial borrado',
+        languageChanged: 'Idioma cambiado a Español',
+        categoriesShown: 'Categorías mostradas',
+        categoriesHidden: 'Categorías ocultadas',
+        languageMenuShown: 'Menú de idioma mostrado',
+        languageMenuHidden: 'Menú de idioma ocultado',
+        thinking: 'Pensando...',
+        error: 'Error al procesar tu solicitud',
+        categoryCard: 'Tarjeta de categoría mostrada',
+        placeCard: 'Tarjeta de lugar mostrada',
+        recommendationList: 'Lista de recomendaciones mostrada',
+        viewAllPlaces: 'Ver todos los lugares en el mapa'
+    },
+    en: {
+        historyCleared: 'History cleared',
+        languageChanged: 'Language changed to English',
+        categoriesShown: 'Categories shown',
+        categoriesHidden: 'Categories hidden',
+        languageMenuShown: 'Language menu shown',
+        languageMenuHidden: 'Language menu hidden',
+        thinking: 'Thinking...',
+        error: 'Error processing your request',
+        categoryCard: 'Category card displayed',
+        placeCard: 'Place card displayed',
+        recommendationList: 'Recommendation list displayed',
+        viewAllPlaces: 'View all places on map'
+    }
+};
+
+function vibrateDevice(pattern = 50) {
+    if ('vibrate' in navigator) {
+        navigator.vibrate(pattern);
+    }
+}
+
+function scrollToBottom() {
+    setTimeout(() => {
+        messageContainer.scrollTop = messageContainer.scrollHeight;
+    }, 100);
+}
+
+function showTypingIndicator(isUser = false) {
+    if (isUser) {
+        userTypingBubble.classList.add('show');
+    } else {
+        modelTypingBubble.classList.add('show');
+    }
+    scrollToBottom();
+}
+
+function hideTypingIndicator(isUser = false) {
+    if (isUser) {
+        userTypingBubble.classList.remove('show');
+    } else {
+        modelTypingBubble.classList.remove('show');
+    }
+}
+
+function alertUser(message, icon = 'i', type = 'news') {
+    if (type !== 'error' && !notificationPreferences[type]) {
+        return;
+    }
+
+    const iconMap = {
+        'i': 'ℹ️',
+        '✓': '✅',
+        '✗': '❌',
+        '⚠': '⚠️'
+    };
+
+    const displayIcon = iconMap[icon] || icon;
+
+    const card = document.createElement('div');
+    card.className = 'notification-card';
+    card.innerHTML = `
+        <div class="message-content">
+            <span style="margin-right: 8px;">${displayIcon}</span>
+            <span>${message}</span>
+        </div>
+        <button class="close-btn">×</button>
+    `;
+
+    appAlertContainer.appendChild(card);
+
+    setTimeout(() => {
+        card.classList.add('show');
+    }, 10);
+
+    const closeBtn = card.querySelector('.close-btn');
+    closeBtn.addEventListener('click', () => {
+        card.classList.remove('show');
+        setTimeout(() => {
+            card.remove();
+        }, 400);
+    });
+
+    setTimeout(() => {
+        card.classList.remove('show');
+        setTimeout(() => {
+            card.remove();
+        }, 400);
+    }, 4000);
+}
     };
 
     // MENSAJES DE AGRADECIMIENTO ALEATORIOS
