@@ -1238,6 +1238,145 @@ padding-top:0px;
         btnSupport.addEventListener('click', handleSupportClick);
     }
 
+async function sendMessage(text, isChipClick = false) {
+    if (!text || text.trim() === '') return;
+    if (isBotTyping) return;
+
+    const userMessage = { role: 'user', text: text.trim(), timestamp: new Date() };
+    chatHistory.push(userMessage);
+
+    if (!isChipClick) {
+        inputElement.value = '';
+        sendButton.disabled = true;
+    }
+
+    renderChat();
+    isBotTyping = true;
+    showTypingIndicator(false);
+
+    try {
+        const response = await fetch(BACKEND_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                message: text, 
+                language: currentLanguage,
+                history: chatHistory.slice(0, -1)
+            })
+        });
+
+        const data = await response.json();
+        hideTypingIndicator(false);
+
+        if (data.error) {
+            chatHistory.push({
+                role: 'model',
+                text: UI_STRINGS[currentLanguage].error,
+                timestamp: new Date()
+            });
+        } else {
+            chatHistory.push({
+                role: 'model',
+                text: data.response || '',
+                timestamp: new Date(),
+                isStructured: data.isStructured || false,
+                type: data.type || null,
+                subcategories: data.subcategories || null,
+                place: data.place || null,
+                places: data.places || null,
+                totalCount: data.totalCount || 0,
+                apiQuery: data.apiQuery || null
+            });
+        }
+
+        renderChat();
+        isBotTyping = false;
+
+    } catch (error) {
+        hideTypingIndicator(false);
+        console.error('Error:', error);
+        alertUser(UI_STRINGS[currentLanguage].error, '✗', 'error');
+        isBotTyping = false;
+    }
+}
+
+window.initChatUI = function() {
+    console.log('Chat UI Initialized');
+    
+    if (btnSupport) {
+        btnSupport.addEventListener('click', handleSupportClick);
+    }
+
+    sendButton.addEventListener('click', () => {
+        const text = inputElement.value.trim();
+        if (text) sendMessage(text);
+    });
+
+    inputElement.addEventListener('input', () => {
+        sendButton.disabled = inputElement.value.trim() === '';
+    });
+
+    inputElement.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            const text = inputElement.value.trim();
+            if (text) sendMessage(text);
+        }
+    });
+
+    btnClearTop.addEventListener('click', () => {
+        vibrateDevice();
+        chatHistory = [];
+        renderChat();
+        quickActionFullList.classList.add('hidden');
+        alertUser(UI_STRINGS[currentLanguage].historyCleared, '✓', 'news');
+    });
+
+    categoryChips.forEach(chip => {
+        chip.addEventListener('click', function() {
+            vibrateDevice();
+            const query = currentLanguage === 'es' 
+                ? this.getAttribute('data-query-es') 
+                : this.getAttribute('data-query-en');
+            if (query) sendMessage(query, true);
+        });
+    });
+
+    languageChips.forEach(chip => {
+        chip.addEventListener('click', function() {
+            vibrateDevice();
+            const lang = this.getAttribute('data-lang');
+            if (lang) {
+                currentLanguage = lang;
+                alertUser(UI_STRINGS[currentLanguage].languageChanged, '✓', 'news');
+                languageChipsGroup.classList.add('hidden');
+                languageMenuVisible = false;
+            }
+        });
+    });
+
+    menuActionChips.forEach(chip => {
+        chip.addEventListener('click', function() {
+            vibrateDevice();
+            const action = this.getAttribute('data-action');
+
+            if (action === 'CATEGORIES') {
+                categoriesVisible = !categoriesVisible;
+                categoryChipsGroup.classList.toggle('hidden', !categoriesVisible);
+                alertUser(categoriesVisible ? UI_STRINGS[currentLanguage].categoriesShown : UI_STRINGS[currentLanguage].categoriesHidden, 'i', 'news');
+            } else if (action === 'LANGUAGE') {
+                languageMenuVisible = !languageMenuVisible;
+                languageChipsGroup.classList.toggle('hidden', !languageMenuVisible);
+                alertUser(languageMenuVisible ? UI_STRINGS[currentLanguage].languageMenuShown : UI_STRINGS[currentLanguage].languageMenuHidden, 'i', 'news');
+            } else {
+                const query = currentLanguage === 'es' 
+                    ? this.getAttribute('data-query-es') 
+                    : this.getAttribute('data-query-en');
+                if (query) sendMessage(query, true);
+            }
+        });
+    });
+};
     // ... (resto del script original, incluyendo initChatUI, etc.)
 
     window.initChatUI = function() {
