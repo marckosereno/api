@@ -1182,33 +1182,147 @@ padding-top:0px;
 
     // Dentro de createMessageBubble, añadir el caso para 'support'
     function createMessageBubble(m) {
-        // ... (código existente)
-        if (m.isStructured) {
-            // ... (código existente)
+    const bubbleDiv = document.createElement('div');
+    bubbleDiv.className = m.role === 'user' ? 'flex justify-end mb-4' : 'flex justify-start mb-4';
 
-            if (m.type === 'support' && m.actions) {
-                let supportActionsHTML = '';
-                m.actions.forEach(action => {
-                    supportActionsHTML += `
-                        <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-url="${action.url}">
-                            ${action.label}
-                        </div>
-                    `;
-                });
+    const contentDiv = document.createElement('div');
+    contentDiv.className = m.role === 'user' 
+        ? 'flex flex-col items-end max-w-xs sm:max-w-md lg:max-w-lg' 
+        : 'flex flex-col items-start';
 
-                actionsBar = `
-                    <div class="action-bar-container">
-                        <div class="inline-flex space-x-3 p-1">
-                            ${supportActionsHTML}
-                        </div>
+    let messageHTML = '';
+    let actionsBar = '';
+
+    if (m.isStructured) {
+        if (m.type === 'category') {
+            const subcategories = m.subcategories || [];
+            let subcatHTML = '';
+            subcategories.forEach(sub => {
+                subcatHTML += `
+                    <div class="action-chip glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-subcat-query-es="${sub.queryEs}" data-subcat-query-en="${sub.queryEn}">
+                        ${sub.emoji} ${sub.name}
                     </div>
+                `;
+            });
+
+            actionsBar = `
+                <div class="action-bar-container">
+                    <div class="inline-flex space-x-3 p-1">
+                        ${subcatHTML}
+                    </div>
+                </div>
+            `;
+            messageHTML = `<p>${m.text}</p>`;
+
+        } else if (m.type === 'support' && m.actions) {
+            let supportActionsHTML = '';
+            m.actions.forEach(action => {
+                supportActionsHTML += `
+                    <div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-url="${action.url}">
+                        ${action.label}
+                    </div>
+                `;
+            });
+
+            actionsBar = `
+                <div class="action-bar-container">
+                    <div class="inline-flex space-x-3 p-1">
+                        ${supportActionsHTML}
+                    </div>
+                </div>
+            `;
+            messageHTML = `<p>${m.text}</p>`;
+
+        } else if (m.type === 'place') {
+            const p = m.place;
+            const name = p.name || 'Nombre no disponible';
+            const address = p.address || '';
+            const rating = p.rating ? `⭐ ${p.rating}` : '';
+            const openNow = p.openNow !== undefined ? (p.openNow ? '🟢 Abierto' : '🔴 Cerrado') : '';
+            const phone = p.phone || '';
+            const website = p.website || '';
+            const photoUrl = p.photoUrl || '';
+            const mapsUrl = p.mapsUrl || '';
+
+            let imageHTML = '';
+            if (photoUrl) {
+                imageHTML = `
+                    <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" class="image-link">
+                        <img src="${photoUrl}" alt="${name}" class="stacked-photo clickable-effect" loading="lazy">
+                    </a>
                 `;
             }
 
-            // ... (resto del código)
+            const detailsHTML = `
+                <div><strong>${name}</strong></div>
+                ${address ? `<div>${address}</div>` : ''}
+                ${rating ? `<div>${rating}</div>` : ''}
+                ${openNow ? `<div>${openNow}</div>` : ''}
+                ${phone ? `<div>📞 ${phone}</div>` : ''}
+            `;
+
+            messageHTML = `${imageHTML}${detailsHTML}`;
+
+            actionsBar = `
+                <div class="action-bar-container">
+                    <div class="inline-flex space-x-3 p-1">
+                        ${mapsUrl ? `<div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-maps-url="${mapsUrl}">📍 Ver en Mapa</div>` : ''}
+                        ${website ? `<div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-website-url="${website}">🌐 Sitio Web</div>` : ''}
+                        ${p.placeId ? `<div class="action-chip blue-glass-chip flex items-center p-2 rounded-full text-sm font-semibold cursor-pointer" data-google-url="https://www.google.com/search?q=${encodeURIComponent(name)}">🔍 Buscar en Google</div>` : ''}
+                    </div>
+                </div>
+            `;
+
+        } else if (m.type === 'recommendation' && m.places) {
+            const places = m.places.slice(0, MAX_CHAT_RESULTS);
+            let placesListHTML = '<ul style="list-style: none; padding-left: 0;">';
+            places.forEach((p, idx) => {
+                const name = p.name || 'Nombre no disponible';
+                const rating = p.rating ? ` - ⭐ ${p.rating}` : '';
+                placesListHTML += `<li style="margin-bottom: 8px;">${idx + 1}. <strong>${name}</strong>${rating}</li>`;
+            });
+            placesListHTML += '</ul>';
+
+            messageHTML = `${m.text ? `<p>${m.text}</p>` : ''}${placesListHTML}`;
+
+            lastTotalCount = m.totalCount || 0;
+            lastApiQuery = m.apiQuery || null;
+
+            if (lastTotalCount > MAX_CHAT_RESULTS && lastApiQuery) {
+                quickActionFullList.classList.remove('hidden');
+            } else {
+                quickActionFullList.classList.add('hidden');
+            }
         }
-        // ... (resto)
+    } else {
+        const processedText = marked.parse(m.text || '');
+        messageHTML = processedText;
     }
+
+    const timestamp = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '';
+
+    if (m.role === 'user') {
+        contentDiv.innerHTML = `
+            <div class="user-bubble bg-black text-white p-3 shadow-md">
+                ${messageHTML}
+            </div>
+            <div class="timestamp user-timestamp-container">${timestamp}</div>
+        `;
+    } else {
+        contentDiv.innerHTML = `
+            <div class="model-bubble-wrapper">
+                <div class="model-bubble">
+                    ${messageHTML}
+                </div>
+            </div>
+            ${actionsBar}
+            <div class="timestamp model-timestamp-container">${timestamp}</div>
+        `;
+    }
+
+    bubbleDiv.appendChild(contentDiv);
+    return bubbleDiv;
+}
 
 function renderChat() {
     const existingMessages = messageContainer.querySelectorAll('.flex.justify-start, .flex.justify-end');
