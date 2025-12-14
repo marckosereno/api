@@ -1210,6 +1210,69 @@ padding-top:0px;
         // ... (resto)
     }
 
+function renderChat() {
+    const existingMessages = messageContainer.querySelectorAll('.flex.justify-start, .flex.justify-end');
+    existingMessages.forEach(msg => {
+        if (msg.id !== 'model-typing-bubble' && msg.id !== 'user-typing-bubble') {
+            msg.remove();
+        }
+    });
+
+    chatHistory.forEach(m => {
+        const bubble = createMessageBubble(m);
+        messageContainer.appendChild(bubble);
+    });
+
+    attachSubMenuListeners();
+    scrollToBottom();
+}
+
+function attachSubMenuListeners() {
+    const subcatButtons = messageContainer.querySelectorAll('.action-bar-container .glass-chip');
+    subcatButtons.forEach(btn => {
+        if (btn.classList.contains('listener-attached')) return;
+
+        btn.addEventListener('click', function() {
+            vibrateDevice();
+            const queryEs = this.getAttribute('data-subcat-query-es');
+            const queryEn = this.getAttribute('data-subcat-query-en');
+
+            if (queryEs && queryEn) {
+                const selectedQuery = currentLanguage === 'es' ? queryEs : queryEn;
+                sendMessage(selectedQuery, true);
+            }
+        });
+
+        btn.classList.add('listener-attached');
+    });
+
+    const actionButtons = messageContainer.querySelectorAll('.action-bar-container .blue-glass-chip');
+    actionButtons.forEach(button => {
+        if (button.classList.contains('listener-attached')) return;
+
+        button.addEventListener('click', function() {
+            vibrateDevice();
+            const mapsUrl = this.getAttribute('data-maps-url');
+            const websiteUrl = this.getAttribute('data-website-url');
+            const googleUrl = this.getAttribute('data-google-url');
+            const url = this.getAttribute('data-url');
+
+            if (url) {
+                window.open(url, '_blank');
+                alertUser('¡Gracias por tu apoyo! ☕❤️', '✓', 'news');
+            } else if (mapsUrl) {
+                window.open(mapsUrl, '_blank');
+            } else if (websiteUrl) {
+                window.open(websiteUrl, '_blank');
+            } else if (googleUrl) {
+                window.open(googleUrl, '_blank');
+            }
+        });
+
+        button.classList.add('listener-attached');
+    });
+}
+
     // Dentro de attachSubMenuListeners, añadir el caso para data-url
     function attachSubMenuListeners() {
         // ... (código existente)
