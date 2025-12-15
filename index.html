@@ -1544,7 +1544,7 @@ padding-top:0px;
         inputElement.value = '';
         inputElement.focus();
     }
-## **PARTE 4 de 4**
+## **PARTE 4 CORREGIDA - COMPLETA**
 
 ```javascript
     
@@ -2378,37 +2378,35 @@ padding-top:0px;
     
     if (toggleButton) toggleButton.addEventListener('click', toggleSPSMode);
 
-    if (inputElement) {
+    // 🔧 CORRECCIÓN CRÍTICA: FUNCIÓN UNIFICADA PARA INPUT
+    function handleTypingAndMentionLogic(e) {
+        const inputValue = e.target.value.trim();
         
-        inputElement.addEventListener('focus', handleInputFocus);
+        // 1. Manejar autocompletado (SPS o Mention)
+        handleAutocompleteInput(e);
         
-        if (!inputElement.hasAutocompleteListener) {
-            inputElement.addEventListener('input', handleAutocompleteInput);
-            inputElement.hasAutocompleteListener = true;
+        // 2. Verificar si el usuario borró la mención
+        if (currentMentionPlace) {
+            const mentionText = '@' + currentMentionPlace.textName;
+            if (!e.target.value.includes(mentionText)) {
+                resetMentionMode();
+            }
         }
+        
+        // 3. Habilitar/Deshabilitar el botón de envío
+        sendButton.disabled = isSPSMode || inputValue === ''; 
+        
+        // 4. Manejar la burbuja de escritura del usuario
+        if (!isSPSMode && !isMentionMode && !currentMentionPlace) { 
+            handleTypingIndicator();
+        } else {
+            hideUserTypingBubble();
+        }
+    }
 
-        inputElement.addEventListener('input', () => {
-            
-            const inputValue = inputElement.value.trim();
-            
-            if (currentMentionPlace) {
-                const mentionText = '@' + currentMentionPlace.textName;
-                if (!inputElement.value.includes(mentionText)) {
-                    resetMentionMode();
-                    if (!isSPSMode) {
-                        handleAutocompleteInput({ target: inputElement }); 
-                    }
-                }
-            }
-            
-            sendButton.disabled = isSPSMode || inputValue === ''; 
-            
-            if (!isSPSMode && !isMentionMode && !currentMentionPlace) { 
-                handleTypingIndicator();
-            } else {
-                hideUserTypingBubble();
-            }
-        });
+    if (inputElement) {
+        inputElement.addEventListener('focus', handleInputFocus);
+        inputElement.addEventListener('input', handleTypingAndMentionLogic);
     }
 
     menuActionChips.forEach(chip => {
@@ -2508,7 +2506,7 @@ padding-top:0px;
         });
     }
 
-    // NUEVO: Listener para el botón de apoyo
+    // LISTENER PARA EL BOTÓN DE APOYO
     if (btnSupport) {
         btnSupport.addEventListener('click', handleSupportClick);
     }
