@@ -69,13 +69,14 @@ font-size:;
         /* 🛑 NUEVO: Wrapper para aplicar el color de fondo y el relleno, manteniendo el padding-left del div interno */
         .model-bubble-wrapper {
             /* Colores de la paleta: #3A4EFB / #334AFA */
-            background: linear-gradient(127deg, #ffffff85, #fff); 
+            /* background: linear-gradient(127deg, #ffffff85, #fff); */ 
             color: #373737; /* Texto negro */
             border-radius: 18px 18px 18px 0;
             padding: 12px; /* Mantiene el padding uniforme de la burbuja */
             
-            max-width: 91%;
+            max-width: 98%;
             width: fit-content;
+line-height:0.9;
         }
 
 .model-bubble-wrapper strong {
@@ -913,7 +914,7 @@ padding-top:0px;
             
             <div id="model-typing-bubble" class="flex justify-start">
                 <div class="flex flex-col items-start">
-                    <div class="model-bubble-wrapper p-3 shadow-md">
+                    <div class="model-bubble-wrapper p-3">
                         <div class="typing-dots">
                             <div class="dot"></div>
                             <div class="dot"></div>
