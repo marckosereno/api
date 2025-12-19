@@ -19,12 +19,22 @@
 
 <style>
 
-.chat-window { 
-    height: calc(var(--vh, 1vh) * 100); /* En lugar de 100% */
-}
-
-#message-container {
-    max-height: calc(var(--vh, 1vh) * 100 - 200px); /* Ajustar según tu header/footer */
+/* Fix específico para iOS Safari */
+@supports (-webkit-touch-callout: none) {
+    .chat-window {
+        height: -webkit-fill-available;
+        min-height: -webkit-fill-available;
+    }
+    
+    #bottom-bar-search-wrapper {
+        position: absolute; /* En lugar de fixed/relative */
+        bottom: 0;
+    }
+    
+    .bottom-action-area {
+        position: sticky; /* En lugar de fixed */
+        bottom: 0;
+    }
 }
 
 /* Nuevo CS para soportar contenido Markdown procesado (Negritas, Listas, Párrafos) */
