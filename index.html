@@ -1107,43 +1107,7 @@ padding-top:0px;
       document.documentElement.style.setProperty('--vh', `${vh}px`);
     }
 
-// Agregar esto a tu código existente
-let keyboardVisible = false;
 
-function handleKeyboardShow() {
-    keyboardVisible = true;
-    document.body.classList.add('keyboard-visible');
-    // Forzar recalculo
-    setAppHeight();
-}
-
-function handleKeyboardHide() {
-    keyboardVisible = false;
-    document.body.classList.remove('keyboard-visible');
-    setAppHeight();
-}
-
-// Detectores de teclado iOS
-if (inputElement) {
-    inputElement.addEventListener('focus', handleKeyboardShow);
-    inputElement.addEventListener('blur', handleKeyboardHide);
-}
-
-// Detectar resize del viewport (cuando aparece/desaparece el teclado)
-let lastHeight = window.innerHeight;
-window.addEventListener('resize', () => {
-    const currentHeight = window.innerHeight;
-    
-    if (currentHeight < lastHeight) {
-        // Teclado apareció
-        handleKeyboardShow();
-    } else if (currentHeight > lastHeight) {
-        // Teclado desapareció
-        handleKeyboardHide();
-    }
-    
-    lastHeight = currentHeight;
-});
 
     setAppHeight(); 
     window.addEventListener('resize', setAppHeight);
