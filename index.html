@@ -19,23 +19,30 @@
 
 <style>
 
-/* Fix específico para iOS Safari */
-@supports (-webkit-touch-callout: none) {
-    .chat-window {
-        height: -webkit-fill-available;
-        min-height: -webkit-fill-available;
-    }
-    
-    #bottom-bar-search-wrapper {
-        position: absolute; /* En lugar de fixed/relative */
-        bottom: 0;
-    }
-    
-    .bottom-action-area {
-        position: sticky; /* En lugar de fixed */
-        bottom: 0;
-    }
+/* Comportamiento normal */
+#bottom-bar-search-wrapper {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding-top: 22px;
+    border-radius: 20px 20px 0 0;
+    background-color: white !important;
+    box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
+    z-index: 10;
+    transition: none; /* Importante: sin transiciones para iOS */
 }
+
+/* Cuando el teclado está visible en iOS */
+body.keyboard-visible #bottom-bar-search-wrapper {
+    position: absolute; /* CRÍTICO: cambiar de fixed a absolute */
+    bottom: 0;
+}
+
+body.keyboard-visible .chat-window {
+    overflow: hidden; /* Prevenir scroll extraño */
+}
+    
 
 /* Nuevo CS para soportar contenido Markdown procesado (Negritas, Listas, Párrafos) */
 .model-bubble p {
@@ -1118,6 +1125,44 @@ padding-top:0px;
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty('--vh', `${vh}px`);
     }
+
+// Agregar esto a tu código existente
+let keyboardVisible = false;
+
+function handleKeyboardShow() {
+    keyboardVisible = true;
+    document.body.classList.add('keyboard-visible');
+    // Forzar recalculo
+    setAppHeight();
+}
+
+function handleKeyboardHide() {
+    keyboardVisible = false;
+    document.body.classList.remove('keyboard-visible');
+    setAppHeight();
+}
+
+// Detectores de teclado iOS
+if (inputElement) {
+    inputElement.addEventListener('focus', handleKeyboardShow);
+    inputElement.addEventListener('blur', handleKeyboardHide);
+}
+
+// Detectar resize del viewport (cuando aparece/desaparece el teclado)
+let lastHeight = window.innerHeight;
+window.addEventListener('resize', () => {
+    const currentHeight = window.innerHeight;
+    
+    if (currentHeight < lastHeight) {
+        // Teclado apareció
+        handleKeyboardShow();
+    } else if (currentHeight > lastHeight) {
+        // Teclado desapareció
+        handleKeyboardHide();
+    }
+    
+    lastHeight = currentHeight;
+});
 
     setAppHeight(); 
     window.addEventListener('resize', setAppHeight);
