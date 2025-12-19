@@ -19,6 +19,14 @@
 
 <style>
 
+.chat-window { 
+    height: calc(var(--vh, 1vh) * 100); /* En lugar de 100% */
+}
+
+#message-container {
+    max-height: calc(var(--vh, 1vh) * 100 - 200px); /* Ajustar según tu header/footer */
+}
+
 /* Nuevo CS para soportar contenido Markdown procesado (Negritas, Listas, Párrafos) */
 .model-bubble p {
     margin-bottom: 0.5em; 
