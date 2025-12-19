@@ -19,30 +19,8 @@
 
 <style>
 
-/* Comportamiento normal */
-#bottom-bar-search-wrapper {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding-top: 22px;
-    border-radius: 20px 20px 0 0;
-    background-color: white !important;
-    box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
-    z-index: 10;
-    transition: none; /* Importante: sin transiciones para iOS */
-}
 
-/* Cuando el teclado está visible en iOS */
-body.keyboard-visible #bottom-bar-search-wrapper {
-    position: absolute; /* CRÍTICO: cambiar de fixed a absolute */
-    bottom: 0;
-}
-
-body.keyboard-visible .chat-window {
-    overflow: hidden; /* Prevenir scroll extraño */
-}
-    
+   
 
 /* Nuevo CS para soportar contenido Markdown procesado (Negritas, Listas, Párrafos) */
 .model-bubble p {
@@ -522,7 +500,10 @@ object-fit: cover; /* Asegura que la imagen cubra el área */
 
         /* 🛑 NUEVO: Wrapper para aplicar los bordes redondeados y el fondo flotante (white) */
         #bottom-bar-search-wrapper {
-          padding-top:22px;  
+          padding: 0.75rem 1rem; /* ✅ Padding fijo, no dinámico */
+    max-height: 180px; /* ✅ Límite de altura */
+    overflow: visible; /* ✅ Permitir que el contenido fluya */
+ 
  border-radius: 20px 20px 0 0; /* Bordes superiores redondeados */
              background-color: white !important;
              /* 🛑 CRÍTICO: El sombreado simula que el container "flota" */
