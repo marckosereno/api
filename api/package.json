@@ -1,0 +1,13 @@
+{
+  "name": "chat-ai-project",
+  "version": "1.0.0",
+  "description": "API Handler for the Chat Application.",
+  "main": "api/chat.js",
+  "dependencies": {
+    "@google/genai": "latest",
+    "@googlemaps/google-maps-services-js": "^3.3.42"
+  },
+  "scripts": {
+    "start": "node api/chat.js"
+  }
+}
