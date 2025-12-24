@@ -1,4 +1,3 @@
-// package.json (Ejemplo Mínimo)
 {
   "name": "chat-ai-project",
   "version": "1.0.0",
@@ -7,8 +6,6 @@
   "dependencies": {
     "@google/genai": "latest",
     "@googlemaps/google-maps-services-js": "^3.3.42"
-    // Es posible que necesites otras dependencias aquí, como "dotenv"
-    // si las estás usando para cargar la API Key.
   },
   "scripts": {
     "start": "node api/chat.js"
