@@ -1,13 +1,16 @@
 {
-  "name": "chat-ai-project",
+  "name": "progreso-tour-guide",
   "version": "1.0.0",
-  "description": "API Handler for the Chat Application.",
-  "main": "api/chat.js",
+  "description": "Chatbot para Progreso, Tamps.",
+  "main": "api/chat.js", 
+  "type": "module",
+  "scripts": {
+    "start": "node api/chat.js"  
+  }, 
+  
   "dependencies": {
     "@google/genai": "latest",
-    "@googlemaps/google-maps-services-js": "^3.3.42"
-  },
-  "scripts": {
-    "start": "node api/chat.js"
+    "@googlemaps/google-maps-services-js": "latest",
+    "express-rate-limit": "latest" 
   }
 }
